@@ -11,6 +11,20 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react(), tailwindcss()],
+      build: {
+        chunkSizeWarningLimit: 1000, // 将警告限制从默认的500kb调整为1000kb
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              // 将大型依赖分离到独立的chunk中
+              'react-vendor': ['react', 'react-dom'],
+              'supabase-vendor': ['@supabase/supabase-js'],
+              'chart-vendor': ['recharts'],
+              'ui-vendor': ['framer-motion', 'lucide-react']
+            }
+          }
+        }
+      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)

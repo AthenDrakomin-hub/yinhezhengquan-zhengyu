@@ -45,31 +45,41 @@ serve(async (req) => {
       const config = rule.config
       if (trade_type === 'IPO') {
         if (quantity < config.min_apply_quantity) {
-          return new Response(JSON.stringify({ error: `新股申购最低数量为 ${config.min_apply_quantity}`, code: 1101 }), {
+          return new Response(JSON.stringify({ error: `新股申购最低数量为 ${config.min_apply_quantity}股，当前申购数量为${quantity}股，不符合规则`, code: 1101 }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
           })
         }
         if (amount > config.max_apply_amount) {
-          return new Response(JSON.stringify({ error: `新股申购最高金额为 ${config.max_apply_amount}`, code: 1102 }), {
+          return new Response(JSON.stringify({ error: `新股申购最高金额为 ${config.max_apply_amount}元，当前申购金额为${amount}元，超出规则限制`, code: 1102 }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
           })
         }
       } else if (trade_type === 'BLOCK_TRADE') {
         if (quantity < config.min_quantity) {
-          return new Response(JSON.stringify({ error: `大宗交易最低起买量为 ${config.min_quantity}`, code: 1103 }), {
+          return new Response(JSON.stringify({ error: `大宗交易需满足最低${config.min_quantity}股起买，当前委托数量为${quantity}股，不符合规则`, code: 1103 }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
           })
         }
       } else if (trade_type === 'DERIVATIVES') {
         if (leverage < config.min_leverage || leverage > config.max_leverage) {
-          return new Response(JSON.stringify({ error: `衍生品杠杆需在 ${config.min_leverage}-${config.max_leverage} 倍之间`, code: 1104 }), {
+          return new Response(JSON.stringify({ error: `衍生品交易杠杆需在${config.min_leverage}-${config.max_leverage}倍之间，当前选择${leverage}倍，超出规则限制`, code: 1104 }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
           })
         }
+      } else if (trade_type === 'LIMIT_UP') {
+        // 涨停打板规则校验
+        if (config.max_single_order && quantity > config.max_single_order) {
+          return new Response(JSON.stringify({ error: `涨停打板单次最大报单数量为${config.max_single_order}股，当前报单数量为${quantity}股，超出规则限制`, code: 1105 }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          })
+        }
+        // 触发阈值校验（需要前端传递当前涨幅，这里简化处理）
+        // 实际应用中，需要获取当前股票价格和涨幅进行校验
       }
     }
 

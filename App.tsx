@@ -106,6 +106,29 @@ const AppContent: React.FC = () => {
         const profile = await authService.getSession();
         setUserRole(profile?.role || 'user');
         syncAccountData(session.user.id);
+        
+        // 监听该用户的交易状态变化
+        const tradesChannel = supabase
+          .channel(`trades_changes_${session.user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'trades',
+              filter: `user_id=eq.${session.user.id}`
+            },
+            () => {
+              // 当交易状态变化时，同步账户数据
+              syncAccountData(session.user.id);
+            }
+          )
+          .subscribe();
+          
+        // 返回清理函数
+        return () => {
+          supabase.removeChannel(tradesChannel);
+        };
       } else {
         setUserRole('user');
       }

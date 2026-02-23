@@ -43,8 +43,35 @@ const AdminRuleManagement: React.FC = () => {
     setSaving(false);
   };
 
+  const [operationLogs, setOperationLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [filterRuleType, setFilterRuleType] = useState<string>('');
+
+  const fetchOperationLogs = async () => {
+    setLogsLoading(true);
+    let query = supabase
+      .from('admin_operation_logs')
+      .select('*')
+      .eq('operate_type', 'TRADE_RULE_UPDATE')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (filterRuleType) {
+      query = query.ilike('operate_content->>rule_type', `%${filterRuleType}%`);
+    }
+
+    const { data, error } = await query;
+    if (!error) setOperationLogs(data || []);
+    setLogsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchOperationLogs();
+  }, [filterRuleType]);
+
   return (
     <div className="space-y-8">
+      {/* 规则列表 */}
       <div className="industrial-card p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -93,6 +120,81 @@ const AdminRuleManagement: React.FC = () => {
               </div>
             </motion.div>
           ))}
+        </div>
+      </div>
+
+      {/* 规则操作日志 */}
+      <div className="industrial-card p-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">规则操作日志</h3>
+            <p className="text-xs text-industrial-400 font-bold mt-1">展示规则修改人、修改时间、修改前后参数对比</p>
+          </div>
+          <div className="flex gap-4">
+            <select 
+              value={filterRuleType}
+              onChange={(e) => setFilterRuleType(e.target.value)}
+              className="industrial-input text-xs"
+            >
+              <option value="">全部规则类型</option>
+              <option value="IPO">IPO</option>
+              <option value="BLOCK_TRADE">大宗交易</option>
+              <option value="DERIVATIVES">衍生品</option>
+              <option value="LIMIT_UP">涨停打板</option>
+            </select>
+            <button className="industrial-button-primary" onClick={fetchOperationLogs}>
+              <ICONS.Refresh size={16} className={logsLoading ? 'animate-spin' : ''} /> 刷新日志
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-industrial-200">
+                <th className="py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">规则类型</th>
+                <th className="py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">修改人</th>
+                <th className="py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">修改时间</th>
+                <th className="py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">修改内容</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-industrial-100">
+              {logsLoading ? (
+                <tr><td colSpan={4} className="py-8 text-center text-xs font-bold text-industrial-400">加载中...</td></tr>
+              ) : operationLogs.length === 0 ? (
+                <tr><td colSpan={4} className="py-8 text-center text-xs font-bold text-industrial-400">暂无操作日志</td></tr>
+              ) : operationLogs.map((log) => {
+                const content = log.operate_content;
+                return (
+                  <tr key={log.id} className="hover:bg-industrial-50 transition-colors">
+                    <td className="py-4">
+                      <span className="text-xs font-black text-industrial-800">{content.rule_type}</span>
+                    </td>
+                    <td className="py-4 text-xs font-bold text-industrial-600 truncate max-w-[100px]">{log.admin_id}</td>
+                    <td className="py-4 text-[10px] text-industrial-400 font-bold">
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
+                    <td className="py-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-bold text-industrial-400">旧配置:</span>
+                          <code className="text-[9px] font-mono bg-industrial-50 px-1 py-0.5 rounded text-industrial-600">
+                            {JSON.stringify(content.old_config || {})}
+                          </code>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-bold text-industrial-400">新配置:</span>
+                          <code className="text-[9px] font-mono bg-emerald-50 px-1 py-0.5 rounded text-emerald-600">
+                            {JSON.stringify(content.new_config || {})}
+                          </code>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ICONS } from '@/constants';
 import { integrationService } from '@/services/integrationService';
+import { supabase } from '@/lib/supabase';
 
 const AdminIntegrationPanel: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<any[]>([]);
@@ -27,12 +28,109 @@ const AdminIntegrationPanel: React.FC = () => {
 
   const handleTestApi = async () => {
     setLoading(true);
+    setTestResult(null);
     try {
-      const result = await integrationService.testApi('/api/market/quotes', {
-        market_type: 'CN',
-        stock_codes: ['600000']
+      // 1. 获取一个API Key进行测试
+      if (apiKeys.length === 0) {
+        setTestResult('失败：暂无API Key可测试');
+        return;
+      }
+
+      const testKey = apiKeys[0];
+      
+      // 2. 校验API Key是否存在、是否禁用
+      if (testKey.status !== 'ACTIVE') {
+        setTestResult(`失败：API Key无效（已禁用）`);
+        
+        // 记录审计日志
+        await supabase.from('admin_operation_logs').insert({
+          admin_id: (await supabase.auth.getUser()).data.user?.id,
+          operate_type: 'API_KEY_VALIDATE',
+          target_user_id: testKey.id,
+          operate_content: { 
+            api_key: testKey.api_key,
+            status: testKey.status,
+            result: 'FAILED',
+            reason: 'API Key已禁用'
+          },
+          ip_address: 'N/A'
+        });
+        
+        return;
+      }
+
+      // 3. 模拟调用核心接口，校验是否符合当前交易规则
+      // 使用validate-trade-rule函数测试衍生品规则（使用合规的杠杆值10）
+      const { data: ruleCheck, error: ruleError } = await supabase.functions.invoke('validate-trade-rule', {
+        body: {
+          order_type: 'DERIVATIVES',
+          order_params: {
+            quantity: 100,
+            leverage: 10, // 使用合规的杠杆值，测试成功场景
+            amount: 10000
+          }
+        }
       });
-      setTestResult(JSON.stringify(result, null, 2));
+
+      if (ruleError) {
+        setTestResult(`失败：API Key有效但规则校验失败：${ruleError.message}`);
+        
+        // 记录审计日志
+        await supabase.from('admin_operation_logs').insert({
+          admin_id: (await supabase.auth.getUser()).data.user?.id,
+          operate_type: 'API_KEY_VALIDATE',
+          target_user_id: testKey.id,
+          operate_content: { 
+            api_key: testKey.api_key,
+            status: testKey.status,
+            result: 'FAILED',
+            reason: `规则校验失败：${ruleError.message}`
+          },
+          ip_address: 'N/A'
+        });
+        
+        return;
+      }
+
+      // 4. 检查规则校验结果
+      if (!ruleCheck.valid) {
+        setTestResult(`失败：API Key有效但规则校验失败：${ruleCheck.error}`);
+        
+        // 记录审计日志
+        await supabase.from('admin_operation_logs').insert({
+          admin_id: (await supabase.auth.getUser()).data.user?.id,
+          operate_type: 'API_KEY_VALIDATE',
+          target_user_id: testKey.id,
+          operate_content: { 
+            api_key: testKey.api_key,
+            status: testKey.status,
+            result: 'FAILED',
+            reason: `规则校验失败：${ruleCheck.error}`
+          },
+          ip_address: 'N/A'
+        });
+        
+        return;
+      }
+
+      // 5. 成功情况
+      setTestResult('成功：API Key有效 + 规则校验通过');
+      
+      // 记录审计日志
+      await supabase.from('admin_operation_logs').insert({
+        admin_id: (await supabase.auth.getUser()).data.user?.id,
+        operate_type: 'API_KEY_VALIDATE',
+        target_user_id: testKey.id,
+        operate_content: { 
+          api_key: testKey.api_key,
+          status: testKey.status,
+          result: 'SUCCESS',
+          rule_type: 'DERIVATIVES',
+          checked_at: ruleCheck.checked_at
+        },
+        ip_address: 'N/A'
+      });
+
     } catch (err: any) {
       setTestResult('测试失败: ' + err.message);
     } finally {
@@ -92,48 +190,33 @@ const AdminIntegrationPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* API Tester Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="industrial-card p-8">
-          <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest mb-6">接口在线测试</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">接口路径</label>
-              <select className="industrial-input">
-                <option>/api/market/quotes</option>
-                <option>/api/trades/basic/buy</option>
-                <option>/api/holdings/query</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">请求参数 (JSON)</label>
-              <textarea 
-                className="industrial-input h-32 font-mono text-xs"
-                defaultValue={`{\n  "symbol": "600000",\n  "market": "CN"\n}`}
-              />
-            </div>
-            <button 
-              onClick={handleTestApi}
-              disabled={loading}
-              className="industrial-button-primary w-full"
-            >
-              <ICONS.Zap size={16} /> {loading ? '请求中...' : '发起测试请求'}
-            </button>
+      {/* 一键校验功能 */}
+      <div className="industrial-card p-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest">API 一键校验</h3>
+            <p className="text-xs text-industrial-400 font-bold mt-1">校验 API Key 有效性及规则合规性</p>
           </div>
+          <button 
+            onClick={handleTestApi}
+            disabled={loading}
+            className="industrial-button-primary"
+          >
+            <ICONS.Zap size={16} /> {loading ? '校验中...' : '执行一键校验'}
+          </button>
         </div>
-
-        <div className="industrial-card p-8 bg-industrial-900">
-          <h3 className="text-sm font-black text-industrial-100 uppercase tracking-widest mb-6">响应结果</h3>
-          {testResult ? (
-            <pre className="text-[10px] font-mono text-emerald-400 overflow-x-auto">
+        
+        {testResult && (
+          <div className="mt-6 p-4 bg-industrial-50 rounded-lg border border-industrial-200">
+            <h4 className="text-xs font-black text-industrial-800 uppercase mb-2">校验结果</h4>
+            <div className={`text-sm font-bold ${testResult.includes('成功') ? 'text-emerald-600' : 'text-red-600'}`}>
               {testResult}
-            </pre>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-xs font-bold text-industrial-600 uppercase tracking-widest">等待请求...</p>
             </div>
-          )}
-        </div>
+            <p className="text-[10px] text-industrial-400 mt-2">
+              校验内容：API Key 有效性 + 交易规则合规性
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
