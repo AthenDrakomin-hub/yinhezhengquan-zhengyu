@@ -1,11 +1,13 @@
 
 /**
- * 证裕交易单元 - 极速实时行情服务 (前端直连版)
- * 直接对接东方财富(Eastmoney)公开实时行情接口，实现毫秒级数据同步
+ * 证裕交易单元 - 纯前端原生行情数据源对接方案
+ * 完全前端实现，无需后端/Edge Functions/服务器接口封装
+ * 直接对接免费、无CORS限制、无需API Key的公开行情接口
+ * 覆盖A股、港股实时行情、批量查询、日K线数据
  */
 
 import { Stock } from '../types';
-import { tradeService } from './tradeService';
+import { frontendMarketService } from './frontendMarketService';
 
 /**
  * 获取实时快讯 (新浪财经直连)
@@ -30,45 +32,41 @@ export const getGalaxyNews = async () => {
 };
 
 /**
- * 获取单只股票的深度行情
+ * 获取单只股票的深度行情 (纯前端实现)
  */
 export const getRealtimeStock = async (symbol: string, market: string): Promise<Partial<Stock>> => {
   try {
-    const data = await tradeService.getMarketData(market, [symbol]);
-    if (data && data.length > 0) {
-      const s = data[0];
-      return {
-        price: parseFloat(s.price),
-        change: parseFloat(s.change),
-        changePercent: parseFloat(s.changePercent),
-      };
-    }
-    return {};
+    // 转换market参数为'CN' | 'HK'
+    const marketType = market === 'HK' ? 'HK' : 'CN';
+    const stock = await frontendMarketService.getRealtimeStock(symbol, marketType);
+    
+    return {
+      price: stock.price,
+      change: stock.change,
+      changePercent: stock.changePercent,
+    };
   } catch (error) {
-    console.error('Fetch realtime error:', error);
+    console.error('获取实时行情失败:', error);
+    // 返回空对象保持向后兼容
     return {};
   }
 };
 
 /**
- * 获取热门板块列表 (沪深京A股)
+ * 获取热门板块列表 (纯前端实现)
  */
 export const getMarketList = async (market: string = 'CN'): Promise<Stock[]> => {
   try {
     // 模拟常用标的代码
     const symbols = market === 'HK' ? ['00700', '09988', '03690', '01810', '01024'] : ['600519', '000858', '601318', '000001', '300750'];
-    const data = await tradeService.getMarketData(market, symbols);
     
-    return data.map((s: any) => ({
-      symbol: s.symbol,
-      name: s.name,
-      price: parseFloat(s.price),
-      change: parseFloat(s.change),
-      changePercent: parseFloat(s.changePercent),
-      market: market as any,
-      sparkline: s.sparkline || []
-    }));
+    // 转换market参数为'CN' | 'HK'
+    const marketType = market === 'HK' ? 'HK' : 'CN';
+    const stocks = await frontendMarketService.getBatchStocks(symbols, marketType);
+    
+    return stocks;
   } catch (error) {
+    console.error('获取市场列表失败:', error);
     return [];
   }
 };
