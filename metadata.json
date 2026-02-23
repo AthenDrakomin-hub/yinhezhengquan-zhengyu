@@ -1,0 +1,8 @@
+{
+  "name": "银河证券虚拟管理系统 - 证裕交易单元",
+  "description": "中国银河证券旗下，基于 React 19 构建的工业级虚拟证券管理系统，支持 A 股/港股交易、新股申购、大宗交易及客户端可视化接入。",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

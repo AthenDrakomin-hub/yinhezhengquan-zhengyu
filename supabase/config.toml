@@ -1,0 +1,24 @@
+# Supabase Project Configuration
+project_id = "invest-zy-nexus"
+
+[api]
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://invest-zy.vercel.app"]
+jwt_expiry = 3600
+enable_signup = true
+
+[storage]
+enabled = true
+
+[functions]
+nexus-sync = { verify_jwt = false }
