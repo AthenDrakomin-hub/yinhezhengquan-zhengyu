@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../constants';
-import { getGalaxyNews } from '../services/geminiService';
+import { getGalaxyNews } from '../services/marketService';
 import { Transaction, Banner, TradeType } from '../types';
 
 const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
