@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../constants';
 import { getGalaxyNews } from '../services/geminiService';
-import { Transaction, Banner } from '../types';
+import { Transaction, Banner, TradeType } from '../types';
 
 const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
   const [error, setError] = useState(false);
@@ -10,7 +10,7 @@ const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
 
   if (error) {
     return (
-      <div className="absolute inset-0 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628] flex items-center justify-center">
+      <div className="absolute inset-0 bg-linear-to-br from-[#00D4AA]/20 to-[#0A1628] flex items-center justify-center">
         <div className="w-12 h-12 bg-[#00D4AA] rounded-2xl flex items-center justify-center font-black text-[#0A1628] opacity-50">ZY</div>
       </div>
     );
@@ -80,7 +80,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div 
               key={banner.id} 
               onClick={() => onOpenBanner?.(banner)}
-              className="min-w-[90%] md:min-w-[45%] lg:min-w-[32%] snap-center relative h-56 rounded-[32px] overflow-hidden group shadow-2xl border border-[var(--color-border)] cursor-pointer active:scale-[0.98] transition-all"
+              className="min-w-[90%] md:min-w-[45%] lg:min-w-[32%] snap-center relative h-56 rounded-4xl overflow-hidden group shadow-2xl border border-[var(--color-border)] cursor-pointer active:scale-[0.98] transition-all"
             >
               <BannerImage src={banner.img} alt={banner.title} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-8 flex flex-col justify-end">
@@ -95,7 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* 功能矩阵：响应式列数 */}
       <section className="px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-[var(--color-surface)] p-8 rounded-[32px] border border-[var(--color-border)] shadow-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-[var(--color-surface)] p-8 rounded-4xl border border-[var(--color-border)] shadow-sm">
           {[
             { id: 'calendar', label: '投资日历', icon: ICONS.Calendar, color: 'text-[#00D4AA] bg-[#00D4AA]/10', action: onOpenCalendar },
             { id: 'reports', label: '证裕研报', icon: ICONS.Book, color: 'text-blue-500 bg-blue-500/10', action: onOpenReports },
@@ -107,7 +107,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               onClick={feat.action}
               className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-all"
             >
-              <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center border border-[var(--color-border)] shadow-lg group-hover:scale-110 transition-transform ${feat.color}`}>
+              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center border border-[var(--color-border)] shadow-lg group-hover:scale-110 transition-transform ${feat.color}`}>
                 <feat.icon size={28} />
               </div>
               <span className="text-[11px] font-black text-[var(--color-text-secondary)] uppercase tracking-widest text-center">{feat.label}</span>
@@ -118,7 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* 实时快讯 */}
       <section className="px-4">
-        <div className="glass-card overflow-hidden rounded-[32px]">
+        <div className="glass-card overflow-hidden rounded-4xl">
           <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface)]">
             <div className="flex items-center gap-4">
               <div className="w-2.5 h-2.5 bg-[#00D4AA] rounded-full animate-pulse shadow-[0_0_10px_#00D4AA]" />
@@ -145,7 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* 最近交易 */}
       <section className="px-4">
-        <div className="glass-card overflow-hidden rounded-[32px]">
+        <div className="glass-card overflow-hidden rounded-4xl">
           <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface)]">
             <div className="flex items-center gap-4">
               <ICONS.Trade size={18} className="text-[#00D4AA]" />
@@ -160,11 +160,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <div key={trade.id} className="p-6 flex justify-between items-center hover:bg-[var(--color-surface-hover)] transition-colors">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
-                      trade.type === 'BUY' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 
-                      trade.type === 'SELL' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 
+                      trade.type === TradeType.BUY ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 
+                      trade.type === TradeType.SELL ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 
                       'bg-blue-500/10 text-blue-500'
                     }`}>
-                      {trade.type === 'BUY' ? '买' : trade.type === 'SELL' ? '卖' : '申'}
+                      {trade.type === TradeType.BUY ? '买' : trade.type === TradeType.SELL ? '卖' : '申'}
                     </div>
                     <div>
                       <h4 className="text-sm font-black text-[var(--color-text-primary)]">{trade.name}</h4>

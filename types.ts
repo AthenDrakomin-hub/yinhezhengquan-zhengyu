@@ -19,7 +19,7 @@ export interface Transaction {
   quantity: number;
   amount: number;
   timestamp: Date;
-  status: 'SUCCESS' | 'PENDING' | 'FAILED';
+  status: 'SUCCESS' | 'PENDING' | 'FAILED' | 'MATCHING';
 }
 
 export interface ConditionalOrder {
