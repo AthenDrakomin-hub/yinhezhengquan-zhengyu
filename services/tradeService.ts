@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { TradeType } from '../types';
+import { getRealtimeStock } from './marketService';
 
 export const tradeService = {
   /**
@@ -28,6 +29,12 @@ export const tradeService = {
       logoUrl 
     } = params;
 
+    // 在提交交易前，可以再次校验实时价格（前端校验）
+    const realData = await getRealtimeStock(symbol, marketType === 'HK_SHARE' ? 'HK' : 'CN');
+    if (realData.price && Math.abs(realData.price - price) / realData.price > 0.05) {
+      console.warn('价格偏离过大，请刷新行情后再试');
+    }
+
     const { data, error } = await supabase.functions.invoke('create-trade-order', {
       body: {
         market_type: marketType,
@@ -43,7 +50,6 @@ export const tradeService = {
 
     if (error) {
       console.error('交易失败:', error);
-      // 如果是业务逻辑错误 (code >= 1000)，我们返回 data
       if (data && data.error) return data;
       throw new Error(error.message || '交易执行失败');
     }

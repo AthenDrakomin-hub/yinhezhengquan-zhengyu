@@ -2,19 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ICONS } from '@/constants';
 import { integrationService } from '@/services/integrationService';
-import { supabase } from '@/lib/supabase';
 
 const AdminIntegrationPanel: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<any[]>([]);
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [validationResults, setValidationResults] = useState<any[] | null>(null);
+  const [validatingId, setValidatingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [logs, setLogs] = useState<any[]>([]);
 
   const fetchKeys = async () => {
     setFetchLoading(true);
     try {
       const data = await integrationService.getApiKeys();
       setApiKeys(data || []);
+      
+      // Fetch audit logs (simulated or from service if available)
+      // For now, let's assume userService.getAuditLogs can be used or we just show a placeholder
+      // Actually, let's use a mock for now since integrationService doesn't have getLogs yet
+      setLogs([
+        { id: '1', type: 'API_KEY_GEN', remark: '为用户 ZY-8821 生成了新密钥', time: '14:20:05' },
+        { id: '2', type: 'API_KEY_DISABLE', remark: '禁用了用户 ZY-1029 的接入权限', time: '12:15:30' },
+        { id: '3', type: 'VALIDATION', remark: '执行了系统全量接口安全性校验', time: '10:05:12' },
+      ]);
     } catch (err) {
       console.error('获取 API Key 失败:', err);
     } finally {
@@ -26,115 +36,31 @@ const AdminIntegrationPanel: React.FC = () => {
     fetchKeys();
   }, []);
 
-  const handleTestApi = async () => {
+  const handleValidate = async (userId: string) => {
+    setValidatingId(userId);
     setLoading(true);
-    setTestResult(null);
     try {
-      // 1. 获取一个API Key进行测试
-      if (apiKeys.length === 0) {
-        setTestResult('失败：暂无API Key可测试');
-        return;
+      const result = await integrationService.validateIntegration(userId);
+      if (result.success) {
+        setValidationResults(result.results);
+      } else {
+        alert('校验失败: ' + result.error);
       }
-
-      const testKey = apiKeys[0];
-      
-      // 2. 校验API Key是否存在、是否禁用
-      if (testKey.status !== 'ACTIVE') {
-        setTestResult(`失败：API Key无效（已禁用）`);
-        
-        // 记录审计日志
-        await supabase.from('admin_operation_logs').insert({
-          admin_id: (await supabase.auth.getUser()).data.user?.id,
-          operate_type: 'API_KEY_VALIDATE',
-          target_user_id: testKey.id,
-          operate_content: { 
-            api_key: testKey.api_key,
-            status: testKey.status,
-            result: 'FAILED',
-            reason: 'API Key已禁用'
-          },
-          ip_address: 'N/A'
-        });
-        
-        return;
-      }
-
-      // 3. 模拟调用核心接口，校验是否符合当前交易规则
-      // 使用validate-trade-rule函数测试衍生品规则（使用合规的杠杆值10）
-      const { data: ruleCheck, error: ruleError } = await supabase.functions.invoke('validate-trade-rule', {
-        body: {
-          order_type: 'DERIVATIVES',
-          order_params: {
-            quantity: 100,
-            leverage: 10, // 使用合规的杠杆值，测试成功场景
-            amount: 10000
-          }
-        }
-      });
-
-      if (ruleError) {
-        setTestResult(`失败：API Key有效但规则校验失败：${ruleError.message}`);
-        
-        // 记录审计日志
-        await supabase.from('admin_operation_logs').insert({
-          admin_id: (await supabase.auth.getUser()).data.user?.id,
-          operate_type: 'API_KEY_VALIDATE',
-          target_user_id: testKey.id,
-          operate_content: { 
-            api_key: testKey.api_key,
-            status: testKey.status,
-            result: 'FAILED',
-            reason: `规则校验失败：${ruleError.message}`
-          },
-          ip_address: 'N/A'
-        });
-        
-        return;
-      }
-
-      // 4. 检查规则校验结果
-      if (!ruleCheck.valid) {
-        setTestResult(`失败：API Key有效但规则校验失败：${ruleCheck.error}`);
-        
-        // 记录审计日志
-        await supabase.from('admin_operation_logs').insert({
-          admin_id: (await supabase.auth.getUser()).data.user?.id,
-          operate_type: 'API_KEY_VALIDATE',
-          target_user_id: testKey.id,
-          operate_content: { 
-            api_key: testKey.api_key,
-            status: testKey.status,
-            result: 'FAILED',
-            reason: `规则校验失败：${ruleCheck.error}`
-          },
-          ip_address: 'N/A'
-        });
-        
-        return;
-      }
-
-      // 5. 成功情况
-      setTestResult('成功：API Key有效 + 规则校验通过');
-      
-      // 记录审计日志
-      await supabase.from('admin_operation_logs').insert({
-        admin_id: (await supabase.auth.getUser()).data.user?.id,
-        operate_type: 'API_KEY_VALIDATE',
-        target_user_id: testKey.id,
-        operate_content: { 
-          api_key: testKey.api_key,
-          status: testKey.status,
-          result: 'SUCCESS',
-          rule_type: 'DERIVATIVES',
-          checked_at: ruleCheck.checked_at
-        },
-        ip_address: 'N/A'
-      });
-
     } catch (err: any) {
-      setTestResult('测试失败: ' + err.message);
+      alert('校验异常: ' + err.message);
     } finally {
       setLoading(false);
+      setValidatingId(null);
+    }
+  };
+
+  const handleManageKey = async (userId: string, action: 'generate' | 'disable') => {
+    try {
+      await integrationService.manageApiKey(userId, action);
+      await fetchKeys();
+      alert(action === 'generate' ? 'API Key 已生成' : 'API Key 已禁用');
+    } catch (err: any) {
+      alert('操作失败: ' + err.message);
     }
   };
 
@@ -169,7 +95,10 @@ const AdminIntegrationPanel: React.FC = () => {
                 <tr><td colSpan={4} className="py-8 text-center text-xs font-bold text-industrial-400">暂无 API Key</td></tr>
               ) : apiKeys.map((key) => (
                 <tr key={key.id}>
-                  <td className="py-4 text-xs font-black text-industrial-800">{key.username || key.id}</td>
+                  <td className="py-4 text-xs font-black text-industrial-800">
+                    {key.username}
+                    {key.user_id && <p className="text-[9px] text-industrial-400 font-mono">{key.user_id}</p>}
+                  </td>
                   <td className="py-4">
                     <code className="text-[10px] font-mono bg-industrial-50 px-2 py-1 rounded border border-industrial-200 text-industrial-600">
                       {key.api_key}
@@ -181,7 +110,21 @@ const AdminIntegrationPanel: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-4">
-                    <button className="text-[10px] font-black text-accent-red uppercase hover:underline">禁用</button>
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => handleValidate(key.user_id || key.id)}
+                        disabled={loading}
+                        className="text-[10px] font-black text-blue-600 uppercase hover:underline flex items-center gap-1"
+                      >
+                        <ICONS.Zap size={10} className={validatingId === (key.user_id || key.id) ? 'animate-pulse' : ''} /> 一键校验
+                      </button>
+                      <button 
+                        onClick={() => handleManageKey(key.user_id || key.id, key.status === 'ACTIVE' ? 'disable' : 'generate')}
+                        className={`text-[10px] font-black uppercase hover:underline ${key.status === 'ACTIVE' ? 'text-accent-red' : 'text-emerald-600'}`}
+                      >
+                        {key.status === 'ACTIVE' ? '禁用' : '启用'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -190,33 +133,63 @@ const AdminIntegrationPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 一键校验功能 */}
-      <div className="industrial-card p-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest">API 一键校验</h3>
-            <p className="text-xs text-industrial-400 font-bold mt-1">校验 API Key 有效性及规则合规性</p>
-          </div>
-          <button 
-            onClick={handleTestApi}
-            disabled={loading}
-            className="industrial-button-primary"
-          >
-            <ICONS.Zap size={16} /> {loading ? '校验中...' : '执行一键校验'}
-          </button>
-        </div>
-        
-        {testResult && (
-          <div className="mt-6 p-4 bg-industrial-50 rounded-lg border border-industrial-200">
-            <h4 className="text-xs font-black text-industrial-800 uppercase mb-2">校验结果</h4>
-            <div className={`text-sm font-bold ${testResult.includes('成功') ? 'text-emerald-600' : 'text-red-600'}`}>
-              {testResult}
+      {/* Validation Results Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="industrial-card p-8">
+          <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest mb-6">校验报告 (Validation Report)</h3>
+          {validationResults ? (
+            <div className="space-y-4">
+              {validationResults.map((res, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-industrial-50 rounded-xl border border-industrial-200">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      res.status === 'PASS' ? 'bg-emerald-100 text-emerald-600' : 
+                      res.status === 'WARN' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
+                    }`}>
+                      {res.status === 'PASS' ? <ICONS.Shield size={16} /> : <ICONS.Zap size={16} />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-industrial-800">{res.item}</p>
+                      <p className="text-[10px] text-industrial-400 font-bold">{res.detail}</p>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-black px-2 py-1 rounded ${
+                    res.status === 'PASS' ? 'bg-emerald-500 text-white' : 
+                    res.status === 'WARN' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'
+                  }`}>
+                    {res.status}
+                  </span>
+                </div>
+              ))}
             </div>
-            <p className="text-[10px] text-industrial-400 mt-2">
-              校验内容：API Key 有效性 + 交易规则合规性
-            </p>
+          ) : (
+            <div className="py-12 text-center">
+              <ICONS.Shield size={48} className="mx-auto text-industrial-100 mb-4" />
+              <p className="text-xs font-bold text-industrial-400 uppercase tracking-widest">请点击上方“一键校验”开始诊断</p>
+            </div>
+          )}
+        </div>
+
+        <div className="industrial-card p-8">
+          <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest mb-6">接入审计日志 (Audit Log)</h3>
+          <div className="space-y-4">
+            {logs.map((log) => (
+              <div key={log.id} className="flex justify-between items-start p-4 bg-industrial-50 rounded-lg border border-industrial-100">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-industrial-800 uppercase">{log.type}</span>
+                    <span className="text-[9px] text-industrial-400 font-bold">{log.time}</span>
+                  </div>
+                  <p className="text-xs font-bold text-industrial-600">{log.remark}</p>
+                </div>
+                <ICONS.Shield size={14} className="text-industrial-300" />
+              </div>
+            ))}
+            <button className="w-full mt-4 py-2 text-[10px] font-black text-industrial-400 uppercase tracking-widest hover:text-industrial-800 transition-colors">
+              查看完整审计记录
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -88,11 +88,13 @@ const AdminTradeManagement: React.FC = () => {
                       trade.status === 'SUCCESS' ? 'bg-emerald-50 text-emerald-600' : 
                       trade.status === 'MATCHING' ? 'bg-blue-50 text-blue-600' :
                       trade.status === 'CANCELLED' ? 'bg-industrial-100 text-industrial-400' :
+                      trade.status === 'FAILED' ? 'bg-red-50 text-red-600' :
                       'bg-orange-50 text-orange-600'
                     }`}>
                       {trade.status === 'SUCCESS' ? '成功' : 
                        trade.status === 'MATCHING' ? '撮合中' :
-                       trade.status === 'CANCELLED' ? '已撤单' : '处理中'}
+                       trade.status === 'CANCELLED' ? '已撤单' : 
+                       trade.status === 'FAILED' ? '失败' : '处理中'}
                     </span>
                   </td>
                 </tr>

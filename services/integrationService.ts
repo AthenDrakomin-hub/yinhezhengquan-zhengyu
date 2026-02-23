@@ -6,12 +6,16 @@ export const integrationService = {
    */
   async getApiKeys() {
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, api_key, status')
-      .not('api_key', 'is', null);
+      .from('api_access_keys')
+      .select('*, profiles(username)');
 
     if (error) throw error;
-    return data;
+    
+    // 适配前端展示
+    return data.map(item => ({
+      ...item,
+      username: item.profiles?.username || '系统/外部客户端'
+    }));
   },
 
   /**
@@ -27,11 +31,11 @@ export const integrationService = {
   },
 
   /**
-   * 测试接口
+   * 一键校验接入有效性 (API Key + 规则)
    */
-  async testApi(path: string, params: any) {
-    const { data, error } = await supabase.functions.invoke('get-market-data', {
-      body: params
+  async validateIntegration(userId: string) {
+    const { data, error } = await supabase.functions.invoke('admin-validate-integration', {
+      body: { target_user_id: userId }
     });
 
     if (error) throw error;

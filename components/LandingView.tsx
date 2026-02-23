@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ICONS } from '../constants';
+import * as Constants from '../constants';
+
+const ICONS = Constants.ICONS;
 
 interface LandingViewProps {
   onEnterLogin: () => void;
@@ -30,13 +32,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
     }
   ];
 
-  const announcements = [
-    { type: '系统公告', title: '关于系统升级维护的公告', date: '2026-02-13', color: 'bg-red-50 text-red-500' },
-    { type: '交易提醒', title: '2026年春节假期交易安排通知', date: '2026-02-10', color: 'bg-orange-50 text-orange-500' },
-    { type: '业务通知', title: '新增港股通标的证券公告', date: '2026-02-08', color: 'bg-blue-50 text-blue-500' },
-    { type: '产品公告', title: '理财产品到期兑付公告', date: '2026-02-05', color: 'bg-rose-50 text-rose-500' }
-  ];
-
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -45,33 +40,44 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
   }, [slides.length]);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col animate-slide-up text-slate-900 selection:bg-red-100 selection:text-red-700">
-      {/* 1. 顶部旗舰导航栏 */}
+    <div className="min-h-screen bg-white flex flex-col animate-slide-up text-slate-900 selection:bg-[#E30613] selection:text-white">
+      {/* 1. 顶部工具栏 (Utility Bar) */}
+      <div className="hidden md:block bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 md:px-12 h-10 flex justify-between items-center text-[11px] font-medium text-slate-500">
+          <div className="flex gap-6">
+            <span className="hover:text-[#E30613] cursor-pointer transition-colors">投资者关系</span>
+            <span className="hover:text-[#E30613] cursor-pointer transition-colors">关于银河</span>
+            <span className="hover:text-[#E30613] cursor-pointer transition-colors">人才招聘</span>
+            <span className="hover:text-[#E30613] cursor-pointer transition-colors">English</span>
+          </div>
+          <div className="flex gap-6">
+            <span className="hover:text-[#E30613] cursor-pointer transition-colors">站点地图</span>
+            <span className="hover:text-[#E30613] cursor-pointer transition-colors">联系我们</span>
+            <span className="hover:text-[#E30613] cursor-pointer transition-colors">无障碍辅助</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. 顶部旗舰导航栏 */}
       <nav className="h-20 px-4 md:px-12 flex justify-between items-center bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 shadow-sm">
         <div className="flex items-center gap-8 lg:gap-12">
           <div className="flex items-center gap-3">
             <img src={LOGO_URL} alt="中国银河证券 证裕交易单元" className="h-10 md:h-12 object-contain" />
-            {/* 移除 redundant 文本 "证裕交易单元"，因为 Logo 已包含品牌信息 */}
           </div>
           <div className="hidden lg:flex items-center gap-8">
-            {['首页', '机构理财', '托管与基金服务', '更多服务'].map(item => (
-              <span key={item} className="text-[11px] font-bold text-slate-600 hover:text-red-600 cursor-pointer transition-colors whitespace-nowrap">{item}</span>
+            {['首页', '银河证券-证裕交易单元APP', '快速开户', '登录Nexus'].map(item => (
+              <span 
+                key={item} 
+                onClick={item === '快速开户' ? onQuickOpen : item === '登录Nexus' ? onEnterLogin : undefined}
+                className={`text-[13px] font-bold ${item === '首页' ? 'text-[#E30613]' : 'text-slate-700'} hover:text-[#E30613] cursor-pointer transition-colors whitespace-nowrap`}
+              >
+                {item}
+              </span>
             ))}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={onQuickOpen}
-            className="hidden sm:block px-6 py-2 bg-blue-600 text-white rounded-lg text-xs font-black shadow-md shadow-blue-200 active:scale-95 transition-all"
-          >
-            快速开户
-          </button>
-          <button 
-            onClick={onEnterLogin}
-            className="px-6 py-2 border-2 border-blue-600 text-blue-600 rounded-lg text-xs font-black hover:bg-blue-50 active:scale-95 transition-all"
-          >
-            登录 Nexus
-          </button>
+          {/* Buttons removed as they are now in the main menu per request */}
         </div>
       </nav>
 
@@ -101,63 +107,108 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
         </div>
       </section>
 
-      {/* 3. 核心业务快速入口 */}
-      <section className="max-w-7xl mx-auto w-full px-4 md:px-12 -mt-16 md:-mt-24 relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {[
-          { label: 'A股交易', desc: '沪深A股实时委托交易', icon: '📈', color: 'bg-red-50 text-red-500', action: onQuickOpen },
-          { label: '港股通', desc: '投资香港优质蓝筹股票', icon: '🌐', color: 'bg-blue-50 text-blue-500', action: onQuickOpen },
-          { label: '新股申购', desc: '一键顶格参与极速申购', icon: '📊', color: 'bg-emerald-50 text-emerald-500', action: onQuickOpen },
-          { label: '理财产品', desc: '稳健型收益产品天天赚', icon: '📒', color: 'bg-orange-50 text-orange-500', action: onQuickOpen },
-        ].map((item, idx) => (
-          <div key={idx} onClick={item.action} className="bg-white p-6 md:p-8 rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-4 hover:-translate-y-2 transition-all cursor-pointer group">
-            <div className={`w-12 h-12 ${item.color} rounded-2xl flex items-center justify-center text-xl md:text-2xl shadow-inner`}>
-              {item.icon}
+      {/* 2.5 指数行情条 (Market Bar) */}
+      <div className="bg-slate-900 text-white py-3 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 md:px-12 flex items-center gap-12 animate-marquee whitespace-nowrap">
+          {[
+            { name: '上证指数', value: '3,245.12', change: '+1.24%', color: 'text-red-500' },
+            { name: '深证成指', value: '10,456.78', change: '+0.85%', color: 'text-red-500' },
+            { name: '创业板指', value: '2,123.45', change: '-0.12%', color: 'text-emerald-500' },
+            { name: '恒生指数', value: '19,876.54', change: '+1.56%', color: 'text-red-500' },
+            { name: '中国银河', value: '12.45', change: '+2.31%', color: 'text-red-500' }
+          ].map((idx, i) => (
+            <div key={i} className="flex items-center gap-3 text-xs font-bold">
+              <span className="text-slate-400">{idx.name}</span>
+              <span>{idx.value}</span>
+              <span className={idx.color}>{idx.change}</span>
             </div>
-            <div>
-              <h4 className="font-black text-slate-900 text-sm md:text-base group-hover:text-red-600 transition-colors">{item.label}</h4>
-              <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-1 leading-relaxed">{item.desc}</p>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {/* 4. 系统公告板块 */}
-      <section className="py-16 md:py-24 max-w-7xl mx-auto w-full px-4 md:px-12">
-        <div className="space-y-4">
-          {announcements.map((ann, idx) => (
-            <div key={idx} className="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-white hover:shadow-lg hover:shadow-slate-100 transition-all cursor-pointer rounded-2xl border border-transparent hover:border-slate-100 group">
-              <div className="flex items-center gap-4">
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded ${ann.color} uppercase tracking-tighter`}>{ann.type}</span>
-                <span className="text-xs md:text-sm font-bold text-slate-800 group-hover:text-red-600 transition-colors">{ann.title}</span>
-              </div>
-              <span className="text-[10px] font-mono font-bold text-slate-400">{ann.date}</span>
+          ))}
+          {/* Duplicate for seamless loop */}
+          {[
+            { name: '上证指数', value: '3,245.12', change: '+1.24%', color: 'text-red-500' },
+            { name: '深证成指', value: '10,456.78', change: '+0.85%', color: 'text-red-500' },
+            { name: '创业板指', value: '2,123.45', change: '-0.12%', color: 'text-emerald-500' },
+            { name: '恒生指数', value: '19,876.54', change: '+1.56%', color: 'text-red-500' },
+            { name: '中国银河', value: '12.45', change: '+2.31%', color: 'text-red-500' }
+          ].map((idx, i) => (
+            <div key={i+'_dup'} className="flex items-center gap-3 text-xs font-bold">
+              <span className="text-slate-400">{idx.name}</span>
+              <span>{idx.value}</span>
+              <span className={idx.color}>{idx.change}</span>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* 5.5 中国银河介绍板块 (Refined to match image) */}
+      <section className="py-16 md:py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 md:px-12 text-center">
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">中国银河证券</h2>
+          <p className="text-lg text-slate-500 font-medium mb-16">中国证券行业领先的综合金融服务提供商</p>
+          
+          <div className="flex flex-col lg:flex-row items-center gap-0 border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+            <div className="lg:w-1/2 aspect-video bg-slate-100 relative group cursor-pointer">
+              <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200" alt="Video Placeholder" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2"></div>
+                </div>
+              </div>
+              <div className="absolute bottom-8 left-8 text-white text-left">
+                <p className="text-4xl font-black italic">百年盛世 筑梦银河</p>
+              </div>
+            </div>
+            <div className="lg:w-1/2 p-12 text-left">
+              <h3 className="text-xl font-black text-slate-900 mb-8">关于银河</h3>
+              <p className="text-sm text-slate-500 leading-relaxed mb-8">
+                中国银河证券股份有限公司（股票代码：06881.HK，601881.SH，下称“公司”），中国最大的国有证券公司之一。公司根植中国资本市场超25年，服务中国及“一带一路”沿线超1900万客户，客户托管资产超6万亿元，已发展成为亚洲网络布局领先的投资银行。公司实际控制人为中央汇金投资有限责任公司，其母公司为中国投资有限责任公司，是中国的国家主权财富基金。
+              </p>
+              <a href="#" className="text-sm font-bold text-slate-400 hover:text-[#E30613] transition-colors flex items-center gap-2">
+                了解更多 <ICONS.ArrowRight size={16} />
+              </a>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* 5. APP 下载中心 (全新设计以匹配图片) */}
-      <section className="bg-[#E30613] py-20 md:py-32 relative overflow-hidden text-center text-white">
-        <div className="max-w-4xl mx-auto space-y-16 px-6">
-          <div className="space-y-4">
-            <h3 className="text-3xl md:text-4xl font-black tracking-tight">下载银河证券APP</h3>
-            <p className="text-white/80 text-xs md:text-base font-medium max-w-xl mx-auto leading-relaxed">
-              扫码下载官方APP，开户交易更便捷。新用户专享多重好礼，惊喜不断！
-            </p>
+      {/* 5. 综合金融服务板块 (Refined with images) */}
+      <section className="py-16 md:py-24 bg-white">
+        <div className="max-w-7xl mx-auto w-full px-4 md:px-12">
+          <div className="text-center mb-16">
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-4">综合金融服务</h2>
+            <p className="text-lg text-slate-600 font-medium">金融报国 客户至上</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 max-w-4xl mx-auto">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
-              { label: '扫码下载', icon: QR_PLACEHOLDER },
-              { label: '应用宝', icon: 'https://img.icons8.com/color/144/android-os.png' },
-              { label: 'App Store', icon: 'https://img.icons8.com/ios-filled/150/ffffff/apple-app-store.png' }
-            ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-6 group cursor-pointer">
-                <div className="w-full aspect-square bg-white rounded-3xl md:rounded-[40px] flex items-center justify-center p-8 md:p-12 shadow-2xl group-hover:scale-105 transition-transform duration-500">
-                  <img src={item.icon} alt={item.label} className={`w-full h-full object-contain ${idx > 0 ? 'opacity-20 grayscale scale-75' : ''}`} />
+              {
+                title: '财富管理',
+                desc: '以客户为中心，融合证券经纪、金融产品、投资顾问、证券金融、机构服务等业务，依托"中国银河证券"APP等智能交易工具、分公司机构网点优势，我们为客户提供多元化、智能化、专业化、策略化服务。',
+                img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200'
+              },
+              {
+                title: '投融资业务',
+                desc: '以企业为中心，遵循"全员承揽、全照经营、全程风控、全面协同"的展业原则，打造跨条线、跨市场的一体化价值链条，通过投行业务和投资业务协同，支持实体经济，为客户提供多元化、全周期的综合金融服务解决方案。',
+                img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200'
+              },
+              {
+                title: '研究业务',
+                desc: '作为一家智库型研究机构，银河研究院面向国内外各类机构投资者提供卖方研究服务，向各级政府部门、监管机构与企业提供研究咨询服务，研究领域覆盖宏观、战略、政策、策略、行业、企业、区域、国际、基金、产业等。',
+                img: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=1200'
+              },
+              {
+                title: '国际业务',
+                desc: '凭借银河国际及银河海外在东盟地区的业务网络，我们为境内外各类型客户提供交易、融资、并购、投资和财富管理服务，致力成为"亚洲金融门户"。',
+                img: 'https://images.unsplash.com/photo-1449156001935-d28bc1ad7ead?auto=format&fit=crop&q=80&w=1200'
+              }
+            ].map((item, i) => (
+              <div key={i} className="border border-slate-100 rounded-lg overflow-hidden hover:shadow-xl transition-all group">
+                <div className="h-64 overflow-hidden">
+                  <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 </div>
-                <div className="px-8 py-2 bg-white/10 rounded-full backdrop-blur-md border border-white/20">
-                  <span className="text-white font-black text-xs md:text-sm uppercase tracking-widest">{item.label}</span>
+                <div className="p-8">
+                  <h3 className="text-xl font-black text-slate-900 mb-4">{item.title}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -165,93 +216,224 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
         </div>
       </section>
 
-      {/* 6. 页脚 */}
-      <footer className="bg-[#f4f6f8] pt-12 pb-8 border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8">
-          
-          {/* 友情链接与站点地图 */}
-          <div className="md:col-span-4 space-y-8">
-            <div>
-              <button className="flex items-center gap-2 bg-white px-4 py-2 border border-slate-300 rounded text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                <span className="text-[8px] transform rotate-180">▼</span> 友情链接
-              </button>
+      {/* 6. 业务公告板块 (Refined with tabs and background) */}
+      <section className="py-16 md:py-24 relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1920" alt="Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-[#2B3B52]/90 backdrop-blur-sm"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 md:px-12 relative z-10">
+          <div className="flex flex-col lg:flex-row gap-12">
+            {/* 左侧 Tabs */}
+            <div className="lg:w-1/4 flex flex-col gap-8 text-white/60">
+              {['业务公告', '公司公告', '媒体关注'].map((tab, i) => (
+                <div key={tab} className={`text-2xl font-black cursor-pointer transition-all flex items-center gap-4 ${i === 0 ? 'text-white' : 'hover:text-white'}`}>
+                  {i === 2 && <span className="w-1 h-6 bg-white"></span>}
+                  {tab}
+                </div>
+              ))}
             </div>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-bold text-slate-600">
-                <span className="cursor-pointer hover:text-red-600">人员公示</span>
-                <span className="cursor-pointer hover:text-red-600">营业网点</span>
-                <span className="cursor-pointer hover:text-red-600">投资者教育</span>
+            
+            {/* 右侧列表 */}
+            <div className="lg:w-3/4">
+              <div className="space-y-6">
+                {[
+                  { title: '中国银河证券助力海南打造全球供应链超级接口', date: '2026-01-20' },
+                  { title: '中国银河证券：聚力海南自贸港 共绘全球供应链关键枢纽新蓝图', date: '2026-01-16' },
+                  { title: '券商集约化运营并无统一模板，银河证券北京互联网分公司解答四个关注', date: '2025-12-22' },
+                  { title: '中国银河证券刘冰：从规模增长转向价值深耕 做好社会财富的专业管理者', date: '2025-12-22' },
+                  { title: '中资券商掘金东南亚 深度拆解银河证券打法', date: '2025-12-01' },
+                  { title: '中国银河证券党委书记、董事长王晟：深耕文化建设廿五载 构建特色金融发展...', date: '2025-11-18' }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between text-white/80 hover:text-white transition-colors cursor-pointer group pb-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <span className="w-1 h-1 bg-white rounded-full"></span>
+                      <span className="text-sm font-medium group-hover:translate-x-2 transition-transform">{item.title}</span>
+                    </div>
+                    <span className="text-xs font-mono opacity-60">{item.date}</span>
+                  </div>
+                ))}
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-bold text-slate-600">
-                <span className="cursor-pointer hover:text-red-600">银河交易终端应急措施公告</span>
-                <span className="cursor-pointer hover:text-red-600">投诉与建议</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 联系我们 */}
-          <div className="md:col-span-5 space-y-6 md:border-l md:border-slate-200 md:pl-8">
-            <h4 className="text-[13px] font-black text-slate-800">联系我们</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 text-[11px] text-slate-600 font-medium">
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5">📞</span>
-                <div>
-                  <p className="text-slate-400 text-[9px] font-bold uppercase mb-0.5">客服热线</p>
-                  <p className="text-slate-800 font-bold">95551 或 4008-888-888</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5">📧</span>
-                <div>
-                  <p className="text-slate-400 text-[9px] font-bold uppercase mb-0.5">邮编</p>
-                  <p className="text-slate-800 font-bold">100033</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5">✉️</span>
-                <div>
-                  <p className="text-slate-400 text-[9px] font-bold uppercase mb-0.5">公司邮箱</p>
-                  <p className="text-slate-800 font-bold">webmaster@chinastock.com.cn</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5">✉️</span>
-                <div>
-                  <p className="text-slate-400 text-[9px] font-bold uppercase mb-0.5">纪委邮箱</p>
-                  <p className="text-slate-800 font-bold">xfjb@chinastock.com.cn</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2 col-span-1 sm:col-span-2">
-                <span className="mt-0.5">📍</span>
-                <div>
-                  <p className="text-slate-400 text-[9px] font-bold uppercase mb-0.5">地址</p>
-                  <p className="text-slate-800 font-bold">中国北京市丰台区西营街8号院1号楼青海大厦</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 关注我们 */}
-          <div className="md:col-span-3 space-y-6 md:border-l md:border-slate-200 md:pl-8">
-            <h4 className="text-[13px] font-black text-slate-800">关注我们</h4>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
-                <span className="text-slate-400">💬</span> 微信公众号
-              </div>
-              <div className="w-24 h-24 bg-white p-1.5 border border-slate-200 rounded shadow-sm">
-                <img src={QR_PLACEHOLDER} alt="WeChat QR" className="w-full h-full object-contain" />
+              <div className="mt-8 flex justify-end">
+                <a href="#" className="text-white text-sm font-bold flex items-center gap-2 hover:underline">
+                  更多 <ICONS.ArrowRight size={16} />
+                </a>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* 底部版权与备案信息 */}
-        <div className="max-w-7xl mx-auto px-4 md:px-12 mt-12 pt-8 border-t border-slate-200 text-center">
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] md:text-[11px] font-bold text-slate-400">
-            <span>版权所有 © 中国银河证券股份有限公司</span>
-            <span>京公网安备 11010202007775 号</span>
-            <span>京 ICP 备 10021160 号</span>
-            <span>本公司开展网上证券委托业务已经中国证监会核准</span>
+      {/* 4. 银河观点板块 (Refined to match image) */}
+      <section className="py-16 md:py-24 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 md:px-12 flex flex-col lg:flex-row gap-0">
+          {/* 左侧标题区 */}
+          <div className="lg:w-1/4 bg-[#2B3B52] p-12 flex flex-col justify-between text-white relative">
+            <div>
+              <h2 className="text-3xl font-black mb-4">银河观点</h2>
+              <div className="w-12 h-1 bg-[#E30613] mb-8"></div>
+            </div>
+            <div className="space-y-8">
+              <button className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/10 transition-all">
+                <ICONS.ArrowLeft size={20} />
+              </button>
+              <a href="https://www.chinastock.com.cn/yhgd" target="_blank" rel="noopener noreferrer" className="inline-block px-6 py-2 border border-white rounded-full text-sm font-bold hover:bg-white hover:text-[#2B3B52] transition-all">
+                更多观点
+              </a>
+            </div>
+          </div>
+          
+          {/* 右侧内容区 (Carousel) */}
+          <div className="lg:w-3/4 bg-slate-50 p-8 md:p-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                {
+                  tag: '银河证券',
+                  date: '2026-01-31',
+                  title: '【中国银河宏观】美联储迎来供给侧改革者',
+                  desc: 'Trump提名Warsh出任新一任美联储主席：美东时间1月30日，特朗普正式提名Kevin Warsh出任美联储主席，标志着自2018年Jerome Powell上任以来延续近八年的"鲍威尔时代"即将落幕...',
+                  img: 'https://images.unsplash.com/photo-1611974717482-58f00017963d?auto=format&fit=crop&q=80&w=800'
+                },
+                {
+                  tag: '银河证券',
+                  date: '2026-02-02',
+                  title: '【中国银河策略】2025年业绩预告有哪些线索值得关注？',
+                  desc: '全部A股与上市板预喜率：截至1月31日，2956家A股上市公司已披露2025年年报业绩预告，披露率为54%。其中，1092家预喜，预喜率为37%...',
+                  img: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800'
+                },
+                {
+                  tag: '银河证券',
+                  date: '2026-01-27',
+                  title: '【中国银河宏观】人民币升值逻辑再审视',
+                  desc: '市场的焦点：人民币破7之后。2025年年末，在岸和离岸人民币汇率均升破7.0这一市场关键心理点位，这一点位也是前低（2024年9月30日为7.0156），市场单边的升值预期随之进一步扩散...',
+                  img: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&q=80&w=800'
+                }
+              ].map((item, i) => (
+                <div key={i} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow group cursor-pointer">
+                  <div className="h-40 overflow-hidden">
+                    <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-base font-black text-slate-900 mb-3 line-clamp-2 group-hover:text-[#E30613] transition-colors">{item.title}</h3>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400 mb-4">
+                      <span>{item.tag}</span>
+                      <span>|</span>
+                      <span>{item.date}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-4">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 银河在线 (Galaxy Online) Section */}
+      <section className="py-16 md:py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 md:px-12">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            <div className="lg:w-1/2">
+              <h2 className="text-3xl font-black text-slate-900 mb-6">银河在线</h2>
+              <p className="text-lg text-slate-500 mb-10">随时随地，尊享专业金融服务</p>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="p-8 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group cursor-pointer">
+                  <div className="w-16 h-16 bg-red-50 text-[#E30613] rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <ICONS.Zap size={32} />
+                  </div>
+                  <h4 className="text-lg font-black text-slate-900 mb-2">中国银河证券APP</h4>
+                  <p className="text-xs text-slate-400">扫码下载，开启财富之旅</p>
+                </div>
+                <div className="p-8 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group cursor-pointer">
+                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <ICONS.Market size={32} />
+                  </div>
+                  <h4 className="text-lg font-black text-slate-900 mb-2">营业网点查询</h4>
+                  <p className="text-xs text-slate-400">全国500+网点为您服务</p>
+                </div>
+              </div>
+            </div>
+            <div className="lg:w-1/2 flex justify-center">
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-tr from-[#E30613]/20 to-transparent blur-2xl rounded-full"></div>
+                <div className="relative p-4 bg-white rounded-[40px] shadow-2xl border border-slate-100">
+                  <img src={QR_PLACEHOLDER} alt="Download App" className="w-48 h-48 md:w-64 md:h-64" />
+                  <div className="mt-6 text-center">
+                    <p className="text-sm font-black text-slate-900">扫一扫下载证裕交易单元APP</p>
+                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Scan to download Nexus App</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. 底部导航与版权 (Refined to match image) */}
+      <footer className="bg-[#1A1A1A] pt-16 pb-4 text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 md:px-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+            <div>
+              <div className="flex items-center gap-2 mb-8 cursor-pointer group">
+                <h4 className="text-white text-sm font-bold">友情链接</h4>
+                <ICONS.ArrowRight size={14} className="rotate-90 group-hover:translate-y-1 transition-transform" />
+              </div>
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
+                {['人员公示', '营业网点', '网站声明', '投资者教育', '银河交易终端应急措施公告', '反洗钱', '投诉与建议', '非法仿冒机构信息公示'].map(item => (
+                  <li key={item} className="hover:text-white cursor-pointer transition-colors">{item}</li>
+                ))}
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-white text-sm font-bold mb-8">联系我们</h4>
+              <ul className="space-y-4 text-[13px]">
+                <li className="flex items-center gap-3">
+                  <ICONS.Phone size={16} className="text-slate-500" />
+                  <span>客服热线：<span className="text-white font-bold">95551</span> 或 4008-888-888</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <ICONS.Mail size={16} className="text-slate-500" />
+                  <span>公司邮箱：webmaster@chinastock.com.cn</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <ICONS.Globe size={16} className="text-slate-500" />
+                  <span>地址：北京市丰台区西营街8号院1号楼青海金融大厦</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <ICONS.Shield size={16} className="text-slate-500" />
+                  <span>邮编：100073</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <ICONS.Activity size={16} className="text-slate-500" />
+                  <span>纪委邮箱：xfjb@chinastock.com.cn</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="flex flex-col items-center md:items-end">
+              <h4 className="text-white text-sm font-bold mb-8">关注我们</h4>
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2 text-[13px]">
+                  <ICONS.Globe size={16} className="text-slate-500" />
+                  <span>微信公众号</span>
+                </div>
+                <div className="p-2 bg-white rounded-lg">
+                  <img src={QR_PLACEHOLDER} alt="QR Code" className="w-24 h-24" />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-8 border-t border-white/5 flex flex-col items-center gap-4 text-[11px] tracking-tight">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+              <span>版权所有©中国银河证券股份有限公司</span>
+              <span>京公网安备11010602201151号</span>
+              <span>京ICP备10021160号</span>
+              <span>本公司开展网上证券业务业务已经中国证监会核准</span>
+              <span className="flex items-center gap-1">本网站支持 <span className="px-1 border border-slate-600 rounded text-[9px]">IPv6</span></span>
+            </div>
           </div>
         </div>
       </footer>

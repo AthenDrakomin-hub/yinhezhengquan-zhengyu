@@ -20,10 +20,9 @@ import EducationBaseView from './components/EducationBaseView';
 import ComplianceShieldView from './components/ComplianceShieldView';
 import SupabaseConnectionCheck from './components/SupabaseConnectionCheck';
 import { supabase, isDemoMode } from './lib/supabase';
-import { MOCK_ASSET_HISTORY, BANNER_MOCK } from './constants';
+import { MOCK_STOCKS, MOCK_ASSET_HISTORY, BANNER_MOCK } from './constants';
 import { authService } from './services/authService';
 import { tradeService } from './services/tradeService';
-import { getRealtimeStock } from './services/marketService';
 import { TradeType, Holding, Transaction, UserAccount, Stock, Banner } from './types';
 
 import AdminLayout from './components/admin/AdminLayout';
@@ -107,29 +106,6 @@ const AppContent: React.FC = () => {
         const profile = await authService.getSession();
         setUserRole(profile?.role || 'user');
         syncAccountData(session.user.id);
-        
-        // 监听该用户的交易状态变化
-        const tradesChannel = supabase
-          .channel(`trades_changes_${session.user.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'trades',
-              filter: `user_id=eq.${session.user.id}`
-            },
-            () => {
-              // 当交易状态变化时，同步账户数据
-              syncAccountData(session.user.id);
-            }
-          )
-          .subscribe();
-          
-        // 返回清理函数
-        return () => {
-          supabase.removeChannel(tradesChannel);
-        };
       } else {
         setUserRole('user');
       }
@@ -196,72 +172,10 @@ const AppContent: React.FC = () => {
     }
   }, [session, syncAccountData]);
 
-  // 包装详情页组件 - 使用真实行情数据
+  // 包装详情页组件
   const StockDetailWrapper = () => {
     const { symbol } = useParams();
-    const [stock, setStock] = useState<Stock | null>(null);
-    const [loading, setLoading] = useState(true);
-    
-    useEffect(() => {
-      const loadStock = async () => {
-        if (!symbol) {
-          setStock(null);
-          setLoading(false);
-          return;
-        }
-        
-        try {
-          setLoading(true);
-          // 假设symbol格式如 '600519' 或 '00700'，需要判断市场
-          const market = symbol.startsWith('0') || symbol.startsWith('3') || symbol.startsWith('6') ? 'CN' : 'HK';
-          const stockData = await getRealtimeStock(symbol, market);
-          
-          // getRealtimeStock返回Partial<Stock>，需要转换为完整Stock
-          const fullStock: Stock = {
-            symbol,
-            name: stockData.name || symbol,
-            price: stockData.price || 0,
-            change: stockData.change || 0,
-            changePercent: stockData.changePercent || 0,
-            market: market as any,
-            sparkline: [],
-            logoUrl: undefined
-          };
-          
-          setStock(fullStock);
-        } catch (error) {
-          console.error('加载股票数据失败:', error);
-          setStock(null);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      loadStock();
-    }, [symbol]);
-    
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <div className="w-8 h-8 border-2 border-[#00D4AA] border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    }
-    
-    if (!stock) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full space-y-4">
-          <div className="text-[#FF6B6B]">无法加载股票数据</div>
-          <button 
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-[var(--color-surface)] rounded-xl text-sm"
-          >
-            返回
-          </button>
-        </div>
-      );
-    }
-    
+    const stock = MOCK_STOCKS.find(s => s.symbol === symbol) || MOCK_STOCKS[0];
     return <StockDetailView stock={stock} onBack={() => navigate(-1)} onTradeClick={() => navigate(`/trade?symbol=${symbol}`)} />;
   };
 
@@ -274,53 +188,7 @@ const AppContent: React.FC = () => {
   const TradeWrapper = () => {
     const [searchParams] = useSearchParams();
     const symbol = searchParams.get('symbol');
-    const [stock, setStock] = useState<Stock | null>(null);
-    const [loading, setLoading] = useState(true);
-    
-    useEffect(() => {
-      const loadStock = async () => {
-        if (!symbol) {
-          setStock(null);
-          setLoading(false);
-          return;
-        }
-        
-        try {
-          setLoading(true);
-          const market = symbol.startsWith('0') || symbol.startsWith('3') || symbol.startsWith('6') ? 'CN' : 'HK';
-          const stockData = await getRealtimeStock(symbol, market);
-          
-          const fullStock: Stock = {
-            symbol,
-            name: stockData.name || symbol,
-            price: stockData.price || 0,
-            change: stockData.change || 0,
-            changePercent: stockData.changePercent || 0,
-            market: market as any,
-            sparkline: [],
-            logoUrl: undefined
-          };
-          
-          setStock(fullStock);
-        } catch (error) {
-          console.error('加载交易股票数据失败:', error);
-          setStock(null);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      loadStock();
-    }, [symbol]);
-    
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <div className="w-8 h-8 border-2 border-[#00D4AA] border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    }
-    
+    const stock = MOCK_STOCKS.find(s => s.symbol === symbol) || null;
     return <TradePanel account={account} onExecute={executeTrade} initialStock={stock} />;
   };
 
@@ -392,7 +260,7 @@ const AppContent: React.FC = () => {
         <Route path="/compliance" element={<ProtectedRoute session={session} role={userRole}><ComplianceShieldView onBack={() => navigate(-1)} /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute session={session} role={userRole}><SettingsView onBack={() => navigate(-1)} isDarkMode={isDarkMode} toggleTheme={toggleTheme} riskLevel="C3-稳健型" onLogout={async () => { await authService.logout(); setSession(null); navigate('/'); }} /></ProtectedRoute>} />
         <Route path="/analysis" element={<ProtectedRoute session={session} role={userRole}><AssetAnalysisView account={account} onBack={() => navigate(-1)} /></ProtectedRoute>} />
-        <Route path="/conditional" element={<ProtectedRoute session={session} role={userRole}><ConditionalOrderPanel stock={null} onBack={() => navigate(-1)} onAddOrder={() => {}} /></ProtectedRoute>} />
+        <Route path="/conditional" element={<ProtectedRoute session={session} role={userRole}><ConditionalOrderPanel stock={MOCK_STOCKS[0]} onBack={() => navigate(-1)} onAddOrder={() => {}} /></ProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

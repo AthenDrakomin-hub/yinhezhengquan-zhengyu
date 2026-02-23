@@ -42,7 +42,7 @@ const AboutInvestZYView: React.FC<AboutInvestZYViewProps> = ({ onBack }) => {
           <h3 className="px-2 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">品牌愿景</h3>
           <div className="glass-card p-6 space-y-4">
              <p className="text-xs leading-relaxed text-[var(--color-text-secondary)] font-medium">
-               证裕（Invest ZY）是中国银河证券数字化转型的旗舰虚拟管理单元。依托银河 Nexus 2025 计划，我们致力于为专业用户提供高精度、低延迟的模拟交易体验。
+               证裕（Invest ZY）是中国银河证券数字化转型的旗舰虚拟管理单元。依托银河 Nexus 2025 计划，我们致力于为专业用户提供高精度、低延迟的机构交易体验。
              </p>
              <div className="flex gap-2">
                 <span className="text-[8px] font-black px-2 py-1 bg-[#00D4AA]/10 text-[#00D4AA] rounded uppercase">银河证券内核</span>

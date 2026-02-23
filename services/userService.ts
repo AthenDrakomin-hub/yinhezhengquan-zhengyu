@@ -1,64 +1,110 @@
 import { supabase } from '../lib/supabase';
+import { TradeType } from '../types';
+import { getRealtimeStock } from './marketService';
 
-export const userService = {
+export const tradeService = {
   /**
-   * 获取所有用户 (仅管理员)
+   * 执行交易 (买入/卖出)
+   * 调用 Edge Function 处理复杂的交易逻辑 (原子性保证)
    */
-  async getAllUsers() {
-    // 联表查询资产信息
+  async executeTrade(params: {
+    userId: string;
+    type: TradeType;
+    symbol: string;
+    name: string;
+    price: number;
+    quantity: number;
+    marketType?: string;
+    leverage?: number;
+    logoUrl?: string;
+  }) {
+    const { 
+      type, 
+      symbol, 
+      name, 
+      price, 
+      quantity, 
+      marketType = 'A_SHARE', 
+      leverage = 1,
+      logoUrl 
+    } = params;
+
+    // 在提交交易前，可以再次校验实时价格（前端校验）
+    const realData = await getRealtimeStock(symbol, marketType === 'HK_SHARE' ? 'HK' : 'CN');
+    if (realData.price && Math.abs(realData.price - price) / realData.price > 0.05) {
+      console.warn('价格偏离过大，请刷新行情后再试');
+    }
+
+    const { data, error } = await supabase.functions.invoke('create-trade-order', {
+      body: {
+        market_type: marketType,
+        trade_type: type,
+        stock_code: symbol,
+        stock_name: name,
+        price,
+        quantity,
+        leverage,
+        logo_url: logoUrl
+      }
+    });
+
+    if (error) {
+      console.error('交易失败:', error);
+      if (data && data.error) return data;
+      throw new Error(error.message || '交易执行失败');
+    }
+
+    return data;
+  },
+
+  /**
+   * 获取用户持仓
+   */
+  async getHoldings(userId: string) {
     const { data, error } = await supabase
-      .from('profiles')
-      .select('*, assets(available_balance, total_asset)')
-      .order('created_at', { ascending: false });
+      .from('positions')
+      .select('*')
+      .eq('user_id', userId);
 
     if (error) throw error;
     
-    // 扁平化数据以适配前端
-    return data.map(user => ({
-      ...user,
-      balance: user.assets?.[0]?.available_balance || 0,
-      totalAsset: user.assets?.[0]?.total_asset || 0
+    // 映射字段以适配前端
+    return data.map(item => ({
+      ...item,
+      averagePrice: parseFloat(item.average_price),
+      marketValue: parseFloat(item.market_value),
+      availableQuantity: item.available_quantity,
+      logoUrl: item.logo_url
     }));
   },
 
   /**
-   * 更新用户状态 (仅管理员)
+   * 获取交易记录
    */
-  async updateUserStatus(userId: string, status: 'ACTIVE' | 'BANNED') {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ status })
-      .eq('id', userId);
+  async getTransactions(userId?: string, limit = 20) {
+    let query = supabase
+      .from('trades')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    if (error) throw error;
-  },
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
 
-  /**
-   * 资金上下分 (仅管理员)
-   */
-  async adjustBalance(userId: string, amount: number, type: 'RECHARGE' | 'WITHDRAW', remark = '') {
-    const { data, error } = await supabase.functions.invoke('admin-user-fund-operation', {
-      body: { 
-        target_user_id: userId, 
-        amount, 
-        operate_type: type,
-        remark
-      }
-    });
+    const { data, error } = await query;
 
     if (error) throw error;
     return data;
   },
 
   /**
-   * 获取审计日志 (仅管理员)
+   * 获取行情数据
    */
-  async getAuditLogs(limit = 50) {
-    const { data, error } = await supabase
-      .from('admin_operation_logs')
-      .select('*, admin:profiles!admin_id(username)')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+  async getMarketData(marketType: string, stockCodes: string[]) {
+    const { data, error } = await supabase.functions.invoke('get-market-data', {
+      body: { market_type: marketType, stock_codes: stockCodes }
+    });
 
     if (error) throw error;
     return data;
