@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MOCK_STOCKS, COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../constants';
+import { COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../constants';
 import { getGalaxyNews } from '../services/marketService';
 import { Transaction, Banner } from '../types';
 

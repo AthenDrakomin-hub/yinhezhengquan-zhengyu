@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { MOCK_STOCKS } from '../constants';
 import { Stock } from '../types';
 import StockIcon from './StockIcon';
 import { getMarketList } from '../services/marketService';
@@ -17,19 +16,28 @@ const MarketView: React.FC<MarketViewProps> = ({ onSelectStock }) => {
 
   useEffect(() => {
     const loadMarket = async () => {
-      setLoading(true);
-      const data = await getMarketList(marketTab);
-      if (data && data.length > 0) {
-        setStocks(data);
-      } else {
-        setStocks(MOCK_STOCKS.filter(s => s.market === marketTab));
+      try {
+        setLoading(true);
+        const data = await getMarketList(marketTab);
+        if (data && data.length > 0) {
+          setStocks(data);
+        } else {
+          // 如果获取不到数据，保持现有数据或显示空状态
+          console.warn(`获取${marketTab === 'CN' ? 'A股' : '港股'}行情数据失败，返回空数组`);
+          setStocks([]);
+        }
+      } catch (error) {
+        console.error('加载市场数据失败:', error);
+        setStocks([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+    
     loadMarket();
 
-    // 每 10 秒刷新一次
-    const timer = setInterval(loadMarket, 10000);
+    // 每 30 秒刷新一次（减少频率以避免频繁请求）
+    const timer = setInterval(loadMarket, 30000);
     return () => clearInterval(timer);
   }, [marketTab]);
 

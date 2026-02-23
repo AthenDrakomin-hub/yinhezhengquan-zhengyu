@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { TradeType, OrderStrategy, UserAccount, Stock } from '../types';
-import { MOCK_STOCKS, MOCK_IPO_STOCKS, MOCK_DERIVATIVES, ICONS } from '../constants';
-import { validateTradeRisk } from '../services/marketService';
+import { ICONS } from '../constants';
+import { validateTradeRisk, getMarketList } from '../services/marketService';
 import StockIcon from './StockIcon';
 
 interface TradePanelProps {
@@ -13,7 +13,17 @@ interface TradePanelProps {
 
 const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStock }) => {
   const [assetCategory, setAssetCategory] = useState('股票');
-  const [selectedStock, setSelectedStock] = useState<Stock>(initialStock || MOCK_STOCKS[0]);
+  const [stocksList, setStocksList] = useState<Stock[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<Stock>(initialStock || {
+    symbol: '600519',
+    name: '贵州茅台',
+    price: 1750.00,
+    change: 15.00,
+    changePercent: 0.87,
+    market: 'CN',
+    sparkline: []
+  });
   const [tradeType, setTradeType] = useState<TradeType>(TradeType.BUY);
   const [quantity, setQuantity] = useState('');
   const [amount, setAmount] = useState('');
@@ -26,12 +36,46 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
   const ipoQuota = 25000;
   const currentHolding = useMemo(() => account.holdings.find(h => h.symbol === selectedStock.symbol), [account.holdings, selectedStock.symbol]);
 
+  // 加载股票数据
+  useEffect(() => {
+    const loadStocks = async () => {
+      try {
+        setLoading(true);
+        const data = await getMarketList('CN'); // 默认加载A股
+        if (data && data.length > 0) {
+          setStocksList(data);
+          // 如果没有初始股票，选择第一个
+          if (!initialStock) {
+            setSelectedStock(data[0]);
+            setPrice(data[0].price.toString());
+          }
+        }
+      } catch (error) {
+        console.error('加载股票数据失败:', error);
+        setStocksList([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStocks();
+  }, [initialStock]);
+
   // 处理分类切换逻辑
   useEffect(() => {
     if (assetCategory === '新股申购') {
-      const ipo = MOCK_IPO_STOCKS[0];
-      setSelectedStock(ipo);
-      setPrice(ipo.price.toString());
+      // 新股申购使用模拟数据（通常没有免费公开API）
+      const ipoStock: Stock = {
+        symbol: '780123',
+        name: '银河量子',
+        price: 18.50,
+        change: 0,
+        changePercent: 0,
+        market: 'CN',
+        sparkline: []
+      };
+      setSelectedStock(ipoStock);
+      setPrice(ipoStock.price.toString());
       setTradeType(TradeType.IPO);
     } else if (assetCategory === '大宗交易') {
       setTradeType(TradeType.BLOCK);
@@ -40,15 +84,24 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
       setTradeType(TradeType.LIMIT_UP);
       setPrice((selectedStock.price * 1.1).toFixed(2)); // 涨停价格
     } else if (assetCategory === '衍生品') {
-      const deriv = MOCK_DERIVATIVES[0];
-      setSelectedStock(deriv);
-      setPrice(deriv.price.toString());
+      // 衍生品使用模拟数据
+      const derivStock: Stock = {
+        symbol: 'IF2506',
+        name: '沪深300指数期货2506',
+        price: 3624.5,
+        change: 12.4,
+        changePercent: 0.34,
+        market: 'FUTURES',
+        sparkline: []
+      };
+      setSelectedStock(derivStock);
+      setPrice(derivStock.price.toString());
       setTradeType(TradeType.BUY);
     } else {
       setTradeType(TradeType.BUY);
       setPrice(selectedStock.price.toString());
     }
-  }, [assetCategory]);
+  }, [assetCategory, selectedStock]);
 
   const maxQty = useMemo(() => {
     const p = parseFloat(price);
@@ -96,10 +149,35 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
   };
 
   const filteredStocks = useMemo(() => {
-    const sourceList = assetCategory === '新股申购' ? MOCK_IPO_STOCKS : 
-                       assetCategory === '衍生品' ? MOCK_DERIVATIVES : MOCK_STOCKS;
-    return searchTerm ? sourceList.filter(s => s.name.includes(searchTerm) || s.symbol.includes(searchTerm)) : sourceList;
-  }, [searchTerm, assetCategory]);
+    if (assetCategory === '新股申购') {
+      // 新股申购模拟数据
+      const ipoStocks: Stock[] = [{
+        symbol: '780123',
+        name: '银河量子',
+        price: 18.50,
+        change: 0,
+        changePercent: 0,
+        market: 'CN',
+        sparkline: []
+      }];
+      return searchTerm ? ipoStocks.filter(s => s.name.includes(searchTerm) || s.symbol.includes(searchTerm)) : ipoStocks;
+    } else if (assetCategory === '衍生品') {
+      // 衍生品模拟数据
+      const derivStocks: Stock[] = [{
+        symbol: 'IF2506',
+        name: '沪深300指数期货2506',
+        price: 3624.5,
+        change: 12.4,
+        changePercent: 0.34,
+        market: 'FUTURES',
+        sparkline: []
+      }];
+      return searchTerm ? derivStocks.filter(s => s.name.includes(searchTerm) || s.symbol.includes(searchTerm)) : derivStocks;
+    } else {
+      // 股票使用真实数据
+      return searchTerm ? stocksList.filter(s => s.name.includes(searchTerm) || s.symbol.includes(searchTerm)) : stocksList;
+    }
+  }, [searchTerm, assetCategory, stocksList]);
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)] animate-slide-up pb-4 pt-4 px-4 gap-6">
