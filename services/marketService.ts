@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { frontendMarketService } from './frontendMarketService';
 
 // Mock implementations for Gemini API functions (since geminiService.ts is removed)
 export const getGalaxyNews = async () => {

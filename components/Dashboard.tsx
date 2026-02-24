@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../constants';
 import { getGalaxyNews } from '../services/marketService';
@@ -10,7 +9,7 @@ const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
 
   if (error) {
     return (
-      <div className="absolute inset-0 bg-linear-to-br from-[#00D4AA]/20 to-[#0A1628] flex items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628] flex items-center justify-center">
         <div className="w-12 h-12 bg-[#00D4AA] rounded-2xl flex items-center justify-center font-black text-[#0A1628] opacity-50">ZY</div>
       </div>
     );
