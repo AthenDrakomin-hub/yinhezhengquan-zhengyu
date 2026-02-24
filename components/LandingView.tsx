@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as Constants from '../constants';
 
 const ICONS = Constants.ICONS;
@@ -10,6 +10,8 @@ interface LandingViewProps {
 
 const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
   const QR_PLACEHOLDER = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.zhengyutouzi.com/";
@@ -148,11 +150,53 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
           
           <div className="flex flex-col lg:flex-row items-center gap-0 border border-slate-100 rounded-xl overflow-hidden shadow-sm">
             <div className="lg:w-1/2 aspect-video bg-slate-100 relative group cursor-pointer">
-              <video src="https://cdn.chinastock.com.cn/downloadwz/yhzp/indexvideo2024.m4v" className="w-full h-full object-cover" autoPlay muted loop playsInline />
+              <video 
+                ref={videoRef}
+                src="https://cdn.chinastock.com.cn/downloadwz/yhzp/indexvideo2024.m4v" 
+                className="w-full h-full object-cover" 
+                muted 
+                loop 
+                playsInline
+                onClick={() => {
+                  if (videoRef.current) {
+                    if (isVideoPlaying) {
+                      videoRef.current.pause();
+                      setIsVideoPlaying(false);
+                    } else {
+                      videoRef.current.play();
+                      setIsVideoPlaying(true);
+                    }
+                  }
+                }}
+                onEnded={() => {
+                  setIsVideoPlaying(false);
+                }}
+              />
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2"></div>
-                </div>
+                <button 
+                  className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform hover:bg-white/30"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (videoRef.current) {
+                      if (isVideoPlaying) {
+                        videoRef.current.pause();
+                        setIsVideoPlaying(false);
+                      } else {
+                        videoRef.current.play();
+                        setIsVideoPlaying(true);
+                      }
+                    }
+                  }}
+                >
+                  {isVideoPlaying ? (
+                    <div className="flex items-center justify-center w-8 h-8">
+                      <div className="w-2 h-8 bg-white mx-1"></div>
+                      <div className="w-2 h-8 bg-white mx-1"></div>
+                    </div>
+                  ) : (
+                    <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2"></div>
+                  )}
+                </button>
               </div>
               <div className="absolute bottom-8 left-8 text-white text-left">
                 <p className="text-4xl font-black italic">百年盛世 筑梦银河</p>
@@ -163,7 +207,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
               <p className="text-sm text-slate-500 leading-relaxed mb-8">
                 中国银河证券股份有限公司（股票代码：06881.HK，601881.SH，下称“公司”），中国最大的国有证券公司之一。公司根植中国资本市场超25年，服务中国及“一带一路”沿线超1900万客户，客户托管资产超6万亿元，已发展成为亚洲网络布局领先的投资银行。公司实际控制人为中央汇金投资有限责任公司，其母公司为中国投资有限责任公司，是中国的国家主权财富基金。
               </p>
-              <a href="#" className="text-sm font-bold text-slate-400 hover:text-[#E30613] transition-colors flex items-center gap-2">
+              <a href="https://www.chinastock.com.cn/newsite/cgs.html" target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-slate-400 hover:text-[#E30613] transition-colors flex items-center gap-2">
                 了解更多 <ICONS.ArrowRight size={16} />
               </a>
             </div>
@@ -179,40 +223,64 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
             <p className="text-lg text-slate-600 font-medium">金融报国 客户至上</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 title: '财富管理',
-                desc: '以客户为中心，融合证券经纪、金融产品、投资顾问、证券金融、机构服务等业务，依托"中国银河证券"APP等智能交易工具、分公司机构网点优势，我们为客户提供多元化、智能化、专业化、策略化服务。',
-                img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200',
-                url: 'https://www.chinastock.com.cn/newsite/wealthManagement.html'
+                desc: '为客户提供证券经纪、金融产品、投资顾问、证券金融、机构服务等多元化、智能化、专业化服务。',
+                img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
+                url: 'https://www.chinastock.com.cn/newsite/wealth.html'
               },
               {
-                title: '投融资业务',
-                desc: '以企业为中心，遵循"全员承揽、全照经营、全程风控、全面协同"的展业原则，打造跨条线、跨市场的一体化价值链条，通过投行业务和投资业务协同，支持实体经济，为客户提供多元化、全周期的综合金融服务解决方案。',
-                img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200',
-                url: 'https://www.chinastock.com.cn/newsite/investmentBanking.html'
+                title: '投资银行',
+                desc: '为企业提供IPO、再融资、并购重组、债券发行等全周期投融资服务，支持实体经济发展。',
+                img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
+                url: 'https://www.chinastock.com.cn/newsite/investment.html'
               },
               {
-                title: '研究业务',
-                desc: '作为一家智库型研究机构，银河研究院面向国内外各类机构投资者提供卖方研究服务，向各级政府部门、监管机构与企业提供研究咨询服务，研究领域覆盖宏观、战略、政策、策略、行业、企业、区域、国际、基金、产业等。',
-                img: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=1200',
+                title: '研究咨询',
+                desc: '银河研究院提供宏观、策略、行业、企业研究，为机构投资者和政府企业提供智库支持。',
+                img: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=800',
                 url: 'https://www.chinastock.com.cn/newsite/research.html'
               },
               {
                 title: '国际业务',
-                desc: '凭借银河国际及银河海外在东盟地区的业务网络，我们为境内外各类型客户提供交易、融资、并购、投资和财富管理服务，致力成为"亚洲金融门户"。',
-                img: 'https://images.unsplash.com/photo-1449156001935-d28bc1ad7ead?auto=format&fit=crop&q=80&w=1200',
-                url: 'https://www.chinastock.com.cn/newsite/international.html'
+                desc: '通过银河国际及银河海外网络，为境内外客户提供跨境交易、融资、投资和财富管理服务。',
+                img: 'https://images.unsplash.com/photo-1449156001935-d28bc1ad7ead?auto=format&fit=crop&q=80&w=800',
+                url: 'https://www.chinastock.com.cn/newsite/global.html'
+              },
+              {
+                title: '资产管理',
+                desc: '为机构和个人客户提供公募基金、私募资管、专户理财等多元化资产管理解决方案。',
+                img: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=800',
+                url: 'https://www.chinastock.com.cn/newsite/asset.html'
+              },
+              {
+                title: '金融科技',
+                desc: '运用人工智能、大数据、区块链等技术，打造智能化交易系统和数字化金融服务平台。',
+                img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800',
+                url: 'https://www.chinastock.com.cn/newsite/fintech.html'
+              },
+              {
+                title: '风险管理',
+                desc: '建立全面风险管理体系，为客户提供风险识别、评估、监控和应对的专业服务。',
+                img: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800',
+                url: 'https://www.chinastock.com.cn/newsite/risk.html'
+              },
+              {
+                title: '绿色金融',
+                desc: '践行ESG理念，发展绿色债券、碳金融、可持续投资等业务，支持绿色低碳转型。',
+                img: 'https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?auto=format&fit=crop&q=80&w=800',
+                url: 'https://www.chinastock.com.cn/newsite/green.html'
               }
             ].map((item, i) => (
-              <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="border border-slate-100 rounded-lg overflow-hidden hover:shadow-xl transition-all group block">
-                <div className="h-64 overflow-hidden">
-                  <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+              <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="border border-slate-100 rounded-xl overflow-hidden hover:shadow-lg transition-all group block bg-white">
+                <div className="h-48 overflow-hidden">
+                  <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 </div>
-                <div className="p-8">
-                  <h3 className="text-xl font-black text-slate-900 mb-4">{item.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
+                <div className="p-6">
+                  <h3 className="text-lg font-black text-slate-900 mb-3">{item.title}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">{item.desc}</p>
                 </div>
               </a>
             ))}
@@ -264,7 +332,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
                 ))}
               </div>
               <div className="mt-8 flex justify-end">
-                <a href="#" className="text-white text-sm font-bold flex items-center gap-2 hover:underline">
+                <a href="https://www.chinastock.com.cn/newsite/announcement.html" target="_blank" rel="noopener noreferrer" className="text-white text-sm font-bold flex items-center gap-2 hover:underline">
                   更多 <ICONS.ArrowRight size={16} />
                 </a>
               </div>

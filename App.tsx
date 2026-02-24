@@ -117,12 +117,32 @@ const AppContent: React.FC = () => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const handleLoginSuccess = (userData?: any, role: string = 'user') => {
-    const finalUser = userData || { email: 'demo@zhengyu.com', username: '演示用户' };
-    setSession({ user: finalUser });
+    const finalUser = userData || { 
+      id: 'demo-user-id',
+      email: 'demo@zhengyu.com', 
+      username: '演示用户',
+      user_metadata: { username: '演示用户' }
+    };
+    
+    // 创建完整的session对象，模拟Supabase的session结构
+    const session = {
+      user: {
+        id: finalUser.id || 'demo-user-id',
+        email: finalUser.email || 'demo@zhengyu.com',
+        user_metadata: finalUser.user_metadata || { username: finalUser.username || '演示用户' }
+      },
+      access_token: 'demo-access-token',
+      refresh_token: 'demo-refresh-token',
+      expires_at: Date.now() + 3600 * 1000, // 1小时后过期
+      expires_in: 3600
+    };
+    
+    setSession(session);
     setUserRole(role);
     
     setAccount(prev => ({
       ...prev,
+      id: finalUser.id || prev.id,
       username: finalUser.username || prev.username,
       email: finalUser.email || prev.email
     }));

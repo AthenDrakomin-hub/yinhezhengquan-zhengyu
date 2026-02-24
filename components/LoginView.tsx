@@ -86,6 +86,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           });
           if (error) throw error;
           onLoginSuccess(data.user);
+          setLoading(false);
         }
       } else if (loginMethod === 'email') {
         if (isPlaceholder) {
@@ -101,6 +102,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
           onLoginSuccess(data.user);
+          setLoading(false);
         }
       } else if (loginMethod === '2fa') {
         // 双因素登录
@@ -119,12 +121,21 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           } else {
             // 真实环境：验证邮箱密码
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-            // 如果用户启用了2FA，Supabase会返回需要2FA
-            // 这里简化处理，直接进入第二步
-            setTwoFactorStep(2);
-            setLoading(false);
-            alert('身份验证成功，请输入您的 TOTP 验证码');
+            if (error) {
+              // 检查是否是2FA需要的错误
+              if (error.message.includes('2FA') || error.message.includes('two-factor')) {
+                // 需要2FA验证，进入第二步
+                setTwoFactorStep(2);
+                setLoading(false);
+                alert('身份验证成功，请输入您的 TOTP 验证码');
+              } else {
+                throw error;
+              }
+            } else {
+              // 如果没有启用2FA，直接登录成功
+              onLoginSuccess(data.user);
+              setLoading(false);
+            }
           }
         } else {
           // 第二步：验证TOTP验证码
