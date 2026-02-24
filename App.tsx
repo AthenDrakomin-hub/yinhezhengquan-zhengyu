@@ -1,3 +1,4 @@
+"use strict";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
@@ -220,24 +221,23 @@ const AppContent: React.FC = () => {
         <Route path="/login" element={<LoginView onLoginSuccess={handleLoginSuccess} onBackToHome={() => navigate('/')} />} />
         <Route path="/quick-open" element={<QuickOpenView onBack={() => navigate('/')} onComplete={(data) => handleLoginSuccess(data)} />} />
 
-        {/* 管理端路由 */}
+        {/* 管理端路由 - 使用嵌套路由模式 */}
         <Route path="/admin/*" element={
           <ProtectedRoute session={session} role={userRole} isAdmin={true}>
-            <AdminLayout>
-              <Routes>
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="rules" element={<AdminRuleManagement />} />
-                <Route path="match" element={<AdminMatchIntervention />} />
-                <Route path="users" element={<AdminUserManagement />} />
-                <Route path="trades" element={<AdminTradeManagement />} />
-                <Route path="integration" element={<AdminIntegrationPanel />} />
-                <Route path="*" element={<Navigate to="dashboard" replace />} />
-              </Routes>
-            </AdminLayout>
+            <AdminLayout />
           </ProtectedRoute>
-        } />
+        }>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="rules" element={<AdminRuleManagement />} />
+          <Route path="match" element={<AdminMatchIntervention />} />
+          <Route path="users" element={<AdminUserManagement />} />
+          <Route path="trades" element={<AdminTradeManagement />} />
+          <Route path="integration" element={<AdminIntegrationPanel />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Route>
 
-        <Route element={
+        {/* 主应用布局路由 - 使用嵌套路由模式 */}
+        <Route path="/*" element={
           <ProtectedRoute session={session} role={userRole}>
             <Layout 
               activeTab={location.pathname.split('/')[1] || 'dashboard'} 
@@ -246,29 +246,23 @@ const AppContent: React.FC = () => {
               toggleTheme={toggleTheme} 
               onOpenSettings={() => navigate('/settings')}
               account={account}
-            >
-              <Routes>
-                <Route path="/dashboard" element={
-                  <Dashboard 
-                    transactions={account.transactions}
-                    onOpenBanner={(b) => navigate(`/banner/${b.id}`)}
-                    onOpenCalendar={() => navigate('/calendar')}
-                    onOpenReports={() => navigate('/reports')}
-                    onOpenEducation={() => navigate('/education')}
-                    onOpenCompliance={() => navigate('/compliance')}
-                  />
-                } />
-                <Route path="/market" element={<MarketView onSelectStock={(symbol) => navigate(`/stock/${symbol}`)} />} />
-                <Route path="/trade" element={<TradeWrapper />} />
-                <Route path="/profile" element={<ProfileView account={account} onOpenAnalysis={() => navigate('/analysis')} onOpenConditional={() => navigate('/conditional')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />} />
-              </Routes>
-            </Layout>
+            />
           </ProtectedRoute>
         }>
-          <Route path="/dashboard" element={null} />
-          <Route path="/market" element={null} />
-          <Route path="/trade" element={null} />
-          <Route path="/profile" element={null} />
+          {/* 嵌套在布局内的子路由 */}
+          <Route path="dashboard" element={
+            <Dashboard 
+              transactions={account.transactions}
+              onOpenBanner={(b) => navigate(`/banner/${b.id}`)}
+              onOpenCalendar={() => navigate('/calendar')}
+              onOpenReports={() => navigate('/reports')}
+              onOpenEducation={() => navigate('/education')}
+              onOpenCompliance={() => navigate('/compliance')}
+            />
+          } />
+          <Route path="market" element={<MarketView onSelectStock={(symbol) => navigate(`/stock/${symbol}`)} />} />
+          <Route path="trade" element={<TradeWrapper />} />
+          <Route path="profile" element={<ProfileView account={account} onOpenAnalysis={() => navigate('/analysis')} onOpenConditional={() => navigate('/conditional')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />} />
         </Route>
 
         {/* 独立全屏业务页面 */}

@@ -1,12 +1,12 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ICONS } from '@/constants';
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
+  // 不再需要 children prop，使用 Outlet
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -84,7 +84,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </header>
         
         <div className="flex-1 overflow-y-auto p-8">
-          {children}
+          <Outlet />
         </div>
       </main>
     </div>

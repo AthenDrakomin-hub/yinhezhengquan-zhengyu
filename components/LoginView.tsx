@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ICONS } from '../constants';
 
@@ -9,12 +10,15 @@ interface LoginViewProps {
 }
 
 const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) => {
+  console.log('LoginView rendering');
+  const navigate = useNavigate();
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email' | '2fa'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
   // 2FA相关状态
@@ -31,7 +35,57 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
   }, [countdown]);
 
   // 环境检查
-  const isPlaceholder = !process.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL.includes('placeholder');
+  const isPlaceholder = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
+
+  // 忘记密码功能
+  const handleForgotPassword = async () => {
+    // 获取当前邮箱输入框的值
+    let targetEmail = email;
+    
+    // 如果邮箱为空，提示用户输入
+    if (!targetEmail || targetEmail.trim() === '') {
+      targetEmail = prompt('请输入您的邮箱地址以重置密码：');
+      if (!targetEmail || targetEmail.trim() === '') {
+        alert('请输入有效的邮箱地址');
+        return;
+      }
+    }
+
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(targetEmail)) {
+      alert('请输入有效的邮箱地址格式（例如：user@example.com）');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    
+    try {
+      if (isPlaceholder) {
+        // 演示模式
+        setTimeout(() => {
+          alert(`演示模式：重置密码邮件已发送到 ${targetEmail}\n在真实环境中，您将收到包含重置链接的邮件。`);
+          setForgotPasswordLoading(false);
+        }, 1000);
+      } else {
+        // 真实环境：调用 Supabase 重置密码 API
+        const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        alert(`重置密码邮件已发送到 ${targetEmail}，请检查您的邮箱并按照说明重置密码。`);
+        setForgotPasswordLoading(false);
+      }
+    } catch (error: any) {
+      console.error('重置密码失败:', error);
+      alert(`重置密码失败：${error.message || '请稍后重试或联系管理员'}`);
+      setForgotPasswordLoading(false);
+    }
+  };
 
   // 发送验证码
   const handleSendOtp = async () => {
@@ -373,8 +427,21 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
 
           <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between px-2">
-              <button className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-[#00D4AA]">忘记密码</button>
-              <button className="text-[10px] font-black text-[#00D4AA] uppercase tracking-widest">申请开通单元</button>
+              <button 
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={forgotPasswordLoading || loading}
+                className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-[#00D4AA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {forgotPasswordLoading ? '发送中...' : '忘记密码'}
+              </button>
+              <button 
+                type="button"
+                onClick={() => navigate('/quick-open')}
+                className="text-[10px] font-black text-[#00D4AA] uppercase tracking-widest hover:text-[#00D4AA]/80 transition-colors"
+              >
+                申请开通单元
+              </button>
             </div>
             
             <div className="h-px bg-white/5 w-1/2 mx-auto" />

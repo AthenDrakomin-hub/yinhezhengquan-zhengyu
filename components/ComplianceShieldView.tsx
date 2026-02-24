@@ -1,6 +1,14 @@
 
+"use strict";
+
 import React from 'react';
 import { ICONS, MOCK_TICKETS } from '../constants';
+
+interface MonitorItem {
+  label: string;
+  status: string;
+  time: string;
+}
 
 interface ComplianceShieldViewProps {
   onBack: () => void;

@@ -1,11 +1,10 @@
 
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ICONS, COLORS } from '../constants';
 import { UserAccount } from '../types';
 
 interface LayoutProps {
-  children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isDarkMode: boolean;
@@ -14,7 +13,7 @@ interface LayoutProps {
   account: UserAccount;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isDarkMode, toggleTheme, onOpenSettings, account }) => {
+const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, toggleTheme, onOpenSettings, account }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -136,7 +135,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, isDa
         {/* 主内容区：根据 PC/Mobile 调整宽度 */}
         <main className="flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-10 w-full">
           <div className="max-w-md mx-auto md:max-w-7xl md:px-8">
-            {children}
+            <Outlet />
           </div>
         </main>
 

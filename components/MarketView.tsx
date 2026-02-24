@@ -1,3 +1,4 @@
+"use strict";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Stock } from '../types';
@@ -16,6 +17,13 @@ const MarketView: React.FC<MarketViewProps> = ({ onSelectStock }) => {
 
   useEffect(() => {
     const loadMarket = async () => {
+      // getMarketList 只支持 'CN' 和 'HK' 市场
+      if (marketTab !== 'CN' && marketTab !== 'HK') {
+        // 对于自选等，不调用 getMarketList，保持空数组或从其他地方加载
+        setStocks([]);
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const data = await getMarketList(marketTab);

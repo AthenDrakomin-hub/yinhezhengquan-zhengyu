@@ -1,4 +1,6 @@
 
+"use strict";
+
 import React, { useState } from 'react';
 import { ICONS } from '../constants';
 import ProfileDetailView from './ProfileDetailView';
@@ -7,6 +9,23 @@ import TradingPreferencesView from './TradingPreferencesView';
 import PersonalizedSettingsView from './PersonalizedSettingsView';
 import AboutInvestZYView from './AboutInvestZYView';
 import { OrderStrategy, TradingSettings, PersonalSettings } from '../types';
+
+interface SettingsItem {
+  id: string;
+  label: string;
+  value?: string;
+  icon?: React.ComponentType<any>;
+  action?: () => void;
+  highlight?: boolean;
+  toggle?: boolean;
+  active?: boolean;
+  arrow?: boolean;
+}
+
+interface SettingsSection {
+  title: string;
+  items: SettingsItem[];
+}
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -68,7 +87,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
   );
   if (subPage === 'about') return <AboutInvestZYView onBack={() => setSubPage('list')} />;
 
-  const sections = [
+  const sections: SettingsSection[] = [
     {
       title: '账户与安全',
       items: [
@@ -87,7 +106,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
           icon: ICONS.Zap, 
           action: () => setSubPage('trading') 
         },
-        { id: 'strategy', label: '默认委托策略', value: tradingSettings.defaultStrategy, icon: ICONS.Trade },
+        { id: 'strategy', label: '默认委托策略', value: String(tradingSettings.defaultStrategy), icon: ICONS.Trade },
         { id: 'leverage', label: '衍生品默认杠杆', value: `${tradingSettings.defaultLeverage}x`, icon: ICONS.Chart },
       ]
     },
@@ -135,16 +154,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
                   
                   <div className="flex items-center gap-2">
                     {item.value && (
-                      <span className={`text-[10px] font-black font-mono uppercase ${item.highlight ? 'text-[#00D4AA]' : 'text-[var(--color-text-muted)]'}`}>
+                      <span className={`text-[10px] font-black font-mono uppercase ${(item.highlight ?? false) ? 'text-[#00D4AA]' : 'text-[var(--color-text-muted)]'}`}>
                         {item.value}
                       </span>
                     )}
                     {item.toggle && (
-                      <div className={`w-10 h-5 rounded-full p-1 transition-colors ${item.active ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}>
-                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${item.active ? 'translate-x-5' : 'translate-x-0'}`} />
+                      <div className={`w-10 h-5 rounded-full p-1 transition-colors ${(item.active ?? false) ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}>
+                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${(item.active ?? false) ? 'translate-x-5' : 'translate-x-0'}`} />
                       </div>
                     )}
-                    {(item.arrow || (item.action && !item.toggle)) && <ICONS.ArrowRight size={12} className="text-[var(--color-text-muted)]" />}
+                    {((item.arrow ?? false) || (item.action && !item.toggle)) && <ICONS.ArrowRight size={12} className="text-[var(--color-text-muted)]" />}
                   </div>
                 </div>
               ))}

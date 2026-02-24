@@ -1,3 +1,5 @@
+"use strict";
+
 import { supabase, getCurrentProfile } from '../lib/supabase';
 
 export const authService = {

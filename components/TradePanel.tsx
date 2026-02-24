@@ -7,7 +7,7 @@ import StockIcon from './StockIcon';
 
 interface TradePanelProps {
   account: UserAccount;
-  onExecute: (type: TradeType, symbol: string, name: string, price: number, quantity: number, logoUrl?: string) => boolean;
+  onExecute: (type: TradeType, symbol: string, name: string, price: number, quantity: number, logoUrl?: string) => Promise<boolean>;
   initialStock?: Stock | null;
 }
 
@@ -133,7 +133,7 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
     await validateTradeRisk(selectedStock.name, parseFloat(amount));
     setIsValidating(false);
     
-    const success = onExecute(
+    const success = await onExecute(
       tradeType,
       selectedStock.symbol,
       selectedStock.name,

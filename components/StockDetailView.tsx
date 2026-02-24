@@ -22,6 +22,11 @@ const StockDetailView: React.FC<StockDetailViewProps> = ({ stock: initialStock, 
   // 实时价格轮询
   useEffect(() => {
     const updatePrice = async () => {
+      // getRealtimeStock 只支持 'CN' 和 'HK' 市场
+      if (initialStock.market !== 'CN' && initialStock.market !== 'HK') {
+        // 对于其他市场，跳过实时更新，保持静态数据
+        return;
+      }
       const updates = await getRealtimeStock(initialStock.symbol, initialStock.market);
       if (updates.price) {
         setStock(prev => ({ ...prev, ...updates as Partial<Stock> }));

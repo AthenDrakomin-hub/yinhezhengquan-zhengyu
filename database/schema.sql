@@ -18,19 +18,25 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- 允许匿名用户检查表是否存在（用于连接检查）
+DROP POLICY IF EXISTS "允许连接检查" ON public.profiles;
+CREATE POLICY "允许连接检查" ON public.profiles
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "用户可以查看自己的个人资料" ON public.profiles;
 CREATE POLICY "用户可以查看自己的个人资料" ON public.profiles
   FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "管理员可以查看所有个人资料" ON public.profiles;
 CREATE POLICY "管理员可以查看所有个人资料" ON public.profiles
   FOR SELECT USING (
-    (auth.jwt() ->> 'role' = 'admin') OR 
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    (auth.jwt() ->> 'role' = 'admin')
   );
 
+DROP POLICY IF EXISTS "管理员可以更新所有个人资料" ON public.profiles;
 CREATE POLICY "管理员可以更新所有个人资料" ON public.profiles
   FOR UPDATE USING (
-    (auth.jwt() ->> 'role' = 'admin') OR 
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    (auth.jwt() ->> 'role' = 'admin')
   );
 
 -- 2. 资产核心表 (public.assets)
@@ -49,14 +55,17 @@ CREATE TABLE IF NOT EXISTS public.assets (
 
 ALTER TABLE public.assets ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "用户可以查看自己的资产" ON public.assets;
 CREATE POLICY "用户可以查看自己的资产" ON public.assets
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "管理员可以查看所有资产" ON public.assets;
 CREATE POLICY "管理员可以查看所有资产" ON public.assets
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "管理员可以更新资产" ON public.assets;
 CREATE POLICY "管理员可以更新资产" ON public.assets
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
@@ -81,14 +90,17 @@ CREATE TABLE IF NOT EXISTS public.trades (
 
 ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "用户可以查看自己的交易" ON public.trades;
 CREATE POLICY "用户可以查看自己的交易" ON public.trades
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "管理员可以查看所有交易" ON public.trades;
 CREATE POLICY "管理员可以查看所有交易" ON public.trades
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "用户可以创建交易" ON public.trades;
 CREATE POLICY "用户可以创建交易" ON public.trades
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -110,9 +122,11 @@ CREATE TABLE IF NOT EXISTS public.positions (
 
 ALTER TABLE public.positions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "用户可以查看自己的持仓" ON public.positions;
 CREATE POLICY "用户可以查看自己的持仓" ON public.positions
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "管理员可以查看所有持仓" ON public.positions;
 CREATE POLICY "管理员可以查看所有持仓" ON public.positions
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
@@ -131,6 +145,7 @@ CREATE TABLE IF NOT EXISTS public.admin_operation_logs (
 
 ALTER TABLE public.admin_operation_logs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "仅管理员可以访问操作日志" ON public.admin_operation_logs;
 CREATE POLICY "仅管理员可以访问操作日志" ON public.admin_operation_logs
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
@@ -151,6 +166,7 @@ CREATE TABLE IF NOT EXISTS public.conditional_orders (
 
 ALTER TABLE public.conditional_orders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "用户可以管理自己的条件单" ON public.conditional_orders;
 CREATE POLICY "用户可以管理自己的条件单" ON public.conditional_orders
   FOR ALL USING (auth.uid() = user_id);
 
@@ -166,11 +182,13 @@ CREATE TABLE IF NOT EXISTS public.trade_rules (
 
 ALTER TABLE public.trade_rules ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "仅管理员可以管理交易规则" ON public.trade_rules;
 CREATE POLICY "仅管理员可以管理交易规则" ON public.trade_rules
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "所有人可以查看交易规则" ON public.trade_rules;
 CREATE POLICY "所有人可以查看交易规则" ON public.trade_rules
   FOR SELECT USING (true);
 
@@ -191,6 +209,7 @@ CREATE TABLE IF NOT EXISTS public.trade_match_pool (
 
 ALTER TABLE public.trade_match_pool ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "仅管理员可以访问撮合池" ON public.trade_match_pool;
 CREATE POLICY "仅管理员可以访问撮合池" ON public.trade_match_pool
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
@@ -205,10 +224,10 @@ INSERT INTO public.trade_rules (rule_type, config) VALUES
 ON CONFLICT (rule_type) DO NOTHING;
 
 -- 9. 索引优化
-CREATE INDEX idx_assets_user_id ON public.assets(user_id);
-CREATE INDEX idx_trades_user_market_status ON public.trades(user_id, market_type, status);
-CREATE INDEX idx_admin_logs_operate_type_time ON public.admin_operation_logs(operate_type, created_at);
-CREATE INDEX idx_positions_user_symbol ON public.positions(user_id, symbol);
+CREATE INDEX IF NOT EXISTS idx_assets_user_id ON public.assets(user_id);
+CREATE INDEX IF NOT EXISTS idx_trades_user_market_status ON public.trades(user_id, market_type, status);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_operate_type_time ON public.admin_operation_logs(operate_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_positions_user_symbol ON public.positions(user_id, symbol);
 
 -- 8. 触发器
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -219,7 +238,14 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_assets_updated_at ON public.assets;
 CREATE TRIGGER update_assets_updated_at BEFORE UPDATE ON public.assets FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_positions_updated_at ON public.positions;
 CREATE TRIGGER update_positions_updated_at BEFORE UPDATE ON public.positions FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_conditional_orders_updated_at ON public.conditional_orders;
 CREATE TRIGGER update_conditional_orders_updated_at BEFORE UPDATE ON public.conditional_orders FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();

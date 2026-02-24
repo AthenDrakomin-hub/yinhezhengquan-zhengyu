@@ -66,7 +66,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
           <div className="flex items-center gap-3">
             <img src={LOGO_URL} alt="中国银河证券 证裕交易单元" className="h-10 md:h-12 object-contain" />
           </div>
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="flex items-center gap-8">
             {['首页', '银河证券-证裕交易单元APP', '快速开户', '登录Nexus'].map(item => (
               <span 
                 key={item} 
@@ -228,55 +228,63 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
               {
                 title: '财富管理',
                 desc: '为客户提供证券经纪、金融产品、投资顾问、证券金融、机构服务等多元化、智能化、专业化服务。',
-                img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=1',
                 url: 'https://www.chinastock.com.cn/newsite/wealth.html'
               },
               {
                 title: '投资银行',
                 desc: '为企业提供IPO、再融资、并购重组、债券发行等全周期投融资服务，支持实体经济发展。',
-                img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=2',
                 url: 'https://www.chinastock.com.cn/newsite/investment.html'
               },
               {
                 title: '研究咨询',
                 desc: '银河研究院提供宏观、策略、行业、企业研究，为机构投资者和政府企业提供智库支持。',
-                img: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=3',
                 url: 'https://www.chinastock.com.cn/newsite/research.html'
               },
               {
                 title: '国际业务',
                 desc: '通过银河国际及银河海外网络，为境内外客户提供跨境交易、融资、投资和财富管理服务。',
-                img: 'https://images.unsplash.com/photo-1449156001935-d28bc1ad7ead?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=4',
                 url: 'https://www.chinastock.com.cn/newsite/global.html'
               },
               {
                 title: '资产管理',
                 desc: '为机构和个人客户提供公募基金、私募资管、专户理财等多元化资产管理解决方案。',
-                img: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=5',
                 url: 'https://www.chinastock.com.cn/newsite/asset.html'
               },
               {
                 title: '金融科技',
                 desc: '运用人工智能、大数据、区块链等技术，打造智能化交易系统和数字化金融服务平台。',
-                img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=6',
                 url: 'https://www.chinastock.com.cn/newsite/fintech.html'
               },
               {
                 title: '风险管理',
                 desc: '建立全面风险管理体系，为客户提供风险识别、评估、监控和应对的专业服务。',
-                img: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=7',
                 url: 'https://www.chinastock.com.cn/newsite/risk.html'
               },
               {
                 title: '绿色金融',
                 desc: '践行ESG理念，发展绿色债券、碳金融、可持续投资等业务，支持绿色低碳转型。',
-                img: 'https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?auto=format&fit=crop&q=80&w=800',
+                img: 'https://picsum.photos/800/600?random=8',
                 url: 'https://www.chinastock.com.cn/newsite/green.html'
               }
             ].map((item, i) => (
               <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="border border-slate-100 rounded-xl overflow-hidden hover:shadow-lg transition-all group block bg-white">
-                <div className="h-48 overflow-hidden">
-                  <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <div className="h-48 overflow-hidden bg-slate-100">
+                  <img 
+                    src={item.img} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    onError={(e) => {
+                      // 图片加载失败时使用备用图片
+                      e.currentTarget.src = `https://picsum.photos/800/600?random=${i + 10}`;
+                    }}
+                  />
                 </div>
                 <div className="p-6">
                   <h3 className="text-lg font-black text-slate-900 mb-3">{item.title}</h3>
