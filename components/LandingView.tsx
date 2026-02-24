@@ -148,7 +148,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
           
           <div className="flex flex-col lg:flex-row items-center gap-0 border border-slate-100 rounded-xl overflow-hidden shadow-sm">
             <div className="lg:w-1/2 aspect-video bg-slate-100 relative group cursor-pointer">
-              <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200" alt="Video Placeholder" className="w-full h-full object-cover" />
+              <video src="https://cdn.chinastock.com.cn/downloadwz/yhzp/indexvideo2024.m4v" className="w-full h-full object-cover" autoPlay muted loop playsInline />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2"></div>
@@ -184,25 +184,29 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
               {
                 title: '财富管理',
                 desc: '以客户为中心，融合证券经纪、金融产品、投资顾问、证券金融、机构服务等业务，依托"中国银河证券"APP等智能交易工具、分公司机构网点优势，我们为客户提供多元化、智能化、专业化、策略化服务。',
-                img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200'
+                img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200',
+                url: 'https://www.chinastock.com.cn/newsite/wealthManagement.html'
               },
               {
                 title: '投融资业务',
                 desc: '以企业为中心，遵循"全员承揽、全照经营、全程风控、全面协同"的展业原则，打造跨条线、跨市场的一体化价值链条，通过投行业务和投资业务协同，支持实体经济，为客户提供多元化、全周期的综合金融服务解决方案。',
-                img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200'
+                img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200',
+                url: 'https://www.chinastock.com.cn/newsite/investmentBanking.html'
               },
               {
                 title: '研究业务',
                 desc: '作为一家智库型研究机构，银河研究院面向国内外各类机构投资者提供卖方研究服务，向各级政府部门、监管机构与企业提供研究咨询服务，研究领域覆盖宏观、战略、政策、策略、行业、企业、区域、国际、基金、产业等。',
-                img: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=1200'
+                img: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=1200',
+                url: 'https://www.chinastock.com.cn/newsite/research.html'
               },
               {
                 title: '国际业务',
                 desc: '凭借银河国际及银河海外在东盟地区的业务网络，我们为境内外各类型客户提供交易、融资、并购、投资和财富管理服务，致力成为"亚洲金融门户"。',
-                img: 'https://images.unsplash.com/photo-1449156001935-d28bc1ad7ead?auto=format&fit=crop&q=80&w=1200'
+                img: 'https://images.unsplash.com/photo-1449156001935-d28bc1ad7ead?auto=format&fit=crop&q=80&w=1200',
+                url: 'https://www.chinastock.com.cn/newsite/international.html'
               }
             ].map((item, i) => (
-              <div key={i} className="border border-slate-100 rounded-lg overflow-hidden hover:shadow-xl transition-all group">
+              <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="border border-slate-100 rounded-lg overflow-hidden hover:shadow-xl transition-all group block">
                 <div className="h-64 overflow-hidden">
                   <img src={item.img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 </div>
@@ -210,7 +214,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
                   <h3 className="text-xl font-black text-slate-900 mb-4">{item.title}</h3>
                   <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
@@ -227,11 +231,15 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
           <div className="flex flex-col lg:flex-row gap-12">
             {/* 左侧 Tabs */}
             <div className="lg:w-1/4 flex flex-col gap-8 text-white/60">
-              {['业务公告', '公司公告', '媒体关注'].map((tab, i) => (
-                <div key={tab} className={`text-2xl font-black cursor-pointer transition-all flex items-center gap-4 ${i === 0 ? 'text-white' : 'hover:text-white'}`}>
+              {[
+                { text: '业务公告', url: 'https://www.chinastock.com.cn/newsite/businessAnnouncement.html' },
+                { text: '公司公告', url: 'https://www.chinastock.com.cn/newsite/companyAnnouncement.html' },
+                { text: '媒体关注', url: 'https://www.chinastock.com.cn/newsite/mediaAttention.html' }
+              ].map((tab, i) => (
+                <a key={tab.text} href={tab.url} target="_blank" rel="noopener noreferrer" className={`text-2xl font-black cursor-pointer transition-all flex items-center gap-4 ${i === 0 ? 'text-white' : 'hover:text-white'}`}>
                   {i === 2 && <span className="w-1 h-6 bg-white"></span>}
-                  {tab}
-                </div>
+                  {tab.text}
+                </a>
               ))}
             </div>
             
@@ -330,46 +338,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
         </div>
       </section>
 
-      {/* 银河在线 (Galaxy Online) Section */}
-      <section className="py-16 md:py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-12">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="lg:w-1/2">
-              <h2 className="text-3xl font-black text-slate-900 mb-6">银河在线</h2>
-              <p className="text-lg text-slate-500 mb-10">随时随地，尊享专业金融服务</p>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="p-8 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group cursor-pointer">
-                  <div className="w-16 h-16 bg-red-50 text-[#E30613] rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <ICONS.Zap size={32} />
-                  </div>
-                  <h4 className="text-lg font-black text-slate-900 mb-2">中国银河证券APP</h4>
-                  <p className="text-xs text-slate-400">扫码下载，开启财富之旅</p>
-                </div>
-                <div className="p-8 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group cursor-pointer">
-                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <ICONS.Market size={32} />
-                  </div>
-                  <h4 className="text-lg font-black text-slate-900 mb-2">营业网点查询</h4>
-                  <p className="text-xs text-slate-400">全国500+网点为您服务</p>
-                </div>
-              </div>
-            </div>
-            <div className="lg:w-1/2 flex justify-center">
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-tr from-[#E30613]/20 to-transparent blur-2xl rounded-full"></div>
-                <div className="relative p-4 bg-white rounded-[40px] shadow-2xl border border-slate-100">
-                  <img src={QR_PLACEHOLDER} alt="Download App" className="w-48 h-48 md:w-64 md:h-64" />
-                  <div className="mt-6 text-center">
-                    <p className="text-sm font-black text-slate-900">扫一扫下载证裕交易单元APP</p>
-                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Scan to download Nexus App</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* 7. 底部导航与版权 (Refined to match image) */}
       <footer className="bg-[#1A1A1A] pt-16 pb-4 text-slate-400">
         <div className="max-w-7xl mx-auto px-4 md:px-12">
@@ -380,8 +348,19 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
                 <ICONS.ArrowRight size={14} className="rotate-90 group-hover:translate-y-1 transition-transform" />
               </div>
               <ul className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
-                {['人员公示', '营业网点', '网站声明', '投资者教育', '银河交易终端应急措施公告', '反洗钱', '投诉与建议', '非法仿冒机构信息公示'].map(item => (
-                  <li key={item} className="hover:text-white cursor-pointer transition-colors">{item}</li>
+                {[
+                  { text: '人员公示', url: 'https://www.chinastock.com.cn/newsite/online/personnelAnnc.html' },
+                  { text: '营业网点', url: 'https://www.chinastock.com.cn/newsite/online/branch.html' },
+                  { text: '网站声明', url: 'https://www.chinastock.com.cn/newsite/online/statement.html' },
+                  { text: '投资者教育', url: 'https://www.chinastock.com.cn/newsite/online/investorEducation.html' },
+                  { text: '银河交易终端应急措施公告', url: 'https://www.chinastock.com.cn/newsite/online/emergency.html' },
+                  { text: '反洗钱', url: 'https://www.chinastock.com.cn/newsite/online/antiMoneyLaundering.html' },
+                  { text: '投诉与建议', url: 'https://www.chinastock.com.cn/newsite/online/complaint.html' },
+                  { text: '非法仿冒机构信息公示', url: 'https://www.chinastock.com.cn/newsite/online/counterfeit.html' }
+                ].map(item => (
+                  <li key={item.text} className="hover:text-white cursor-pointer transition-colors">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-white">{item.text}</a>
+                  </li>
                 ))}
               </ul>
             </div>

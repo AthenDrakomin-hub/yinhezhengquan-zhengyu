@@ -3,6 +3,7 @@ import { COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../cons
 import { getGalaxyNews } from '../services/marketService';
 import { Transaction, Banner, TradeType } from '../types';
 
+// 图片加载组件：处理加载/错误状态
 const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,7 @@ const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
   );
 };
 
+// 定义组件Props类型
 interface DashboardProps {
   transactions?: Transaction[];
   onOpenCalendar?: () => void;
@@ -38,6 +40,7 @@ interface DashboardProps {
   onOpenBanner?: (banner: Banner) => void;
 }
 
+// 核心Dashboard组件
 const Dashboard: React.FC<DashboardProps> = ({ 
   transactions = [], 
   onOpenCalendar, 
@@ -49,30 +52,38 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [news, setNews] = useState<any[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
 
+  // 获取银河新闻数据
   const fetchNews = async () => {
     setLoadingNews(true);
-    const newsRes = await getGalaxyNews();
-    setNews(newsRes);
-    setLoadingNews(false);
+    try {
+      const newsRes = await getGalaxyNews();
+      setNews(newsRes || []); // 兜底：避免返回null导致报错
+    } catch (err) {
+      console.error('获取新闻失败:', err);
+      setNews([]);
+    } finally {
+      setLoadingNews(false);
+    }
   };
 
+  // 初始化+定时刷新新闻
   useEffect(() => {
     fetchNews();
-    const interval = setInterval(fetchNews, 300000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNews, 300000); // 5分钟刷新一次
+    return () => clearInterval(interval); // 组件卸载清除定时器
   }, []);
 
   return (
     <div className="space-y-6 animate-slide-up pb-8 pt-4">
-      {/* 风险告知 */}
+      {/* 风险告知栏 */}
       <div className="bg-[#FF6B6B]/10 py-3 px-6 flex items-center gap-4 overflow-hidden border border-[#FF6B6B]/10 rounded-2xl mx-4">
-         <div className="bg-[#FF6B6B] text-white px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shrink-0">银河风控</div>
-         <div className="animate-marquee whitespace-nowrap text-[11px] font-bold text-[#FF6B6B] tracking-wide">
-            证裕单元 Nexus 计划实时合规提示：市场波动加剧，请严格执行止盈止损策略，防范流动性风险。
-         </div>
+        <div className="bg-[#FF6B6B] text-white px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shrink-0">银河风控</div>
+        <div className="animate-marquee whitespace-nowrap text-[11px] font-bold text-[#FF6B6B] tracking-wide">
+          证裕单元 Nexus 计划实时合规提示：市场波动加剧，请严格执行止盈止损策略，防范流动性风险。
+        </div>
       </div>
 
-      {/* 轮播图：PC端展示多张，移动端单张 */}
+      {/* 轮播Banner区 */}
       <section className="px-4">
         <div className="flex overflow-x-auto gap-6 no-scrollbar snap-x">
           {BANNER_MOCK.map((banner) => (
@@ -92,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </section>
 
-      {/* 功能矩阵：响应式列数 */}
+      {/* 功能矩阵区 */}
       <section className="px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-[var(--color-surface)] p-8 rounded-4xl border border-[var(--color-border)] shadow-sm">
           {[
@@ -100,7 +111,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             { id: 'reports', label: '证裕研报', icon: ICONS.Book, color: 'text-blue-500 bg-blue-500/10', action: onOpenReports },
             { id: 'edu', label: '投教中心', icon: ICONS.User, color: 'text-purple-500 bg-purple-500/10', action: onOpenEducation },
             { id: 'compliance', label: '合规盾牌', icon: ICONS.Shield, color: 'text-[#FF6B6B] bg-[#FF6B6B]/10', action: onOpenCompliance },
-          ].map(feat => (
+          ].map((feat) => (
             <div 
               key={feat.id} 
               onClick={feat.action}
@@ -115,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </section>
 
-      {/* 实时快讯 */}
+      {/* 实时快讯区 */}
       <section className="px-4">
         <div className="glass-card overflow-hidden rounded-4xl">
           <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface)]">
@@ -123,26 +134,44 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div className="w-2.5 h-2.5 bg-[#00D4AA] rounded-full animate-pulse shadow-[0_0_10px_#00D4AA]" />
               <h3 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-[0.3em]">银河证券证裕单元 24H 全球实时情报</h3>
             </div>
-            <button className="text-[10px] font-black text-[#00D4AA] uppercase tracking-widest px-4 py-2 bg-[#00D4AA]/10 rounded-xl hover:bg-[#00D4AA]/20 transition-all" onClick={fetchNews}>同步情报</button>
+            <button 
+              className="text-[10px] font-black text-[#00D4AA] uppercase tracking-widest px-4 py-2 bg-[#00D4AA]/10 rounded-xl hover:bg-[#00D4AA]/20 transition-all" 
+              onClick={fetchNews}
+            >
+              同步情报
+            </button>
           </div>
           <div className="divide-y divide-[var(--color-border)]">
-            {news.map((item, idx) => (
-              <div key={idx} className="p-6 flex gap-6 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer group">
-                <span className="text-[11px] font-mono font-bold text-[var(--color-text-muted)] mt-1">{item.time}</span>
-                <div className="flex-1 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter bg-[var(--color-bg)] px-2 py-0.5 rounded-md border border-[var(--color-border)]">{item.category}</span>
-                    <div className={`w-2 h-2 rounded-full ${item.sentiment === 'positive' ? 'bg-[#00D4AA]' : item.sentiment === 'negative' ? 'bg-[#FF6B6B]' : 'bg-slate-400'}`} />
+            {loadingNews ? (
+              <div className="p-6 text-center text-[var(--color-text-muted)] font-black uppercase tracking-widest text-[10px]">加载情报中...</div>
+            ) : news.length === 0 ? (
+              <div className="p-6 text-center text-[var(--color-text-muted)] font-black uppercase tracking-widest text-[10px]">暂无实时情报</div>
+            ) : (
+              news.map((item, idx) => (
+                <div 
+                  key={idx} 
+                  className="p-6 flex gap-6 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer group"
+                >
+                  <span className="text-[11px] font-mono font-bold text-[var(--color-text-muted)] mt-1">{item.time}</span>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter bg-[var(--color-bg)] px-2 py-0.5 rounded-md border border-[var(--color-border)]">{item.category}</span>
+                      <div className={`w-2 h-2 rounded-full ${
+                        item.sentiment === 'positive' ? 'bg-[#00D4AA]' : 
+                        item.sentiment === 'negative' ? 'bg-[#FF6B6B]' : 
+                        'bg-slate-400'
+                      }`} />
+                    </div>
+                    <p className="text-[15px] font-bold text-[var(--color-text-primary)] leading-relaxed group-hover:text-[#00D4AA] transition-colors">{item.title}</p>
                   </div>
-                  <p className="text-[15px] font-bold text-[var(--color-text-primary)] leading-relaxed group-hover:text-[#00D4AA] transition-colors">{item.title}</p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </section>
 
-      {/* 最近交易 */}
+      {/* 最近交易区 */}
       <section className="px-4">
         <div className="glass-card overflow-hidden rounded-4xl">
           <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center bg-[var(--color-surface)]">
@@ -156,7 +185,10 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div className="p-12 text-center text-[var(--color-text-muted)] font-black uppercase tracking-widest text-[10px]">暂无交易记录</div>
             ) : (
               transactions.map((trade) => (
-                <div key={trade.id} className="p-6 flex justify-between items-center hover:bg-[var(--color-surface-hover)] transition-colors">
+                <div 
+                  key={trade.id} 
+                  className="p-6 flex justify-between items-center hover:bg-[var(--color-surface-hover)] transition-colors"
+                >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
                       trade.type === TradeType.BUY ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 
@@ -167,7 +199,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                     <div>
                       <h4 className="text-sm font-black text-[var(--color-text-primary)]">{trade.name}</h4>
-                      <p className="text-[10px] text-[var(--color-text-muted)] font-mono font-bold">{trade.symbol} · {new Date(trade.timestamp).toLocaleTimeString()}</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)] font-mono font-bold">
+                        {trade.symbol} · {new Date(trade.timestamp).toLocaleTimeString()}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
