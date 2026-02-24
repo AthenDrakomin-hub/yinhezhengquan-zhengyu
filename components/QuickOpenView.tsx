@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ICONS } from '../constants';
 import { supabase } from '../lib/supabase';
+import { FaceVerificationResult } from '../utils/face';
 
 // ==========================================================
 // 注意：使用前请先安装依赖：
@@ -272,7 +273,7 @@ const IdCardOcrStep: React.FC<{
 // Step 3: 人脸识别组件
 const FaceRecognitionStep: React.FC<{
   onNext: () => void;
-  onVerify: () => Promise<void>;
+  onVerify: (result: FaceVerificationResult) => Promise<void>;
 }> = ({ onNext, onVerify }) => {
   const { setValue } = useFormContext<QuickOpenFormData>();
   const [loading, setLoading] = useState(false);
@@ -283,7 +284,17 @@ const FaceRecognitionStep: React.FC<{
     try {
       // 模拟人脸识别过程
       await new Promise(resolve => setTimeout(resolve, 2000));
-      await onVerify();
+      // 模拟人脸验证结果
+      const mockResult: FaceVerificationResult = {
+        verified: true,
+        confidence: 0.95,
+        similarity: 0.92,
+        isLive: true,
+        livenessScore: 0.88,
+        message: '人脸验证成功',
+        timestamp: new Date().toISOString(),
+      };
+      await onVerify(mockResult);
       setValue('faceVerified', true);
       setVerified(true);
     } catch (error) {
@@ -630,18 +641,18 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
       idCard: {
         name: '',
         idNumber: '',
-        gender: undefined,
+        gender: 'male',
         birthday: '',
       },
       faceVerified: false,
       riskAssessment: {
-        investmentExperience: undefined,
-        riskTolerance: undefined,
-        investmentHorizon: undefined,
-        annualIncome: undefined,
+        investmentExperience: 'none',
+        riskTolerance: 'conservative',
+        investmentHorizon: 'short_term',
+        annualIncome: 'under_100k',
       },
       suitabilityInfo: {
-        occupation: undefined,
+        occupation: 'student',
         company: '',
       },
       agreements: {
@@ -697,7 +708,9 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
   const handleAutoFillIdCard = (data: Partial<QuickOpenFormData['idCard']>) => {
     methods.setValue('idCard.name', data.name || '');
     methods.setValue('idCard.idNumber', data.idNumber || '');
-    methods.setValue('idCard.gender', data.gender);
+    if (data.gender !== undefined) {
+      methods.setValue('idCard.gender', data.gender);
+    }
     methods.setValue('idCard.birthday', data.birthday || '');
   };
 
@@ -789,7 +802,7 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
         return (
           <FaceRecognitionStep
             onNext={() => setStep(4)}
-            onVerify={async (result) => {
+            onVerify={async (result: FaceVerificationResult) => {
               setFaceVerificationResult(result);
               await handleFaceVerify(result);
             }}
