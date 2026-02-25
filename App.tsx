@@ -142,26 +142,48 @@ const AppContent: React.FC = () => {
           if (error) {
             console.error('获取用户角色失败:', error);
             setUserRole('user');
+            // 默认导航到用户仪表板
+            if (location.pathname === '/' || location.pathname === '/login') {
+              navigate('/dashboard');
+            }
           } else {
-            setUserRole(profile?.role || 'user');
+            const role = profile?.role || 'user';
+            setUserRole(role);
+            
+            // 根据角色导航
+            if (location.pathname === '/' || location.pathname === '/login') {
+              if (role === 'admin') {
+                navigate('/admin/dashboard');
+              } else {
+                navigate('/dashboard');
+              }
+            }
           }
         } catch (err) {
           console.error('获取用户角色异常:', err);
           setUserRole('user');
+          // 默认导航到用户仪表板
+          if (location.pathname === '/' || location.pathname === '/login') {
+            navigate('/dashboard');
+          }
         }
         
         syncAccountData(session.user.id);
       } else {
         setUserRole('user');
+        // 用户登出，导航到首页
+        if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard')) {
+          navigate('/');
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [syncAccountData]);
+    }, [syncAccountData, navigate, location]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const handleLoginSuccess = (userData?: any, role: string = 'user') => {
+  const handleLoginSuccess = (userData?: any) => {
     const finalUser = userData || { 
       id: 'user-id-001',
       email: 'user@zhengyu.com', 
@@ -183,7 +205,7 @@ const AppContent: React.FC = () => {
     };
     
     setSession(session);
-    setUserRole(role);
+    // 注意：不在这里设置userRole，让onAuthStateChange回调从数据库获取正确的角色
     
     setAccount(prev => ({
       ...prev,
@@ -192,11 +214,8 @@ const AppContent: React.FC = () => {
       email: finalUser.email || prev.email
     }));
     
-    if (role === 'admin') {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/dashboard');
-    }
+    // 不在这里导航，让onAuthStateChange回调处理导航
+    // 因为我们需要等待获取用户角色
   };
 
   const executeTrade = useCallback(async (

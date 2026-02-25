@@ -186,7 +186,7 @@ const AdminTicketDetail: React.FC = () => {
   if (!ticket) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <ICONS.AlertCircle size={48} className="text-industrial-300 mb-4" />
+        <ICONS.Shield size={48} className="text-industrial-300 mb-4" />
         <h3 className="text-lg font-bold text-industrial-700 mb-2">工单不存在</h3>
         <p className="text-sm text-industrial-500 mb-4">找不到指定的工单</p>
         <button
