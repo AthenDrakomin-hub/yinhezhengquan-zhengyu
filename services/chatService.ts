@@ -254,32 +254,52 @@ export const chatService = {
     }
 
     try {
-      const { data, error } = await supabase
+      // 第一步：获取所有工单
+      const { data: tickets, error: ticketsError } = await supabase
         .from('support_tickets')
-        .select(`
-          *,
-          profiles:user_id (username, email)
-        `)
+        .select('*')
         .order('last_message_at', { ascending: false });
 
-      if (error) throw error;
+      if (ticketsError) throw ticketsError;
+      if (!tickets || tickets.length === 0) return [];
 
-      // 获取每个工单的消息数量
+      // 第二步：收集所有用户ID并查询profiles
+      const userIds = tickets.map(ticket => ticket.user_id).filter(Boolean);
+      const profilesMap = new Map();
+      
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, email')
+          .in('id', userIds);
+        
+        if (profilesError) {
+          console.error('获取用户信息失败:', profilesError);
+        } else if (profiles) {
+          profiles.forEach(profile => {
+            profilesMap.set(profile.id, profile);
+          });
+        }
+      }
+
+      // 第三步：获取每个工单的消息数量并合并数据
       const ticketsWithCounts = await Promise.all(
-        (data || []).map(async (ticket) => {
+        tickets.map(async (ticket) => {
           const { count } = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
             .eq('ticket_id', ticket.id);
 
+          const profile = profilesMap.get(ticket.user_id);
+          
           return {
             id: ticket.id,
             subject: ticket.subject,
             status: ticket.status,
             lastUpdate: ticket.last_update,
             userId: ticket.user_id,
-            username: ticket.profiles?.username || '未知用户',
-            email: ticket.profiles?.email || '未知邮箱',
+            username: profile?.username || '未知用户',
+            email: profile?.email || '未知邮箱',
             lastMessageAt: ticket.last_message_at,
             unreadCountUser: ticket.unread_count_user || 0,
             unreadCountAdmin: ticket.unread_count_admin || 0,

@@ -132,14 +132,24 @@ const AppContent: React.FC = () => {
       setSession(session);
       if (session) {
         // 直接获取用户profile，避免重复调用getSession
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-          .catch(() => ({ data: null }));
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+            console.error('获取用户角色失败:', error);
+            setUserRole('user');
+          } else {
+            setUserRole(profile?.role || 'user');
+          }
+        } catch (err) {
+          console.error('获取用户角色异常:', err);
+          setUserRole('user');
+        }
         
-        setUserRole(profile?.role || 'user');
         syncAccountData(session.user.id);
       } else {
         setUserRole('user');
