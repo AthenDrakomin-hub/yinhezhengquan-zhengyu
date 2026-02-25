@@ -12,6 +12,11 @@ interface LoginViewProps {
 const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) => {
   console.log('LoginView rendering');
   const navigate = useNavigate();
+  
+  // 常量定义
+  const BG_URL = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070";
+  const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
+  
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email' | '2fa'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -221,6 +226,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
       setLoading(false);
     }
   };
+
+  return (
     <div 
       className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-8 animate-slide-up relative"
       style={{ backgroundImage: `url('${BG_URL}')` }}
