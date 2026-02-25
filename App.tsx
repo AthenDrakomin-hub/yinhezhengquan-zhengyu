@@ -33,6 +33,12 @@ import AdminTradeManagement from './components/admin/AdminTradeManagement';
 import AdminIntegrationPanel from './components/admin/AdminIntegrationPanel';
 import AdminRuleManagement from './components/admin/AdminRuleManagement';
 import AdminMatchIntervention from './components/admin/AdminMatchIntervention';
+import AdminReports from './components/admin/AdminReports';
+import AdminEducation from './components/admin/AdminEducation';
+import AdminCalendar from './components/admin/AdminCalendar';
+import AdminIPOs from './components/admin/AdminIPOs';
+import AdminDerivatives from './components/admin/AdminDerivatives';
+import AdminBanners from './components/admin/AdminBanners';
 
 // --- 路由保护组件 ---
 const ProtectedRoute: React.FC<{ session: any; role?: string; children: React.ReactNode; isAdmin?: boolean }> = ({ session, role, children, isAdmin }) => {
@@ -48,7 +54,7 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // --- 虚拟账户核心状态 ---
+  // --- 账户核心状态 ---
   const [account, setAccount] = useState<UserAccount>({
     id: 'ZY-USER-001',
     email: '',
@@ -119,21 +125,21 @@ const AppContent: React.FC = () => {
 
   const handleLoginSuccess = (userData?: any, role: string = 'user') => {
     const finalUser = userData || { 
-      id: 'demo-user-id',
-      email: 'demo@zhengyu.com', 
-      username: '演示用户',
-      user_metadata: { username: '演示用户' }
+      id: 'user-id-001',
+      email: 'user@zhengyu.com', 
+      username: '证裕用户',
+      user_metadata: { username: '证裕用户' }
     };
     
-    // 创建完整的session对象，模拟Supabase的session结构
+    // 创建完整的session对象，创建Supabase的session结构
     const session = {
       user: {
-        id: finalUser.id || 'demo-user-id',
-        email: finalUser.email || 'demo@zhengyu.com',
-        user_metadata: finalUser.user_metadata || { username: finalUser.username || '演示用户' }
+        id: finalUser.id || 'user-id-001',
+        email: finalUser.email || 'user@zhengyu.com',
+        user_metadata: finalUser.user_metadata || { username: finalUser.username || '证裕用户' }
       },
-      access_token: 'demo-access-token',
-      refresh_token: 'demo-refresh-token',
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
       expires_at: Date.now() + 3600 * 1000, // 1小时后过期
       expires_in: 3600
     };
@@ -233,6 +239,12 @@ const AppContent: React.FC = () => {
           <Route path="users" element={<AdminUserManagement />} />
           <Route path="trades" element={<AdminTradeManagement />} />
           <Route path="integration" element={<AdminIntegrationPanel />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="education" element={<AdminEducation />} />
+          <Route path="calendar" element={<AdminCalendar />} />
+          <Route path="ipos" element={<AdminIPOs />} />
+          <Route path="derivatives" element={<AdminDerivatives />} />
+          <Route path="banners" element={<AdminBanners />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
 

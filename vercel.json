@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/stock/:path*",
+      "destination": "https://hq.sinajs.cn/:path*"
+    }
+  ]
+}

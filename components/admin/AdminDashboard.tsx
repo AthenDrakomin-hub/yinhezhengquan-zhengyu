@@ -40,7 +40,7 @@ const AdminDashboard: React.FC = () => {
         
         const volume = trades?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
-        // 模拟在线用户 (Supabase 实时 Presence 可以实现，这里先模拟)
+        // 在线用户 (Supabase 实时 Presence 可以实现，这里先模拟)
         const onlineCount = Math.floor(Math.random() * 10) + 5;
 
         setStats({

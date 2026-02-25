@@ -80,7 +80,7 @@ const BannerDetailView: React.FC<BannerDetailViewProps> = ({ banner, onBack, onA
               {banner.content}
             </p>
             <p className="text-sm leading-loose text-[var(--color-text-secondary)] font-medium mt-4">
-              作为证裕交易单元的核心战略，Nexus 计划致力于通过极致的流动性管理与 AI 赋能的策略研究，为专业投资者提供全方位虚拟对冲工具。
+              作为证裕交易单元的核心战略，Nexus 计划致力于通过极致的流动性管理与 AI 赋能的策略研究，为专业投资者提供全方位对冲工具。
             </p>
           </article>
 

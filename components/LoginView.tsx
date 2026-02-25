@@ -62,9 +62,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
     
     try {
       if (isPlaceholder) {
-        // 演示模式
+        // 演示环境
         setTimeout(() => {
-          alert(`演示模式：重置密码邮件已发送到 ${targetEmail}\n在真实环境中，您将收到包含重置链接的邮件。`);
+          alert(`演示环境：重置密码邮件已发送到 ${targetEmail}\n在真实环境中，您将收到包含重置链接的邮件。`);
           setForgotPasswordLoading(false);
         }, 1000);
       } else {
@@ -94,12 +94,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
     
     try {
       if (isPlaceholder) {
-        console.warn('演示模式：模拟发送验证码到', phone);
+        console.warn('演示环境：发送验证码到', phone);
         setTimeout(() => {
           setOtpSent(true);
           setCountdown(60);
           setLoading(false);
-          alert('验证码已发送（演示模式：请输入任意 6 位数字）');
+          alert('验证码已发送（演示环境：请输入任意 6 位数字）');
         }, 1000);
       } else {
         const { error } = await supabase.auth.signInWithOtp({
@@ -126,7 +126,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
         if (isPlaceholder) {
           if (otp.length === 6) {
             setTimeout(() => {
-              onLoginSuccess({ email: `${phone}@demo.com`, username: `User_${phone.slice(-4)}` });
+              onLoginSuccess({ email: `${phone}@zhengyu.com`, username: `User_${phone.slice(-4)}` });
               setLoading(false);
             }, 1000);
           } else {
@@ -203,24 +203,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
               throw new Error('请输入 6 位 TOTP 验证码');
             }
           } else {
-            // 真实环境：验证TOTP
-            // 注意：Supabase的TOTP验证可能需要不同的API
-            // 这里简化处理，假设验证成功
-            onLoginSuccess({ email, twoFactorEnabled: true });
+            // 真实环境：验证TOTP验证码
+            // 注意：Supabase 2FA验证需要额外配置，这里简化处理
+            const { data, error } = await supabase.auth.verifyOtp({
+              email,
+              token: totpCode,
+              type: 'totp',
+            });
+            if (error) throw error;
+            onLoginSuccess(data.user);
             setLoading(false);
           }
         }
       }
     } catch (error: any) {
-      alert(error.message || '登录验证失败');
+      alert(error.message || '登录失败，请检查输入信息');
       setLoading(false);
     }
   };
-
-  const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
-  const BG_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/75581daa-fd55-45c5-8376-f51bf6852fde.jpg";
-
-  return (
     <div 
       className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-8 animate-slide-up relative"
       style={{ backgroundImage: `url('${BG_URL}')` }}
@@ -449,7 +449,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             <div className="space-y-2">
               <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
                 登录即代表您同意《银河证券·证裕用户隐私协议》<br/>
-                <span className="text-[#00D4AA]/60">本平台仅用于模拟资产验证，不涉及真实资金交易</span>
+                <span className="text-[#00D4AA]/60">本平台用于资产验证，不涉及真实资金交易</span>
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
--- 银河证券虚拟管理系统 - Supabase Postgres Schema (Enhanced)
+-- 银河证券管理系统 - Supabase Postgres Schema (Enhanced)
 
 -- 1. 用户扩展表 (public.profiles / users_profile)
 CREATE TABLE IF NOT EXISTS public.profiles (

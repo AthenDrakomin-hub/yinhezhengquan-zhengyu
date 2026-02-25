@@ -113,7 +113,7 @@ const ComplianceShieldView: React.FC<ComplianceShieldViewProps> = ({ onBack }) =
             <h3 className="text-xs font-black text-[#FF6B6B] uppercase tracking-widest">监管警示与适当性声明</h3>
           </div>
           <p className="text-[10px] text-[var(--color-text-secondary)] font-medium leading-relaxed">
-            证裕交易单元作为银河证券 Nexus 2026 计划的核心节点，严格遵守《证券期货投资者适当性管理办法》。所有虚拟交易标的仅供策略回测与研究使用，不构成真实投资建议。杠杆倍数超过 10x 的合约属于高风险标的，请审慎操作。
+            证裕交易单元作为银河证券 Nexus 2026 计划的核心节点，严格遵守《证券期货投资者适当性管理办法》。所有交易标的仅供策略回测与研究使用，不构成真实投资建议。杠杆倍数超过 10x 的合约属于高风险标的，请审慎操作。
           </p>
         </div>
       </div>

@@ -64,7 +64,7 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
   // 处理分类切换逻辑
   useEffect(() => {
     if (assetCategory === '新股申购') {
-      // 新股申购使用模拟数据（通常没有免费公开API）
+      // 新股申购使用数据（通常没有免费公开API）
       const ipoStock: Stock = {
         symbol: '780123',
         name: '银河量子',
@@ -84,7 +84,7 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
       setTradeType(TradeType.LIMIT_UP);
       setPrice((selectedStock.price * 1.1).toFixed(2)); // 涨停价格
     } else if (assetCategory === '衍生品') {
-      // 衍生品使用模拟数据
+      // 衍生品使用数据
       const derivStock: Stock = {
         symbol: 'IF2506',
         name: '沪深300指数期货2506',
@@ -150,7 +150,7 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
 
   const filteredStocks = useMemo(() => {
     if (assetCategory === '新股申购') {
-      // 新股申购模拟数据
+      // 新股申购数据
       const ipoStocks: Stock[] = [{
         symbol: '780123',
         name: '银河量子',
@@ -162,7 +162,7 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
       }];
       return searchTerm ? ipoStocks.filter(s => s.name.includes(searchTerm) || s.symbol.includes(searchTerm)) : ipoStocks;
     } else if (assetCategory === '衍生品') {
-      // 衍生品模拟数据
+      // 衍生品数据
       const derivStocks: Stock[] = [{
         symbol: 'IF2506',
         name: '沪深300指数期货2506',

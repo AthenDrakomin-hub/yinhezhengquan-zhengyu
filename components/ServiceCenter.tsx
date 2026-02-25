@@ -16,7 +16,7 @@ const ServiceCenter: React.FC = () => {
     setInput('');
     setLoading(true);
     
-    // 延迟模拟真实响应
+    // 延迟以模拟真实响应
     setTimeout(async () => {
         const botReply = await getSmartCustomerSupport(userMsg);
         setMessages(prev => [...prev, { role: 'bot', text: botReply }]);

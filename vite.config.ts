@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api/stock': {
+            target: 'https://hq.sinajs.cn',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/stock/, ''),
+          }
+        }
       },
       plugins: [react(), tailwindcss()],
       build: {

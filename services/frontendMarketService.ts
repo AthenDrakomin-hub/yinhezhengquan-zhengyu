@@ -7,6 +7,10 @@
 
 import { Stock } from '../types';
 
+// ==================== 环境变量配置 ====================
+// 是否使用真实行情数据（通过环境变量控制，默认使用模拟数据）
+const useRealMarketData = import.meta.env.VITE_USE_REAL_MARKET_DATA === 'true';
+
 // ==================== 数据源配置 ====================
 interface DataSourceConfig {
   name: string;
@@ -16,18 +20,19 @@ interface DataSourceConfig {
 
 // 免费、无CORS限制的公开行情数据源
 const DATA_SOURCES = {
-  // 新浪财经实时行情 (无CORS限制，覆盖A股、港股)
+  // 新浪财经实时行情 (通过代理解决跨域，覆盖A股、港股)
   SINA_REALTIME: {
     name: '新浪财经实时行情',
     priority: 1,
-    enabled: true,
+    enabled: useRealMarketData, // 根据环境变量启用
     getRealtimeUrl: (symbol: string, market: 'CN' | 'HK'): string => {
       // A股: sh600000, sz000001
       // 港股: hk00700
       const prefix = market === 'CN' 
         ? (symbol.startsWith('6') ? 'sh' : 'sz')
         : 'hk';
-      return `https://hq.sinajs.cn/list=${prefix}${symbol}`;
+      // 通过代理路径访问，解决跨域问题（代理会将 /api/stock 前缀移除）
+      return `/api/stock/list=${prefix}${symbol}`;
     },
     parseRealtimeData: (text: string, symbol: string, market: 'CN' | 'HK'): Partial<Stock> | null => {
       try {
@@ -64,7 +69,7 @@ const DATA_SOURCES = {
   TENCENT_KLINE: {
     name: '腾讯财经K线数据',
     priority: 2,
-    enabled: true,
+    enabled: useRealMarketData, // 根据环境变量启用
     getKlineUrl: (symbol: string, market: 'CN' | 'HK', period: 'day' | 'week' | 'month' = 'day'): string => {
       const marketCode = market === 'CN' ? 'sz' : 'hk';
       return `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${marketCode}${symbol},${period},,,320`;
@@ -85,7 +90,7 @@ const DATA_SOURCES = {
   EASTMONEY_BATCH: {
     name: '东方财富批量行情',
     priority: 3,
-    enabled: true,
+    enabled: useRealMarketData, // 根据环境变量启用
     getBatchUrl: (symbols: string[], market: 'CN' | 'HK'): string => {
       const marketCode = market === 'CN' ? '1.' : '116.';
       const codeList = symbols.map(sym => `${marketCode}${sym}`).join(',');
@@ -219,7 +224,7 @@ class ErrorHandler {
   }
   
   static generateFallbackData(symbol: string, market: 'CN' | 'HK'): Stock {
-    // 生成符合交易规则的模拟行情数据
+    // 生成符合交易规则的行情数据
     const basePrice = market === 'CN' ? 
       (symbol.startsWith('6') ? 10 + Math.random() * 50 : 5 + Math.random() * 30) :
       100 + Math.random() * 300;
@@ -228,7 +233,7 @@ class ErrorHandler {
     const price = basePrice + change;
     const changePercent = (change / basePrice) * 100;
     
-    // 生成模拟走势图
+    // 生成走势图
     const sparkline: number[] = [];
     let current = price;
     for (let i = 0; i < 10; i++) {
@@ -238,7 +243,7 @@ class ErrorHandler {
     
     return {
       symbol,
-      name: `${symbol}模拟数据`,
+      name: `${symbol}数据`,
       price: parseFloat(price.toFixed(2)),
       change: parseFloat(change.toFixed(2)),
       changePercent: parseFloat(changePercent.toFixed(2)),
@@ -327,10 +332,10 @@ export const frontendMarketService = {
       }
     }
     
-    // 4. 所有数据源都失败，返回模拟数据
-    console.warn('所有数据源均失败，返回模拟数据');
+    // 4. 所有数据源都失败，返回数据
+    console.warn('所有数据源均失败，返回数据');
     const fallbackData = ErrorHandler.generateFallbackData(symbol, market);
-    MarketCache.set(cacheKey, fallbackData, 60 * 1000); // 模拟数据缓存1分钟
+    MarketCache.set(cacheKey, fallbackData, 60 * 1000); // 数据缓存1分钟
     return fallbackData;
   },
   

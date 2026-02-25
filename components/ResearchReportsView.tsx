@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
-import { ICONS, MOCK_REPORTS } from '../constants';
+import React, { useState, useEffect } from 'react';
+import { ICONS } from '../constants';
 import { ResearchReport } from '../types';
+import { getReports } from '../services/contentService';
 
 interface ResearchReportsViewProps {
   onBack: () => void;
@@ -10,10 +11,27 @@ interface ResearchReportsViewProps {
 const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => {
   const [filter, setFilter] = useState('全部');
   const [selectedReport, setSelectedReport] = useState<ResearchReport | null>(null);
+  const [reports, setReports] = useState<ResearchReport[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      try {
+        const data = await getReports();
+        setReports(data);
+      } catch (error) {
+        console.error('Failed to load reports:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
 
   const filteredReports = filter === '全部' 
-    ? MOCK_REPORTS 
-    : MOCK_REPORTS.filter(r => r.category === filter);
+    ? reports 
+    : reports.filter(r => r.category === filter);
 
   if (selectedReport) {
     return (
@@ -86,31 +104,41 @@ const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => 
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-        {filteredReports.map(report => (
-          <div 
-            key={report.id} 
-            onClick={() => setSelectedReport(report)}
-            className="glass-card p-5 space-y-3 border-l-4 border-transparent hover:border-[#00D4AA] transition-all cursor-pointer group"
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-[9px] font-black text-[#00D4AA] uppercase tracking-[0.2em]">{report.category}</span>
-              <span className="text-[9px] text-[var(--color-text-muted)] font-bold">{report.date}</span>
-            </div>
-            <h4 className="text-sm font-black text-[var(--color-text-primary)] group-hover:text-[#00D4AA] leading-snug transition-colors">{report.title}</h4>
-            <p className="text-[10px] text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed">{report.summary}</p>
-            <div className="flex justify-between items-center pt-3 border-t border-[var(--color-border)] mt-2">
-              <span className="text-[9px] text-[var(--color-text-secondary)] font-bold italic">{report.author}</span>
-              <div className="flex items-center gap-1">
-                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${report.sentiment === '看多' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 'bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]'}`}>
-                  {report.sentiment}
-                </span>
-                <ICONS.ArrowRight size={10} className="text-[var(--color-text-muted)] group-hover:translate-x-1 transition-transform" />
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-[var(--color-text-muted)] text-xs">加载中...</div>
+        </div>
+      ) : filteredReports.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-[var(--color-text-muted)] text-xs">暂无研报数据</div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+          {filteredReports.map(report => (
+            <div 
+              key={report.id} 
+              onClick={() => setSelectedReport(report)}
+              className="glass-card p-5 space-y-3 border-l-4 border-transparent hover:border-[#00D4AA] transition-all cursor-pointer group"
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-black text-[#00D4AA] uppercase tracking-[0.2em]">{report.category}</span>
+                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">{report.date}</span>
+              </div>
+              <h4 className="text-sm font-black text-[var(--color-text-primary)] group-hover:text-[#00D4AA] leading-snug transition-colors">{report.title}</h4>
+              <p className="text-[10px] text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed">{report.summary}</p>
+              <div className="flex justify-between items-center pt-3 border-t border-[var(--color-border)] mt-2">
+                <span className="text-[9px] text-[var(--color-text-secondary)] font-bold italic">{report.author}</span>
+                <div className="flex items-center gap-1">
+                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${report.sentiment === '看多' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 'bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]'}`}>
+                    {report.sentiment}
+                  </span>
+                  <ICONS.ArrowRight size={10} className="text-[var(--color-text-muted)] group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

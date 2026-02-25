@@ -44,5 +44,5 @@ export const isAdmin = async () => {
   return profile?.role === 'admin';
 };
 
-// 导出判断是否为演示模式的标志
+// 导出判断是否为演示环境的标志
 export const isDemoMode = supabaseUrl.includes('placeholder') || !supabaseUrl;

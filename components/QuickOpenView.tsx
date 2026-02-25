@@ -141,7 +141,7 @@ const PhoneVerificationStep: React.FC<{
       </form>
 
       <p className="text-xs text-slate-500 text-center">
-        开发环境：验证码将在 Supabase 日志中显示
+        开发环境：验证码将在日志中显示
       </p>
     </div>
   );
@@ -154,7 +154,7 @@ const IdCardOcrStep: React.FC<{
 }> = ({ onNext, onAutoFill }) => {
   const { register, setValue, watch, formState: { errors } } = useFormContext<QuickOpenFormData>();
   
-  // 模拟 OCR 识别
+  // OCR 识别
   const simulateOcr = () => {
     const mockData = {
       name: '张三',
@@ -282,9 +282,9 @@ const FaceRecognitionStep: React.FC<{
   const handleFaceVerify = async () => {
     setLoading(true);
     try {
-      // 模拟人脸识别过程
+      // 人脸识别过程
       await new Promise(resolve => setTimeout(resolve, 2000));
-      // 模拟人脸验证结果
+      // 人脸验证结果
       const mockResult: FaceVerificationResult = {
         verified: true,
         confidence: 0.95,

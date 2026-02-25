@@ -14,11 +14,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
     { id: 'dashboard', label: '总览', icon: ICONS.Home, path: '/admin/dashboard' },
     { id: 'rules', label: '交易规则管理', icon: ICONS.Shield, path: '/admin/rules' },
     { id: 'match', label: '撮合干预面板', icon: ICONS.Zap, path: '/admin/match' },
-    { id: 'customers', label: '客户管理', icon: ICONS.User, path: '/admin/customers' },
     { id: 'trades', label: '交易管理', icon: ICONS.Trade, path: '/admin/trades' },
     { id: 'users', label: '用户管理', icon: ICONS.Shield, path: '/admin/users' },
     { id: 'integration', label: '接入面板', icon: ICONS.Zap, path: '/admin/integration' },
-    { id: 'settings', label: '系统设置', icon: ICONS.Settings, path: '/admin/settings' },
+    { id: 'reports', label: '研报管理', icon: ICONS.Book, path: '/admin/reports' },
+    { id: 'education', label: '投教内容', icon: ICONS.Globe, path: '/admin/education' },
+    { id: 'calendar', label: '日历事件', icon: ICONS.Calendar, path: '/admin/calendar' },
+    { id: 'ipos', label: '新股管理', icon: ICONS.Chart, path: '/admin/ipos' },
+    { id: 'derivatives', label: '衍生品管理', icon: ICONS.Key, path: '/admin/derivatives' },
+    { id: 'banners', label: '横幅管理', icon: ICONS.Camera, path: '/admin/banners' },
   ];
 
   return (
@@ -29,7 +33,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
           <div className="w-8 h-8 bg-accent-red rounded flex items-center justify-center text-white font-black">ZY</div>
           <div>
             <h1 className="text-sm font-black tracking-tighter">银河证券</h1>
-            <p className="text-[10px] text-industrial-400 font-bold uppercase tracking-widest">虚拟管理系统</p>
+            <p className="text-[10px] text-industrial-400 font-bold uppercase tracking-widest">管理系统</p>
           </div>
         </div>
         
