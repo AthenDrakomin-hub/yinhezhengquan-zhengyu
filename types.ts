@@ -120,11 +120,25 @@ export interface Holding {
   logoUrl?: string;
 }
 
+export interface Message {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  senderType: 'user' | 'admin';
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface SupportTicket {
   id: string;
   subject: string;
   status: 'IN_PROGRESS' | 'CLOSED' | 'OPEN';
   lastUpdate: string;
+  userId?: string;
+  lastMessageAt?: string;
+  unreadCountUser?: number;
+  unreadCountAdmin?: number;
 }
 
 export interface EducationTopic {

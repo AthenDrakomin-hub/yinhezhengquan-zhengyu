@@ -1,8 +1,10 @@
 
-import React from 'react';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { ICONS, COLORS } from '../constants';
 import { UserAccount } from '../types';
+import { chatService } from '../services/chatService';
+import { useAuth } from '../services/authService';
 
 interface LayoutProps {
   activeTab: string;
@@ -11,11 +13,16 @@ interface LayoutProps {
   toggleTheme: () => void;
   onOpenSettings: () => void;
   account: UserAccount;
+  userRole?: string;
 }
 
-const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, toggleTheme, onOpenSettings, account }) => {
+const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, toggleTheme, onOpenSettings, account, userRole }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { session, user } = useAuth();
+
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [loadingChatCount, setLoadingChatCount] = useState(false);
 
   const tabs = [
     { id: 'dashboard', label: '首页总览', icon: ICONS.Home, path: '/dashboard' },
@@ -25,9 +32,51 @@ const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, to
   ];
 
   const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
-  const unreadCount = account.notifications.filter(n => !n.isRead).length;
+  const notificationUnreadCount = account.notifications.filter(n => !n.isRead).length;
 
   const isTabActive = (path: string) => location.pathname.startsWith(path);
+
+  // 加载未读消息计数
+  useEffect(() => {
+    if (!session || !user) {
+      setUnreadChatCount(0);
+      return;
+    }
+
+    const loadUnreadCount = async () => {
+      setLoadingChatCount(true);
+      try {
+        // 获取活动工单
+        const activeTicket = await chatService.getOrCreateActiveTicket(user.id);
+        // 加载工单详情
+        const allTickets = await chatService.getAllTicketsForAdmin();
+        const foundTicket = allTickets.find(t => t.id === activeTicket.id);
+        
+        if (foundTicket) {
+          setUnreadChatCount(foundTicket.unreadCountUser || 0);
+        }
+      } catch (error) {
+        console.error('加载未读消息计数失败:', error);
+      } finally {
+        setLoadingChatCount(false);
+      }
+    };
+
+    loadUnreadCount();
+
+    // 订阅工单变化来更新未读计数
+    const unsubscribe = chatService.subscribeToTickets(() => {
+      loadUnreadCount();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [session, user]);
+
+  const handleChatClick = () => {
+    navigate('/chat');
+  };
 
   return (
     <div className="flex min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] transition-colors duration-400">
@@ -115,11 +164,35 @@ const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, to
               <ICONS.Chart size={14} />
               数据终端
             </button>
-            <button className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center relative">
-              <ICONS.Headset size={18} className="text-[var(--color-text-secondary)]" />
-              {unreadCount > 0 && (
+            
+            {/* 管理后台入口 - 仅对admin用户显示 */}
+            {userRole === 'admin' && (
+              <Link 
+                to="/admin/dashboard"
+                className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[#00D4AA] transition-all relative group"
+                title="管理后台"
+              >
+                <ICONS.Shield size={18} />
+                {/* 桌面端悬停提示 */}
+                <span className="hidden md:group-hover:block absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[9px] font-black uppercase text-[var(--color-text-primary)] px-2 py-1 rounded whitespace-nowrap z-50">
+                  管理后台
+                </span>
+              </Link>
+            )}
+            
+            <button 
+              onClick={handleChatClick}
+              className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center relative hover:text-[#00D4AA] transition-all"
+              disabled={loadingChatCount}
+            >
+              {loadingChatCount ? (
+                <div className="w-4 h-4 border-2 border-[var(--color-text-secondary)] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <ICONS.Headset size={18} className="text-[var(--color-text-secondary)]" />
+              )}
+              {unreadChatCount > 0 && (
                 <span className="absolute top-2 right-2 w-3.5 h-3.5 bg-[#FF6B6B] border-2 border-[var(--color-bg)] rounded-full text-[7px] font-black flex items-center justify-center">
-                  {unreadCount}
+                  {unreadChatCount > 9 ? '9+' : unreadChatCount}
                 </span>
               )}
             </button>

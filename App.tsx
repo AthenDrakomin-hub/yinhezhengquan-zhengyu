@@ -13,6 +13,7 @@ import AssetAnalysisView from './components/AssetAnalysisView';
 import ConditionalOrderPanel from './components/ConditionalOrderPanel';
 import LoginView from './components/LoginView';
 import LandingView from './components/LandingView';
+import ChatView from './components/ChatView';
 import QuickOpenView from './components/QuickOpenView';
 import BannerDetailView from './components/BannerDetailView';
 import InvestmentCalendarView from './components/InvestmentCalendarView';
@@ -39,6 +40,8 @@ import AdminCalendar from './components/admin/AdminCalendar';
 import AdminIPOs from './components/admin/AdminIPOs';
 import AdminDerivatives from './components/admin/AdminDerivatives';
 import AdminBanners from './components/admin/AdminBanners';
+import AdminTickets from './components/admin/AdminTickets';
+import AdminTicketDetail from './components/admin/AdminTicketDetail';
 
 // --- 路由保护组件 ---
 const ProtectedRoute: React.FC<{ session: any; role?: string; children: React.ReactNode; isAdmin?: boolean }> = ({ session, role, children, isAdmin }) => {
@@ -75,22 +78,40 @@ const AppContent: React.FC = () => {
   // 同步账户数据
   const syncAccountData = useCallback(async (userId: string) => {
     try {
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      const { data: assets } = await supabase.from('assets').select('*').eq('user_id', userId).single();
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) {
+        console.error('获取用户资料失败:', profileError);
+        return;
+      }
+
+      // 使用 maybeSingle 而不是 single，因为 assets 可能不存在
+      const { data: assets, error: assetsError } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (assetsError && assetsError.code !== 'PGRST116') { // PGRST116 表示没有找到记录
+        console.error('获取资产数据失败:', assetsError);
+      }
+
       const holdings = await tradeService.getHoldings(userId);
       const transactions = await tradeService.getTransactions(userId, 50);
 
-      if (profile && assets) {
-        setAccount(prev => ({
-          ...prev,
-          id: profile.id,
-          username: profile.username || prev.username,
-          email: session?.user?.email || prev.email,
-          balance: parseFloat(assets.available_balance),
-          holdings: holdings || [],
-          transactions: transactions || []
-        }));
-      }
+      setAccount(prev => ({
+        ...prev,
+        id: profile.id,
+        username: profile.username || prev.username,
+        email: session?.user?.email || prev.email,
+        balance: assets ? parseFloat(assets.available_balance) : prev.balance,
+        holdings: holdings || [],
+        transactions: transactions || []
+      }));
     } catch (err) {
       console.error('同步账户数据失败:', err);
     }
@@ -110,7 +131,14 @@ const AppContent: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
-        const profile = await authService.getSession();
+        // 直接获取用户profile，避免重复调用getSession
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+          .catch(() => ({ data: null }));
+        
         setUserRole(profile?.role || 'user');
         syncAccountData(session.user.id);
       } else {
@@ -238,6 +266,8 @@ const AppContent: React.FC = () => {
           <Route path="match" element={<AdminMatchIntervention />} />
           <Route path="users" element={<AdminUserManagement />} />
           <Route path="trades" element={<AdminTradeManagement />} />
+          <Route path="tickets" element={<AdminTickets />} />
+          <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
           <Route path="integration" element={<AdminIntegrationPanel />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="education" element={<AdminEducation />} />
@@ -247,6 +277,9 @@ const AppContent: React.FC = () => {
           <Route path="banners" element={<AdminBanners />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
+
+        {/* 聊天路由 */}
+        <Route path="/chat" element={<ProtectedRoute session={session} role={userRole}><ChatView /></ProtectedRoute>} />
 
         {/* 主应用布局路由 - 使用嵌套路由模式 */}
         <Route path="/*" element={
@@ -258,6 +291,7 @@ const AppContent: React.FC = () => {
               toggleTheme={toggleTheme} 
               onOpenSettings={() => navigate('/settings')}
               account={account}
+              userRole={userRole}
             />
           </ProtectedRoute>
         }>

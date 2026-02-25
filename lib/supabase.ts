@@ -13,6 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    // 增加锁超时时间，避免多标签页竞争
+    lockTimeout: 20000, // 20秒
   },
 });
 
