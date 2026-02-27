@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
             target: 'https://hq.sinajs.cn',
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api\/stock/, ''),
+          },
+          '/api/sina/ipo': {
+            target: 'http://vip.stock.finance.sina.com.cn',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/sina\/ipo/, '/quotes_service/api/json_v2.php/Market_Center.getIPOSearchList'),
           }
         }
       },

@@ -6,6 +6,7 @@
  */
 
 import { Stock } from '../types';
+import { TradeType } from '../types';
 
 // ==================== 环境变量配置 ====================
 // 是否使用真实行情数据（通过环境变量控制，默认使用模拟数据）
@@ -482,6 +483,127 @@ export const frontendMarketService = {
     }));
     
     return { cacheSize, errorCounts, dataSources };
+  },
+
+  /**
+   * 根据交易类型获取市场数据
+   * 支持IPO、大宗交易、涨停打板等特殊交易类型
+   */
+  async getMarketData(
+    symbol: string,
+    market: 'CN' | 'HK' = 'CN',
+    tradeType?: TradeType
+  ): Promise<Stock & { ipoInfo?: any; blockTradeInfo?: any; limitUpInfo?: any }> {
+    // 默认获取普通股票行情
+    if (!tradeType || tradeType === TradeType.BUY || tradeType === TradeType.SELL) {
+      return this.getRealtimeStock(symbol, market);
+    }
+
+    // 根据交易类型调用相应的适配器
+    switch (tradeType) {
+      case TradeType.IPO: {
+        // 新股申购：使用新浪财经IPO数据
+        try {
+          // 动态导入适配器，避免循环依赖
+          const { fetchSinaIPOBySymbol } = await import('./adapters/sinaIPOAdapter');
+          const ipoData = await fetchSinaIPOBySymbol(symbol);
+          
+          if (ipoData) {
+            // 转换为Stock格式
+            const stock: Stock & { ipoInfo?: any } = {
+              symbol: ipoData.symbol,
+              name: ipoData.name,
+              price: ipoData.issuePrice,
+              change: 0,
+              changePercent: 0,
+              market,
+              sparkline: [],
+              ipoInfo: {
+                listingDate: ipoData.listingDate,
+                status: ipoData.status,
+                issuePrice: ipoData.issuePrice
+              }
+            };
+            return stock;
+          }
+        } catch (error) {
+          console.warn('获取新浪财经IPO数据失败，降级到普通行情:', error);
+        }
+        
+        // 降级：获取普通行情
+        return this.getRealtimeStock(symbol, market);
+      }
+
+      case TradeType.BLOCK: {
+        // 大宗交易：使用QOS API数据
+        try {
+          // 动态导入适配器
+          const { fetchQOSQuote } = await import('./adapters/qosAdapter');
+          const blockTradeInfo = await fetchQOSQuote(symbol);
+          
+          if (blockTradeInfo) {
+            // 转换为Stock格式
+            const stock: Stock & { blockTradeInfo?: any } = {
+              symbol: blockTradeInfo.symbol,
+              name: blockTradeInfo.name,
+              price: blockTradeInfo.price,
+              change: blockTradeInfo.change,
+              changePercent: blockTradeInfo.changePercent,
+              market: blockTradeInfo.market as 'CN' | 'HK' || market,
+              sparkline: [],
+              blockTradeInfo: {
+                minBlockSize: blockTradeInfo.minBlockSize,
+                blockDiscount: blockTradeInfo.blockDiscount,
+                lastUpdated: blockTradeInfo.lastUpdated
+              }
+            };
+            return stock;
+          }
+        } catch (error) {
+          console.warn('获取QOS大宗交易数据失败，降级到普通行情:', error);
+        }
+        
+        // 降级：获取普通行情
+        return this.getRealtimeStock(symbol, market);
+      }
+
+      case TradeType.LIMIT_UP: {
+        // 涨停打板：使用东方财富SDK数据
+        try {
+          // 动态导入服务
+          const { getLimitUpData } = await import('./limitUpService');
+          const limitUpData = await getLimitUpData(symbol);
+          
+          // 转换为Stock格式
+          const stock: Stock & { limitUpInfo?: any } = {
+            symbol: limitUpData.symbol,
+            name: limitUpData.name,
+            price: limitUpData.currentPrice,
+            change: limitUpData.change,
+            changePercent: limitUpData.changePercent,
+            market: limitUpData.market as 'CN' | 'HK' || market,
+            sparkline: [],
+            limitUpInfo: {
+              preClose: limitUpData.preClose,
+              limitUpPrice: limitUpData.limitUpPrice,
+              limitDownPrice: limitUpData.limitDownPrice,
+              buyOneVolume: limitUpData.buyOneVolume,
+              timestamp: limitUpData.timestamp
+            }
+          };
+          return stock;
+        } catch (error) {
+          console.warn('获取涨停打板数据失败，降级到普通行情:', error);
+        }
+        
+        // 降级：获取普通行情
+        return this.getRealtimeStock(symbol, market);
+      }
+
+      default:
+        // 未知交易类型，返回普通行情
+        return this.getRealtimeStock(symbol, market);
+    }
   }
 };
 

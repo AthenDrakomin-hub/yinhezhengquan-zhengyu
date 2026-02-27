@@ -20,6 +20,7 @@ export interface Transaction {
   amount: number;
   timestamp: Date;
   status: 'SUCCESS' | 'PENDING' | 'FAILED' | 'MATCHING';
+  metadata?: Record<string, any>; // 用于存储交易类型的额外信息
 }
 
 export interface ConditionalOrder {

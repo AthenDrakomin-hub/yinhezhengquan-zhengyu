@@ -3,6 +3,10 @@
     {
       "source": "/api/stock/:path*",
       "destination": "https://hq.sinajs.cn/:path*"
+    },
+    {
+      "source": "/api/sina/ipo",
+      "destination": "http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getIPOSearchList"
     }
   ]
 }

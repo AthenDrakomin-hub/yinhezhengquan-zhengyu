@@ -17,10 +17,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 1. 获取撮合池中所有待撮合订单
+    // 1. 获取撮合池中所有待撮合订单，关联trades表获取原始交易类型
     const { data: poolOrders, error: fetchError } = await supabaseClient
       .from('trade_match_pool')
-      .select('*')
+      .select(`
+        *,
+        trades!inner (
+          trade_type,
+          metadata
+        )
+      `)
       .eq('status', 'MATCHING')
       .order('enter_time', { ascending: true })
 
@@ -33,17 +39,46 @@ serve(async (req) => {
     }
 
     let matchCount = 0
+    let specialTradeCount = 0
 
-    // 2. 按标的代码分组
+    // 2. 先处理特殊交易类型（IPO、大宗交易、涨停打板）
+    for (const order of poolOrders) {
+      const originalTradeType = order.trades?.trade_type
+      
+      // 处理IPO：跳过撮合，直接标记为成交
+      if (originalTradeType === 'IPO') {
+        await handleSpecialTrade(supabaseClient, order, 'IPO')
+        specialTradeCount++
+        continue
+      }
+      
+      // 处理大宗交易：确认折扣计算是否正确（已在create-trade-order中验证）
+      if (originalTradeType === 'BLOCK_TRADE') {
+        // 大宗交易按普通交易处理，但可以记录日志
+        console.log(`处理大宗交易订单: ${order.trade_id}, 股票: ${order.stock_code}`)
+      }
+      
+      // 处理涨停打板：价格限制为涨停价（已在create-trade-order中验证）
+      if (originalTradeType === 'LIMIT_UP') {
+        // 涨停打板按普通交易处理，但可以记录日志
+        console.log(`处理涨停打板订单: ${order.trade_id}, 股票: ${order.stock_code}, 价格: ${order.price}`)
+      }
+    }
+
+    // 3. 按标的代码分组（只处理普通交易）
     const ordersByStock: Record<string, any[]> = {}
     poolOrders.forEach(order => {
+      const originalTradeType = order.trades?.trade_type
+      // 跳过已处理的特殊交易
+      if (originalTradeType === 'IPO' || order.status !== 'MATCHING') return
+      
       if (!ordersByStock[order.stock_code]) {
         ordersByStock[order.stock_code] = []
       }
       ordersByStock[order.stock_code].push(order)
     })
 
-    // 3. 对每个标的执行撮合
+    // 4. 对每个标的执行撮合
     for (const stockCode in ordersByStock) {
       const stockOrders = ordersByStock[stockCode]
       
@@ -64,7 +99,7 @@ serve(async (req) => {
           return new Date(a.enter_time).getTime() - new Date(b.enter_time).getTime()
         })
 
-      // 4. 撮合逻辑：遍历买入订单，寻找匹配的卖出订单
+      // 5. 撮合逻辑：遍历买入订单，寻找匹配的卖出订单
       for (const buyOrder of buyOrders) {
         if (buyOrder.status !== 'MATCHING') continue
         
@@ -101,7 +136,12 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, matchCount }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      matchCount, 
+      specialTradeCount,
+      message: `撮合完成: ${matchCount}笔普通交易, ${specialTradeCount}笔特殊交易`
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
@@ -218,4 +258,120 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
     }).eq('id', sellOrder.trade_id)
   }
   // 注意：部分成交时，不更新trades表状态，保持MATCHING状态
+}
+
+/**
+ * 处理特殊交易类型（IPO、大宗交易、涨停打板）
+ * @param supabase Supabase客户端
+ * @param order 撮合池订单
+ * @param tradeType 交易类型
+ */
+async function handleSpecialTrade(supabase: any, order: any, tradeType: string) {
+  try {
+    console.log(`处理特殊交易: ${tradeType}, 订单ID: ${order.trade_id}, 股票: ${order.stock_code}`)
+    
+    // 根据交易类型处理
+    switch (tradeType) {
+      case 'IPO':
+        // IPO：直接标记为成交，不需要撮合
+        await handleIPOTrade(supabase, order)
+        break
+      
+      case 'BLOCK_TRADE':
+      case 'LIMIT_UP':
+        // 大宗交易和涨停打板：按普通交易处理，进入撮合池
+        // 这里不进行特殊处理，让它们进入普通撮合流程
+        console.log(`${tradeType}交易进入撮合流程: ${order.trade_id}`)
+        break
+      
+      default:
+        console.warn(`未知的特殊交易类型: ${tradeType}, 订单ID: ${order.trade_id}`)
+        break
+    }
+  } catch (error) {
+    console.error(`处理特殊交易失败: ${tradeType}, 订单ID: ${order.trade_id}`, error)
+  }
+}
+
+/**
+ * 处理IPO交易：直接标记为成交
+ * @param supabase Supabase客户端
+ * @param order 撮合池订单
+ */
+async function handleIPOTrade(supabase: any, order: any) {
+  try {
+    // 1. 更新撮合池订单状态为完成
+    await supabase.from('trade_match_pool')
+      .update({ status: 'COMPLETED' })
+      .eq('id', order.id)
+    
+    // 2. 更新原始交易订单状态为成功
+    await supabase.from('trades')
+      .update({ 
+        status: 'SUCCESS',
+        finish_time: new Date().toISOString()
+      })
+      .eq('id', order.trade_id)
+    
+    // 3. 更新资产：解冻资金并扣除
+    const { data: assets } = await supabase.from('assets')
+      .select('*')
+      .eq('user_id', order.user_id)
+      .single()
+    
+    if (assets) {
+      const amount = order.price * order.quantity
+      await supabase.from('assets').update({
+        frozen_balance: Number(assets.frozen_balance) - amount,
+        total_balance: Number(assets.total_balance) - amount
+      }).eq('user_id', order.user_id)
+    }
+    
+    // 4. 更新持仓：添加新股持仓
+    const { data: position } = await supabase.from('positions')
+      .select('*')
+      .eq('user_id', order.user_id)
+      .eq('symbol', order.stock_code)
+      .single()
+    
+    if (position) {
+      // 如果已有持仓，更新数量
+      const newQty = position.quantity + order.quantity
+      const newAvg = (Number(position.average_price) * position.quantity + order.price * order.quantity) / newQty
+      await supabase.from('positions').update({
+        quantity: newQty,
+        available_quantity: position.available_quantity + order.quantity,
+        average_price: newAvg,
+        market_value: newQty * order.price
+      }).eq('id', position.id)
+    } else {
+      // 创建新持仓
+      await supabase.from('positions').insert({
+        user_id: order.user_id,
+        symbol: order.stock_code,
+        name: order.stock_code, // 简化，实际应从trades表获取股票名称
+        quantity: order.quantity,
+        available_quantity: order.quantity,
+        average_price: order.price,
+        market_value: order.price * order.quantity
+      })
+    }
+    
+    // 5. 记录成交记录
+    await supabase.from('trade_executions').insert({
+      buy_order_id: order.trade_id,
+      sell_order_id: null, // IPO没有卖方
+      stock_code: order.stock_code,
+      price: order.price,
+      quantity: order.quantity,
+      executed_at: new Date().toISOString()
+    }).catch(() => {
+      // 如果表不存在，忽略错误
+    })
+    
+    console.log(`IPO交易处理完成: ${order.trade_id}, 股票: ${order.stock_code}, 数量: ${order.quantity}`)
+  } catch (error) {
+    console.error(`处理IPO交易失败: ${order.trade_id}`, error)
+    throw error
+  }
 }

@@ -4,11 +4,11 @@ import * as Constants from '../constants';
 const ICONS = Constants.ICONS;
 
 interface LandingViewProps {
-  onEnterLogin: () => void;
+  onEnter: () => void;
   onQuickOpen: () => void;
 }
 
-const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) => {
+const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -67,10 +67,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnterLogin, onQuickOpen }) 
             <img src={LOGO_URL} alt="中国银河证券 证裕交易单元" className="h-10 md:h-12 object-contain" />
           </div>
           <div className="flex items-center gap-8">
-            {['首页', '银河证券-证裕交易单元APP', '快速开户', '登录Nexus'].map(item => (
+            {['首页', '银河证券-证裕交易单元APP', '快速开户', '进入平台'].map(item => (
               <span 
                 key={item} 
-                onClick={item === '快速开户' ? onQuickOpen : item === '登录Nexus' ? onEnterLogin : undefined}
+                onClick={item === '快速开户' ? onQuickOpen : item === '进入平台' ? onEnter : undefined}
                 className={`text-[13px] font-bold ${item === '首页' ? 'text-[#E30613]' : 'text-slate-700'} hover:text-[#E30613] cursor-pointer transition-colors whitespace-nowrap`}
               >
                 {item}

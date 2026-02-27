@@ -1,7 +1,7 @@
-
 "use strict";
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ICONS } from '../constants';
 import StockIcon from './StockIcon';
 
@@ -18,11 +18,9 @@ interface InfoGroup {
   items: ProfileItem[];
 }
 
-interface ProfileDetailViewProps {
-  onBack: () => void;
-}
-
-const ProfileDetailView: React.FC<ProfileDetailViewProps> = ({ onBack }) => {
+const ProfileDetailView: React.FC = () => {
+  const navigate = useNavigate();
+  
   const infoGroups: InfoGroup[] = [
     {
       title: '基本身份信息',
@@ -53,7 +51,7 @@ const ProfileDetailView: React.FC<ProfileDetailViewProps> = ({ onBack }) => {
   return (
     <div className="animate-slide-up flex flex-col h-full bg-[var(--color-bg)]">
       <header className="sticky top-0 z-30 glass-nav p-4 flex items-center gap-4 border-b border-[var(--color-border)]">
-        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-all">
+        <button onClick={() => navigate('/settings')} className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-all">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 className="text-sm font-black uppercase tracking-[0.2em]">个人资料</h1>
@@ -98,7 +96,7 @@ const ProfileDetailView: React.FC<ProfileDetailViewProps> = ({ onBack }) => {
             <ICONS.Shield size={12} /> 敏感信息保护
           </p>
           <p className="text-[9px] text-[var(--color-text-secondary)] leading-relaxed font-medium">
-            为了您的账户安全，关键实名信息已进行脱敏处理。如需修改认证信息，请前往“账户安全中心”提交审核申请。
+            为了您的账户安全，关键实名信息已进行脱敏处理。如需修改认证信息，请前往"账户安全中心"提交审核申请。
           </p>
         </div>
       </div>

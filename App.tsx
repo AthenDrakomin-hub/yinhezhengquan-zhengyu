@@ -1,16 +1,9 @@
 "use strict";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
-import MarketView from './components/MarketView';
-import TradePanel from './components/TradePanel';
-import ProfileView from './components/ProfileView';
-import StockDetailView from './components/StockDetailView';
-import SettingsView from './components/SettingsView';
-import AssetAnalysisView from './components/AssetAnalysisView';
-import ConditionalOrderPanel from './components/ConditionalOrderPanel';
 import LoginView from './components/LoginView';
 import LandingView from './components/LandingView';
 import ChatView from './components/ChatView';
@@ -21,32 +14,89 @@ import ResearchReportsView from './components/ResearchReportsView';
 import EducationBaseView from './components/EducationBaseView';
 import ComplianceShieldView from './components/ComplianceShieldView';
 import SupabaseConnectionCheck from './components/SupabaseConnectionCheck';
+import StockDetailView from './components/StockDetailView';
+import AssetAnalysisView from './components/AssetAnalysisView';
+import ConditionalOrderPanel from './components/ConditionalOrderPanel';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { supabase, isDemoMode } from './lib/supabase';
 import { MOCK_STOCKS, MOCK_ASSET_HISTORY, BANNER_MOCK } from './constants';
 import { authService } from './services/authService';
 import { tradeService } from './services/tradeService';
 import { TradeType, Holding, Transaction, UserAccount, Stock, Banner } from './types';
 
-import AdminLayout from './components/admin/AdminLayout';
-import AdminDashboard from './components/admin/AdminDashboard';
-import AdminUserManagement from './components/admin/AdminUserManagement';
-import AdminTradeManagement from './components/admin/AdminTradeManagement';
-import AdminIntegrationPanel from './components/admin/AdminIntegrationPanel';
-import AdminRuleManagement from './components/admin/AdminRuleManagement';
-import AdminMatchIntervention from './components/admin/AdminMatchIntervention';
-import AdminReports from './components/admin/AdminReports';
-import AdminEducation from './components/admin/AdminEducation';
-import AdminCalendar from './components/admin/AdminCalendar';
-import AdminIPOs from './components/admin/AdminIPOs';
-import AdminDerivatives from './components/admin/AdminDerivatives';
-import AdminBanners from './components/admin/AdminBanners';
-import AdminTickets from './components/admin/AdminTickets';
-import AdminTicketDetail from './components/admin/AdminTicketDetail';
+// 懒加载组件
+const MarketView = lazy(() => import('./components/MarketView'));
+const TradePanel = lazy(() => import('./components/TradePanel'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
+const SettingsOverview = lazy(() => import('./components/SettingsOverview'));
+const ProfileOverview = lazy(() => import('./components/ProfileOverview'));
+const ProfileDetailView = lazy(() => import('./components/ProfileDetailView'));
+const SecurityCenterView = lazy(() => import('./components/SecurityCenterView'));
+const TradingPreferencesView = lazy(() => import('./components/TradingPreferencesView'));
+const PersonalizedSettingsView = lazy(() => import('./components/PersonalizedSettingsView'));
+const AboutInvestZYView = lazy(() => import('./components/AboutInvestZYView'));
+const ComplianceCenter = lazy(() => import('./components/ComplianceCenter'));
+const ServiceCenter = lazy(() => import('./components/ServiceCenter'));
+const EducationCenter = lazy(() => import('./components/EducationCenter'));
+
+// 懒加载管理员组件
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
+const AdminUserManagement = lazy(() => import('./components/admin/AdminUserManagement'));
+const AdminTradeManagement = lazy(() => import('./components/admin/AdminTradeManagement'));
+const AdminIntegrationPanel = lazy(() => import('./components/admin/AdminIntegrationPanel'));
+const AdminRuleManagement = lazy(() => import('./components/admin/AdminRuleManagement'));
+const AdminMatchIntervention = lazy(() => import('./components/admin/AdminMatchIntervention'));
+const AdminReports = lazy(() => import('./components/admin/AdminReports'));
+const AdminEducation = lazy(() => import('./components/admin/AdminEducation'));
+const AdminCalendar = lazy(() => import('./components/admin/AdminCalendar'));
+const AdminIPOs = lazy(() => import('./components/admin/AdminIPOs'));
+const AdminDerivatives = lazy(() => import('./components/admin/AdminDerivatives'));
+const AdminBanners = lazy(() => import('./components/admin/AdminBanners'));
+const AdminTickets = lazy(() => import('./components/admin/AdminTickets'));
+const AdminTicketDetail = lazy(() => import('./components/admin/AdminTicketDetail'));
+
+// 加载占位符组件
+const LoadingSpinner: React.FC = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+      <p className="mt-4 text-gray-600">加载中...</p>
+    </div>
+  </div>
+);
 
 // --- 路由保护组件 ---
-const ProtectedRoute: React.FC<{ session: any; role?: string; children: React.ReactNode; isAdmin?: boolean }> = ({ session, role, children, isAdmin }) => {
-  if (!session) return <Navigate to="/" replace />;
-  if (isAdmin && role !== 'admin') return <Navigate to="/dashboard" replace />;
+const ProtectedRoute: React.FC<{ 
+  session: any; 
+  role?: string; 
+  children: React.ReactNode; 
+  isAdmin?: boolean;
+  isLoading?: boolean;
+}> = ({ session, role, children, isAdmin, isLoading = false }) => {
+  // 处理加载状态
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">加载中...</p>
+      </div>
+    </div>;
+  }
+  
+  // 检查会话
+  if (!session) {
+    console.log('ProtectedRoute: 未登录，重定向到首页');
+    return <Navigate to="/" replace />;
+  }
+  
+  // 检查管理员权限
+  if (isAdmin && role !== 'admin') {
+    console.log('ProtectedRoute: 非管理员访问管理员路由，重定向到仪表板');
+    return <Navigate to="/dashboard" replace />;
+  }
+  
   return <>{children}</>;
 };
 
@@ -54,6 +104,7 @@ const AppContent: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('user');
   const [isDarkMode, setIsDarkMode] = useState(false); 
+  const [isLoading, setIsLoading] = useState(true); // 添加加载状态
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -118,7 +169,26 @@ const AppContent: React.FC = () => {
   }, [session]);
 
   useEffect(() => {
-    if (isDemoMode) return;
+    if (isDemoMode) {
+      setIsLoading(false);
+      return;
+    }
+    
+    // 使用 ref 跟踪是否已经处理了初始 auth 状态
+    let hasHandledInitialAuth = false;
+    
+    const handleAuthInitialized = () => {
+      if (!hasHandledInitialAuth) {
+        hasHandledInitialAuth = true;
+        setIsLoading(false);
+        console.log('Auth 初始化完成，isLoading 设置为 false');
+      }
+    };
+    
+    // 设置一个超时，确保即使 auth 初始化失败也不会一直加载
+    const timeoutId = setTimeout(() => {
+      handleAuthInitialized();
+    }, 3000);
     
     authService.getSession().then((res) => {
       if (res) {
@@ -126,6 +196,12 @@ const AppContent: React.FC = () => {
         setUserRole(res.role);
         syncAccountData(res.session.user.id);
       }
+      handleAuthInitialized();
+      clearTimeout(timeoutId);
+    }).catch((err) => {
+      console.error('获取 session 失败:', err);
+      handleAuthInitialized();
+      clearTimeout(timeoutId);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -142,46 +218,42 @@ const AppContent: React.FC = () => {
           if (error) {
             console.error('获取用户角色失败:', error);
             setUserRole('user');
-            // 默认导航到用户仪表板
-            if (location.pathname === '/' || location.pathname === '/login') {
-              navigate('/dashboard');
-            }
           } else {
             const role = profile?.role || 'user';
             setUserRole(role);
-            
-            // 根据角色导航
-            if (location.pathname === '/' || location.pathname === '/login') {
-              if (role === 'admin') {
-                navigate('/admin/dashboard');
-              } else {
-                navigate('/dashboard');
-              }
-            }
           }
         } catch (err) {
           console.error('获取用户角色异常:', err);
           setUserRole('user');
-          // 默认导航到用户仪表板
-          if (location.pathname === '/' || location.pathname === '/login') {
-            navigate('/dashboard');
-          }
         }
         
         syncAccountData(session.user.id);
       } else {
         setUserRole('user');
-        // 用户登出，导航到首页
-        if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard')) {
-          navigate('/');
-        }
       }
+      
+      // auth 状态变化时，确保加载状态已结束
+      handleAuthInitialized();
     });
 
-    return () => subscription.unsubscribe();
-    }, [syncAccountData, navigate, location]);
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
+    }, [syncAccountData]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  // 处理进入平台按钮点击
+  const handleEnterPlatform = () => {
+    if (session) {
+      // 根据角色跳转
+      const dashboardPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
+      navigate(dashboardPath);
+    } else {
+      navigate('/login');
+    }
+  };
 
   const handleLoginSuccess = (userData?: any) => {
     const finalUser = userData || { 
@@ -273,83 +345,354 @@ const AppContent: React.FC = () => {
     const [searchParams] = useSearchParams();
     const symbol = searchParams.get('symbol');
     const stock = MOCK_STOCKS.find(s => s.symbol === symbol) || null;
-    return <TradePanel account={account} onExecute={executeTrade} initialStock={stock} />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <TradePanel account={account} onExecute={executeTrade} initialStock={stock} />
+      </Suspense>
+    );
+  };
+
+  // 登录页包装组件：已登录用户访问时重定向到仪表板
+  const LoginWrapper = () => {
+    if (isLoading) {
+      return <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">加载中...</p>
+        </div>
+      </div>;
+    }
+    
+    if (session) {
+      console.log('LoginWrapper: 已登录用户访问登录页，重定向到仪表板');
+      const dashboardPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
+      return <Navigate to={dashboardPath} replace />;
+    }
+    
+    return <LoginView onLoginSuccess={handleLoginSuccess} onBackToHome={() => navigate('/')} />;
   };
 
   return (
     <>
       <SupabaseConnectionCheck />
       <Routes>
-        <Route path="/" element={session ? <Navigate to="/dashboard" /> : <LandingView onEnterLogin={() => navigate('/login')} onQuickOpen={() => navigate('/quick-open')} />} />
-        <Route path="/login" element={<LoginView onLoginSuccess={handleLoginSuccess} onBackToHome={() => navigate('/')} />} />
+        <Route path="/" element={<LandingView onEnter={handleEnterPlatform} onQuickOpen={() => navigate('/quick-open')} />} />
+        <Route path="/login" element={<LoginWrapper />} />
         <Route path="/quick-open" element={<QuickOpenView onBack={() => navigate('/')} onComplete={(data) => handleLoginSuccess(data)} />} />
 
         {/* 管理端路由 - 使用嵌套路由模式 */}
         <Route path="/admin/*" element={
-          <ProtectedRoute session={session} role={userRole} isAdmin={true}>
-            <AdminLayout />
+          <ProtectedRoute session={session} role={userRole} isAdmin={true} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminLayout />
+              </Suspense>
+            </ErrorBoundary>
           </ProtectedRoute>
         }>
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="rules" element={<AdminRuleManagement />} />
-          <Route path="match" element={<AdminMatchIntervention />} />
-          <Route path="users" element={<AdminUserManagement />} />
-          <Route path="trades" element={<AdminTradeManagement />} />
-          <Route path="tickets" element={<AdminTickets />} />
-          <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
-          <Route path="integration" element={<AdminIntegrationPanel />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="education" element={<AdminEducation />} />
-          <Route path="calendar" element={<AdminCalendar />} />
-          <Route path="ipos" element={<AdminIPOs />} />
-          <Route path="derivatives" element={<AdminDerivatives />} />
-          <Route path="banners" element={<AdminBanners />} />
+          <Route path="dashboard" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminDashboard />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="rules" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminRuleManagement />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="match" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminMatchIntervention />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="users" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminUserManagement />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="trades" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminTradeManagement />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="tickets" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminTickets />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="tickets/:ticketId" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminTicketDetail />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="integration" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminIntegrationPanel />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="reports" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminReports />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="education" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminEducation />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="calendar" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminCalendar />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="ipos" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminIPOs />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="derivatives" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminDerivatives />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="banners" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminBanners />
+              </Suspense>
+            </ErrorBoundary>
+          } />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
 
         {/* 聊天路由 */}
-        <Route path="/chat" element={<ProtectedRoute session={session} role={userRole}><ChatView /></ProtectedRoute>} />
+        <Route path="/chat" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <ChatView />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
 
         {/* 主应用布局路由 - 使用嵌套路由模式 */}
         <Route path="/*" element={
-          <ProtectedRoute session={session} role={userRole}>
-            <Layout 
-              activeTab={location.pathname.split('/')[1] || 'dashboard'} 
-              setActiveTab={(tab) => navigate(`/${tab}`)} 
-              isDarkMode={isDarkMode} 
-              toggleTheme={toggleTheme} 
-              onOpenSettings={() => navigate('/settings')}
-              account={account}
-              userRole={userRole}
-            />
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <Layout 
+                activeTab={location.pathname.split('/')[1] || 'dashboard'} 
+                setActiveTab={(tab) => navigate(`/${tab}`)} 
+                isDarkMode={isDarkMode} 
+                toggleTheme={toggleTheme} 
+                onOpenSettings={() => navigate('/settings')}
+                account={account}
+                userRole={userRole}
+              />
+            </ErrorBoundary>
           </ProtectedRoute>
         }>
           {/* 嵌套在布局内的子路由 */}
           <Route path="dashboard" element={
-            <Dashboard 
-              transactions={account.transactions}
-              onOpenBanner={(b) => navigate(`/banner/${b.id}`)}
-              onOpenCalendar={() => navigate('/calendar')}
-              onOpenReports={() => navigate('/reports')}
-              onOpenEducation={() => navigate('/education')}
-              onOpenCompliance={() => navigate('/compliance')}
-            />
+            <ErrorBoundary resetOnNavigate>
+              <Dashboard 
+                transactions={account.transactions}
+                onOpenBanner={(b) => navigate(`/banner/${b.id}`)}
+                onOpenCalendar={() => navigate('/calendar')}
+                onOpenReports={() => navigate('/reports')}
+                onOpenEducation={() => navigate('/education')}
+                onOpenCompliance={() => navigate('/compliance')}
+              />
+            </ErrorBoundary>
           } />
-          <Route path="market" element={<MarketView onSelectStock={(symbol) => navigate(`/stock/${symbol}`)} />} />
-          <Route path="trade" element={<TradeWrapper />} />
-          <Route path="profile" element={<ProfileView account={account} onOpenAnalysis={() => navigate('/analysis')} onOpenConditional={() => navigate('/conditional')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />} />
+          <Route path="market" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <MarketView onSelectStock={(symbol) => navigate(`/stock/${symbol}`)} />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="trade" element={
+            <ErrorBoundary resetOnNavigate>
+              <TradeWrapper />
+            </ErrorBoundary>
+          } />
+
         </Route>
 
         {/* 独立全屏业务页面 */}
-        <Route path="/stock/:symbol" element={<ProtectedRoute session={session} role={userRole}><StockDetailWrapper /></ProtectedRoute>} />
-        <Route path="/banner/:id" element={<ProtectedRoute session={session} role={userRole}><BannerDetailWrapper /></ProtectedRoute>} />
-        <Route path="/calendar" element={<ProtectedRoute session={session} role={userRole}><InvestmentCalendarView onBack={() => navigate(-1)} /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute session={session} role={userRole}><ResearchReportsView onBack={() => navigate(-1)} /></ProtectedRoute>} />
-        <Route path="/education" element={<ProtectedRoute session={session} role={userRole}><EducationBaseView onBack={() => navigate(-1)} /></ProtectedRoute>} />
-        <Route path="/compliance" element={<ProtectedRoute session={session} role={userRole}><ComplianceShieldView onBack={() => navigate(-1)} /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute session={session} role={userRole}><SettingsView onBack={() => navigate(-1)} isDarkMode={isDarkMode} toggleTheme={toggleTheme} riskLevel="C3-稳健型" onLogout={async () => { await authService.logout(); setSession(null); navigate('/'); }} /></ProtectedRoute>} />
-        <Route path="/analysis" element={<ProtectedRoute session={session} role={userRole}><AssetAnalysisView account={account} onBack={() => navigate(-1)} /></ProtectedRoute>} />
-        <Route path="/conditional" element={<ProtectedRoute session={session} role={userRole}><ConditionalOrderPanel stock={MOCK_STOCKS[0]} onBack={() => navigate(-1)} onAddOrder={() => {}} /></ProtectedRoute>} />
+        <Route path="/stock/:symbol" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <StockDetailWrapper />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/banner/:id" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <BannerDetailWrapper />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/calendar" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <InvestmentCalendarView onBack={() => navigate(-1)} />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/reports" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <ResearchReportsView onBack={() => navigate(-1)} />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/education" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <EducationBaseView onBack={() => navigate(-1)} />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/compliance" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <ComplianceShieldView onBack={() => navigate(-1)} />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <SettingsView onBack={() => navigate('/dashboard')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} riskLevel="C3-稳健型" onLogout={async () => { await authService.logout(); setSession(null); navigate('/'); }} />
+              </Suspense>
+            </ErrorBoundary>
+          </ProtectedRoute>
+        }>
+          <Route index element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <SettingsOverview onNavigate={(path) => navigate(path)} />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="profile-detail" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <ProfileDetailView />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="security" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <SecurityCenterView />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="trading-preferences" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <TradingPreferencesView />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="personalized" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <PersonalizedSettingsView />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="about" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AboutInvestZYView />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+        </Route>
+        
+        <Route path="/profile" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <ProfileView account={account} onOpenAnalysis={() => navigate('/analysis')} onOpenConditional={() => navigate('/conditional')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+              </Suspense>
+            </ErrorBoundary>
+          </ProtectedRoute>
+        }>
+          <Route index element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <ProfileOverview account={account} onOpenAnalysis={() => navigate('/analysis')} onOpenConditional={() => navigate('/conditional')} />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="compliance" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <ComplianceCenter />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="service" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <ServiceCenter />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+          <Route path="education" element={
+            <ErrorBoundary resetOnNavigate>
+              <Suspense fallback={<LoadingSpinner />}>
+                <EducationCenter />
+              </Suspense>
+            </ErrorBoundary>
+          } />
+        </Route>
+        
+        <Route path="/analysis" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <AssetAnalysisView account={account} onBack={() => navigate(-1)} />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
+        <Route path="/conditional" element={
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+            <ErrorBoundary resetOnNavigate>
+              <ConditionalOrderPanel stock={MOCK_STOCKS[0]} onBack={() => navigate(-1)} onAddOrder={() => {}} />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        } />
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,31 +1,9 @@
-
 "use strict";
 
 import React, { useState } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ICONS } from '../constants';
-import ProfileDetailView from './ProfileDetailView';
-import SecurityCenterView from './SecurityCenterView';
-import TradingPreferencesView from './TradingPreferencesView';
-import PersonalizedSettingsView from './PersonalizedSettingsView';
-import AboutInvestZYView from './AboutInvestZYView';
-import { OrderStrategy, TradingSettings, PersonalSettings } from '../types';
-
-interface SettingsItem {
-  id: string;
-  label: string;
-  value?: string;
-  icon?: React.ComponentType<any>;
-  action?: () => void;
-  highlight?: boolean;
-  toggle?: boolean;
-  active?: boolean;
-  arrow?: boolean;
-}
-
-interface SettingsSection {
-  title: string;
-  items: SettingsItem[];
-}
+import { TradingSettings, PersonalSettings } from '../types';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -35,15 +13,21 @@ interface SettingsViewProps {
   onLogout: () => void;
 }
 
-type SettingsSubPage = 'list' | 'profile' | 'security' | 'trading' | 'personalized' | 'about';
+interface SettingsNavItem {
+  id: string;
+  label: string;
+  path: string;
+  icon: React.ComponentType<any>;
+}
 
 const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleTheme, riskLevel, onLogout }) => {
-  const [subPage, setSubPage] = useState<SettingsSubPage>('list');
+  const navigate = useNavigate();
+  const location = useLocation();
   
   // Local settings state
   const [tradingSettings, setTradingSettings] = useState<TradingSettings>({
     fastOrderMode: true,
-    defaultStrategy: OrderStrategy.NORMAL,
+    defaultStrategy: 'NORMAL',
     defaultLeverage: 10,
     autoStopLoss: false
   });
@@ -69,61 +53,21 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
     setPersonalSettings(prev => ({ ...prev, ...updates }));
   };
 
-  if (subPage === 'profile') return <ProfileDetailView onBack={() => setSubPage('list')} />;
-  if (subPage === 'security') return <SecurityCenterView onBack={() => setSubPage('list')} />;
-  if (subPage === 'trading') return (
-    <TradingPreferencesView 
-      onBack={() => setSubPage('list')} 
-      settings={tradingSettings}
-      onUpdateSettings={handleUpdateTradingSettings}
-    />
-  );
-  if (subPage === 'personalized') return (
-    <PersonalizedSettingsView 
-      onBack={() => setSubPage('list')} 
-      settings={personalSettings}
-      onUpdateSettings={handleUpdatePersonalSettings}
-    />
-  );
-  if (subPage === 'about') return <AboutInvestZYView onBack={() => setSubPage('list')} />;
-
-  const sections: SettingsSection[] = [
-    {
-      title: '账户与安全',
-      items: [
-        { id: 'profile', label: '个人资料', value: 'Invest_ZY_2026', icon: ICONS.User, action: () => setSubPage('profile') },
-        { id: 'risk', label: '风险测评等级', value: riskLevel, icon: ICONS.Shield, highlight: true },
-        { id: 'security', label: '账户安全中心', value: '极高防护', icon: ICONS.Shield, action: () => setSubPage('security') },
-      ]
-    },
-    {
-      title: '交易偏好',
-      items: [
-        { 
-          id: 'trading_pref', 
-          label: '交易行为设置', 
-          value: tradingSettings.fastOrderMode ? '极速开启' : '普通模式', 
-          icon: ICONS.Zap, 
-          action: () => setSubPage('trading') 
-        },
-        { id: 'strategy', label: '默认委托策略', value: String(tradingSettings.defaultStrategy), icon: ICONS.Trade },
-        { id: 'leverage', label: '衍生品默认杠杆', value: `${tradingSettings.defaultLeverage}x`, icon: ICONS.Chart },
-      ]
-    },
-    {
-      title: '显示与交互',
-      items: [
-        { id: 'theme', label: '深色模式', toggle: true, active: isDarkMode, action: toggleTheme },
-        { id: 'personalized', label: '偏好与辅助功能', value: personalSettings.language === 'zh-CN' ? '简体中文' : 'Other', icon: ICONS.Eye, action: () => setSubPage('personalized') },
-      ]
-    },
-    {
-      title: '关于证裕',
-      items: [
-        { id: 'about', label: '版本信息与法律', value: 'v2.10.4', icon: ICONS.Headset, action: () => setSubPage('about') },
-      ]
-    }
+  const navItems: SettingsNavItem[] = [
+    { id: 'overview', label: '设置概览', path: '/settings', icon: ICONS.Settings },
+    { id: 'profile-detail', label: '个人资料', path: '/settings/profile-detail', icon: ICONS.User },
+    { id: 'security', label: '账户安全', path: '/settings/security', icon: ICONS.Shield },
+    { id: 'trading-preferences', label: '交易偏好', path: '/settings/trading-preferences', icon: ICONS.Zap },
+    { id: 'personalized', label: '个性化', path: '/settings/personalized', icon: ICONS.Eye },
+    { id: 'about', label: '关于', path: '/settings/about', icon: ICONS.Headset },
   ];
+
+  const isActive = (path: string) => {
+    if (path === '/settings') {
+      return location.pathname === '/settings';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <div className="animate-slide-up flex flex-col h-full bg-[var(--color-bg)] pb-10">
@@ -134,53 +78,71 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
         <h1 className="text-sm font-black uppercase tracking-[0.2em]">系统设置</h1>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-8 no-scrollbar">
-        {sections.map((section, idx) => (
-          <div key={idx} className="space-y-3">
-            <h3 className="px-2 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">
-              {section.title}
-            </h3>
-            <div className="glass-card overflow-hidden">
-              {section.items.map((item, i) => (
+      <div className="flex flex-1 overflow-hidden">
+        {/* 左侧导航菜单 */}
+        <div className="w-64 border-r border-[var(--color-border)] bg-[var(--color-surface)] overflow-y-auto no-scrollbar">
+          <div className="p-4 space-y-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+                  isActive(item.path)
+                    ? 'bg-[#00D4AA]/10 text-[#00D4AA] border border-[#00D4AA]/20'
+                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
+                }`}
+              >
+                <item.icon size={16} />
+                <span className="text-xs font-bold">{item.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="p-4 border-t border-[var(--color-border)]">
+            <div className="p-3 bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)] space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase">风险等级</span>
+                <span className="text-xs font-black text-[#00D4AA]">{riskLevel}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase">主题</span>
                 <div 
-                  key={item.id}
-                  onClick={() => item.action && item.action()}
-                  className={`flex items-center justify-between p-4 border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer ${item.action ? 'active:opacity-70' : ''}`}
+                  onClick={toggleTheme}
+                  className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${isDarkMode ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
                 >
-                  <div className="flex items-center gap-3">
-                    {item.icon && <item.icon size={16} className="text-[var(--color-text-muted)]" />}
-                    <span className="text-xs font-bold text-[var(--color-text-primary)]">{item.label}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {item.value && (
-                      <span className={`text-[10px] font-black font-mono uppercase ${(item.highlight ?? false) ? 'text-[#00D4AA]' : 'text-[var(--color-text-muted)]'}`}>
-                        {item.value}
-                      </span>
-                    )}
-                    {item.toggle && (
-                      <div className={`w-10 h-5 rounded-full p-1 transition-colors ${(item.active ?? false) ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}>
-                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${(item.active ?? false) ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </div>
-                    )}
-                    {((item.arrow ?? false) || (item.action && !item.toggle)) && <ICONS.ArrowRight size={12} className="text-[var(--color-text-muted)]" />}
-                  </div>
+                  <div className={`w-3 h-3 bg-white rounded-full transition-transform ${isDarkMode ? 'translate-x-5' : 'translate-x-0'}`} />
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        ))}
 
-        <div className="pt-4">
-          <button 
-            onClick={onLogout}
-            className="w-full py-4 rounded-2xl border border-[var(--color-warning)] text-[var(--color-warning)] font-black text-xs uppercase tracking-[0.2em] hover:bg-[var(--color-warning)]/10 transition-all active:scale-95"
-          >
-            安全退出 Nexus 交易单元
-          </button>
+          <div className="p-4">
+            <button 
+              onClick={onLogout}
+              className="w-full py-3 rounded-xl border border-[var(--color-warning)] text-[var(--color-warning)] font-black text-xs uppercase tracking-[0.2em] hover:bg-[var(--color-warning)]/10 transition-all active:scale-95"
+            >
+              安全退出
+            </button>
+          </div>
         </div>
 
-        <p className="text-center text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em]">
+        {/* 右侧内容区域 */}
+        <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
+          {/* 传递必要的 props 给子路由 */}
+          <Outlet context={{
+            tradingSettings,
+            personalSettings,
+            onUpdateTradingSettings: handleUpdateTradingSettings,
+            onUpdatePersonalSettings: handleUpdatePersonalSettings,
+            isDarkMode,
+            toggleTheme,
+            riskLevel
+          }} />
+        </div>
+      </div>
+
+      <div className="p-4 border-t border-[var(--color-border)] text-center">
+        <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em]">
           Galaxy Securities Nexus v2.10 <br/>
           © 2026 Galaxy Financial Technology
         </p>
