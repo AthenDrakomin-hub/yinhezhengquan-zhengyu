@@ -1,143 +1,127 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-
-type ConnectionStatus = 'checking' | 'connected' | 'tables_missing' | 'disconnected';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase'; // 请根据实际路径调整
 
 const SupabaseConnectionCheck: React.FC = () => {
-  const [status, setStatus] = useState<ConnectionStatus>('checking');
-  const [message, setMessage] = useState<string>('检查 Supabase 连接...');
+  const [connectionStatus, setConnectionStatus] = useState<string>('初始化中...');
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const checkSupabaseConnection = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      setConnectionStatus('检查中 - 正在检查 Supabase 连接...');
+      console.log('🔍 开始检查 Supabase 连接...');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '未设置';
+      console.log('Supabase URL:', supabaseUrl);
+
+      // 步骤1: 基础网络连接（使用 REST API 根路径）
+      setConnectionStatus('检查中 - 验证基础网络连接...');
+      const anonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+      if (!anonKey) {
+        throw new Error('匿名密钥未配置（VITE_SUPABASE_ANON_KEY/VITE_PUBLIC_SUPABASE_ANON_KEY）');
+      }
+      const healthResponse = await fetch(`${supabaseUrl}/rest/v1/`, {
+        method: 'GET',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+        signal: controller.signal,
+      });
+      if (!healthResponse.ok) {
+        throw new Error(`基础连接失败: HTTP ${healthResponse.status} - ${healthResponse.statusText}`);
+      }
+      console.log('✅ 步骤1: 基础网络连接正常');
+
+      // 步骤2: 认证服务可用性（匿名状态允许）
+      setConnectionStatus('检查中 - 验证认证服务...');
+      const { error: authError } = await supabase.auth.getSession();
+      if (authError && authError.message !== 'No current session') {
+        throw new Error(`认证服务异常: ${authError.message}`);
+      }
+      console.log(authError ? 'ℹ️ 步骤2: 认证服务正常（匿名状态）' : '✅ 步骤2: 认证服务正常（已登录）');
+
+      // 步骤3: 数据库连接（替换为安全的自定义表检查，而非系统表）
+      setConnectionStatus('检查中 - 测试数据库连接...');
+      // 方案：查询自己创建的表（比如 profiles，若不存在则跳过，仅做提示）
+      let dbCheckPassed = false;
+      const { error: dbError } = await supabase
+        .from('profiles') // 替换成你实际创建的业务表（如 users/orders 等）
+        .select('id')
+        .limit(1)
+        .abortSignal(controller.signal);
+
+      if (dbError) {
+        if (dbError.message.includes('relation "profiles" does not exist')) {
+          // 自定义表不存在，仅警告，不判定连接失败
+          console.log('ℹ️ 步骤3: 自定义表 profiles 不存在（非致命错误）');
+          dbCheckPassed = true; // 表不存在不代表连接失败
+        } else {
+          throw new Error(`数据库查询异常: ${dbError.message}`);
+        }
+      } else {
+        console.log('✅ 步骤3: 数据库连接正常');
+        dbCheckPassed = true;
+      }
+
+      // 所有核心检查通过
+      if (dbCheckPassed) {
+        setConnectionStatus('✅ 连接成功 - Supabase 所有检查通过！');
+        setErrorDetails(null);
+      }
+    } catch (error) {
+      let errMsg = '未知错误';
+      if (error instanceof Error) {
+        errMsg = error.message;
+        if (errMsg.includes('aborted') || errMsg.includes('timeout')) {
+          errMsg = '连接超时 - Supabase 服务器无响应（可能网络/限流/IP白名单问题）';
+        }
+      }
+      setConnectionStatus(`❌ 连接失败 - ${errMsg}`);
+      setErrorDetails(errMsg);
+      console.error('❌ Supabase 连接失败详情:', error);
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      console.log('📊 最终状态:', connectionStatus);
+      console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+      const anonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      console.log('匿名密钥:', anonKey ? '已设置' : '未设置');
+    }
+  };
 
   useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        console.log('🔍 开始检查 Supabase 连接...');
-        console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL || '未设置');
-        console.log('是否演示模式:', import.meta.env.VITE_SUPABASE_URL?.includes('placeholder') || !import.meta.env.VITE_SUPABASE_URL);
-
-        // 步骤1: 检查基本连接
-        console.log('步骤1: 检查基本连接...');
-        const { data: session, error: authError } = await supabase.auth.getSession();
-        
-        if (authError) {
-          console.error('❌ Supabase 连接失败:', authError);
-          setStatus('disconnected');
-          setMessage(`连接失败: ${authError.message}`);
-          return;
-        }
-
-        console.log('✅ 基本连接成功');
-        
-        // 步骤2: 检查必要的表是否存在
-        console.log('步骤2: 检查数据库表...');
-        try {
-          // 尝试查询 profiles 表（这是应用的关键表）
-          // 使用简单的 select * limit 1 查询，避免 count 查询的权限问题
-          const { data, error: tableError, count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: false })
-            .limit(1);
-
-          console.log('表查询结果:', { data, tableError, count });
-
-          if (tableError) {
-            // 将错误对象转换为可读字符串
-            const errorString = JSON.stringify(tableError, null, 2);
-            const errorMessage = tableError.message || errorString;
-            
-            console.warn('⚠️  连接到 Supabase，但缺少必要的表或权限不足');
-            console.warn('完整错误对象:', errorString);
-            console.warn('错误代码:', tableError.code);
-            console.warn('错误消息:', tableError.message);
-            console.warn('错误详情:', tableError.details);
-            console.warn('错误提示:', tableError.hint);
-            
-            // 检查错误类型
-            const isTableMissing = tableError.code === 'PGRST116' || 
-                errorMessage.includes('relation') || 
-                errorMessage.includes('does not exist') ||
-                errorMessage.includes('42P01'); // 表不存在错误代码
-                
-            const isPermissionError = errorMessage.includes('permission denied') ||
-                errorMessage.includes('权限被拒绝') ||
-                errorMessage.includes('42501'); // 权限拒绝错误代码
-            
-            if (isTableMissing || isPermissionError) {
-              setStatus('tables_missing');
-              setMessage('已连接但表缺失或权限不足，需要运行迁移');
-            } else {
-              setStatus('disconnected');
-              setMessage(`表查询错误: ${errorMessage.substring(0, 100)}...`);
-            }
-            return;
-          }
-
-          console.log('✅ 数据库表存在，查询成功');
-          console.log('查询到的数据:', data);
-          console.log('记录数量:', count);
-          setStatus('connected');
-          setMessage('已成功连接到 Supabase 且表存在');
-        } catch (tableCheckError: any) {
-          console.error('❌ 表检查异常详情:', {
-            message: tableCheckError.message,
-            stack: tableCheckError.stack,
-            originalError: tableCheckError
-          });
-          
-          // 基本连接成功，但表检查失败，可能是表不存在或权限问题
-          console.warn('⚠️  连接到 Supabase，但表检查失败（可能表不存在或权限问题）');
-          setStatus('tables_missing');
-          setMessage(`表检查失败: ${tableCheckError.message || '可能表不存在或权限问题'}`);
-        }
-      } catch (error: any) {
-        console.error('❌ 连接检查失败:', error);
-        setStatus('disconnected');
-        setMessage(`检查失败: ${error.message}`);
+    checkSupabaseConnection();
+    const retryTimer = setTimeout(() => {
+      if (connectionStatus.includes('失败') || connectionStatus.includes('初始化')) {
+        console.log('🔄 重试连接检查...');
+        checkSupabaseConnection();
       }
-    };
-
-    checkConnection();
+    }, 5000);
+    return () => clearTimeout(retryTimer);
   }, []);
 
-  // 状态颜色映射
-  const statusColors = {
-    checking: 'bg-gray-500',
-    connected: 'bg-green-500',
-    tables_missing: 'bg-yellow-500',
-    disconnected: 'bg-red-500',
-  };
-
-  const statusText = {
-    checking: '检查中',
-    connected: '已连接',
-    tables_missing: '表缺失',
-    disconnected: '未连接',
-  };
-
-  const statusDescriptions = {
-    checking: '正在检查 Supabase 连接...',
-    connected: '✅ 已成功连接到 Supabase 且数据库表存在',
-    tables_missing: '⚠️  已连接到 Supabase，但缺少必要的表（需要运行迁移）',
-    disconnected: '❌ 无法连接到 Supabase（检查网络或环境变量）',
-  };
-
-  // 在控制台输出状态信息
-  useEffect(() => {
-    console.log(`Supabase 连接状态: ${statusText[status]} - ${statusDescriptions[status]}`);
-    console.log('环境变量 VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL || '未设置');
-    console.log('环境变量 VITE_PUBLIC_SUPABASE_ANON_KEY:', import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY ? '已设置' : '未设置');
-  }, [status]);
-
   return (
-    <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-      <div 
-        className={`w-3 h-3 rounded-full ${statusColors[status]} animate-pulse`}
-        title={statusDescriptions[status]}
-      />
-      <div className="text-xs text-gray-300 hidden md:block">
-        {statusText[status]}
+    <div style={{ padding: '20px', margin: '20px', border: '1px solid #eee', borderRadius: '8px' }}>
+      <h3>Supabase 连接状态</h3>
+      <div style={{ 
+        color: connectionStatus.includes('成功') ? 'green' : 
+               connectionStatus.includes('失败') ? 'red' : 'orange',
+        fontWeight: 'bold',
+        margin: '10px 0'
+      }}>
+        {connectionStatus}
       </div>
-      <div className="text-xs text-gray-500 hidden lg:block">
-        ({message})
+      {errorDetails && (
+        <div style={{ color: 'red', marginTop: '10px', whiteSpace: 'pre-wrap' }}>
+          <strong>错误详情:</strong> {errorDetails}
+        </div>
+      )}
+      <div style={{ marginTop: '15px', fontSize: '12px', color: '#666' }}>
+        <p>URL: {import.meta.env.VITE_SUPABASE_URL || '未配置'}</p>
+        <p>匿名密钥: {import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY ? '已配置' : '未配置'}</p>
       </div>
     </div>
   );

@@ -1,50 +1,105 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { createClient } from '@supabase/supabase-js';
+// 1. 兼容 Vite 环境变量类型（避免 TS 报错）
+interface ImportMetaEnv {
+  VITE_SUPABASE_URL?: string;
+  VITE_PUBLIC_SUPABASE_ANON_KEY?: string;
+  VITE_SUPABASE_ANON_KEY?: string;
+  DEV?: boolean;
+}
 
-// 从环境变量读取，优先使用 Vite 规范的 import.meta.env
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-project-id.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
 
-/**
- * 证裕交易单元核心客户端
- */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// 2. 安全读取环境变量（移除兜底占位符，强制校验）
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// 3. 开发环境调试日志（避免生产环境泄露）
+if (import.meta.env.DEV) {
+  console.log('🔍 Supabase 配置检查:');
+  console.log('VITE_SUPABASE_URL:', supabaseUrl ? '已设置' : '未设置');
+  console.log('VITE_PUBLIC_SUPABASE_ANON_KEY:', import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY ? '已设置' : '未设置');
+  console.log('supabaseUrl:', supabaseUrl);
+  console.log('supabaseAnonKey:', supabaseAnonKey ? '已设置' : '未设置');
+}
+
+// 4. 强制校验环境变量（提前报错，避免隐性失败）
+if (!supabaseUrl) {
+  throw new Error('⚠️ VITE_SUPABASE_URL 环境变量未配置，请检查 .env 文件');
+}
+if (!supabaseAnonKey) {
+  throw new Error('⚠️ VITE_PUBLIC_SUPABASE_ANON_KEY 环境变量未配置，请检查 .env 文件');
+}
+
+// 5. 初始化 Supabase 客户端（移除自定义 fetch 超时，恢复原生逻辑）
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,
+    persistSession: import.meta.env.DEV ? false : true, // 开发环境不持久化会话
     autoRefreshToken: true,
-    detectSessionInUrl: true,
-    // 增加锁超时时间，避免多标签页竞争
-    lockTimeout: 20000, // 20秒
+    detectSessionInUrl: false, // 开发环境关闭URL解析，避免会话混乱
   },
+  // 移除自定义 fetch，使用 Supabase 原生请求逻辑（核心修复）
+  // global: { ... }  注释掉，恢复默认
 });
 
-/**
- * 获取当前用户 Profile
- */
-export const getCurrentProfile = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+// 6. Profile 类型定义（TS 友好）
+export interface Profile {
+  id: string;
+  role: 'admin' | 'user' | 'guest';
+  [key: string]: any; // 兼容其他自定义字段
+}
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+// 7. 获取当前用户 Profile（保留原有健壮逻辑）
+export const getCurrentProfile = async (): Promise<Profile | null> => {
+  try {
+    const authResponse = await supabase.auth.getUser();
+    if (authResponse.error || !authResponse.data.user) {
+      if (import.meta.env.DEV) {
+        console.error('获取用户信息失败:', authResponse.error?.message || '未登录');
+      }
+      return null;
+    }
 
-  if (error) {
-    console.error('获取 Profile 失败:', error);
+    const user = authResponse.data.user;
+    const profileResponse = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileResponse.error) {
+      if (import.meta.env.DEV) {
+        console.error('获取 Profile 失败:', profileResponse.error.message);
+      }
+      return null;
+    }
+
+    return profileResponse.data as Profile;
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.error('获取 Profile 异常:', (err as Error).message);
+    }
     return null;
   }
-  return data;
 };
 
-/**
- * 检查是否为管理员
- */
-export const isAdmin = async () => {
-  const profile = await getCurrentProfile();
-  return profile?.role === 'admin';
+// 8. 检查是否为管理员（保留原有逻辑）
+export const isAdmin = async (): Promise<boolean> => {
+  try {
+    const profile = await getCurrentProfile();
+    return profile?.role === 'admin';
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.error('检查管理员权限异常:', (err as Error).message);
+    }
+    return false;
+  }
 };
 
-// 导出判断是否为演示环境的标志
-export const isDemoMode = supabaseUrl.includes('placeholder') || !supabaseUrl;
+// 9. 演示环境标识（调整判断逻辑）
+export const isDemoMode = supabaseUrl.includes('placeholder') || !supabaseUrl.includes('supabase.co');
+
+// 10. 兜底导出
+export default supabase;

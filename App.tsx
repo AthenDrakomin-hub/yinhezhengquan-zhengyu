@@ -74,27 +74,31 @@ const ProtectedRoute: React.FC<{
   children: React.ReactNode; 
   isAdmin?: boolean;
   isLoading?: boolean;
-}> = ({ session, role, children, isAdmin, isLoading = false }) => {
+  isDemoMode?: boolean; // 新增演示模式参数
+}> = ({ session, role, children, isAdmin, isLoading = false, isDemoMode = false }) => {
   // 处理加载状态
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">加载中...</p>
-      </div>
-    </div>;
+    return <LoadingSpinner />;
   }
   
-  // 检查会话
-  if (!session) {
-    console.log('ProtectedRoute: 未登录，重定向到首页');
-    return <Navigate to="/" replace />;
-  }
-  
-  // 检查管理员权限
-  if (isAdmin && role !== 'admin') {
-    console.log('ProtectedRoute: 非管理员访问管理员路由，重定向到仪表板');
-    return <Navigate to="/dashboard" replace />;
+  // 演示模式下强制要求登录（核心修复）
+  if (isDemoMode) {
+    if (!session) {
+      console.log('ProtectedRoute [演示模式]: 未登录，重定向到登录页');
+      return <Navigate to="/login" replace />;
+    }
+  } else {
+    // 非演示模式：检查会话
+    if (!session) {
+      console.log('ProtectedRoute: 未登录，重定向到首页');
+      return <Navigate to="/" replace />;
+    }
+    
+    // 检查管理员权限
+    if (isAdmin && role !== 'admin') {
+      console.log('ProtectedRoute: 非管理员访问管理员路由，重定向到仪表板');
+      return <Navigate to="/dashboard" replace />;
+    }
   }
   
   return <>{children}</>;
@@ -102,7 +106,7 @@ const ProtectedRoute: React.FC<{
 
 const AppContent: React.FC = () => {
   const [session, setSession] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>('user');
+  const [userRole, setUserRole] = useState<string>('guest'); // 默认为guest，而非user
   const [isDarkMode, setIsDarkMode] = useState(false); 
   const [isLoading, setIsLoading] = useState(true); // 添加加载状态
   const navigate = useNavigate();
@@ -168,84 +172,119 @@ const AppContent: React.FC = () => {
     }
   }, [session]);
 
-  useEffect(() => {
-    if (isDemoMode) {
-      setIsLoading(false);
-      return;
-    }
-    
-    // 使用 ref 跟踪是否已经处理了初始 auth 状态
-    let hasHandledInitialAuth = false;
-    
-    const handleAuthInitialized = () => {
-      if (!hasHandledInitialAuth) {
-        hasHandledInitialAuth = true;
-        setIsLoading(false);
-        console.log('Auth 初始化完成，isLoading 设置为 false');
-      }
-    };
-    
-    // 设置一个超时，确保即使 auth 初始化失败也不会一直加载
-    const timeoutId = setTimeout(() => {
-      handleAuthInitialized();
-    }, 3000);
-    
-    authService.getSession().then((res) => {
-      if (res) {
-        setSession(res.session);
-        setUserRole(res.role);
-        syncAccountData(res.session.user.id);
-      }
-      handleAuthInitialized();
-      clearTimeout(timeoutId);
-    }).catch((err) => {
-      console.error('获取 session 失败:', err);
-      handleAuthInitialized();
-      clearTimeout(timeoutId);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session) {
-        // 直接获取用户profile，避免重复调用getSession
-        try {
-          const { data: profile, error } = await supabase
+  // 核心修复：统一的认证校验逻辑（包含服务端验证）
+  const validateAuthSession = useCallback(async () => {
+    try {
+      // 1. 先获取本地会话
+      const { data: { session: localSession } } = await supabase.auth.getSession();
+      
+      if (localSession) {
+        // 2. 关键：向服务端验证会话有效性
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !userData.user) {
+          // 会话无效 → 清空本地会话
+          await supabase.auth.signOut();
+          setSession(null);
+          setUserRole('guest');
+          console.log('validateAuthSession: 会话无效，已清空');
+        } else {
+          // 会话有效 → 更新状态
+          setSession(localSession);
+          
+          // 获取用户角色
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', session.user.id)
+            .eq('id', localSession.user.id)
             .single();
           
-          if (error) {
-            console.error('获取用户角色失败:', error);
-            setUserRole('user');
-          } else {
-            const role = profile?.role || 'user';
-            setUserRole(role);
-          }
-        } catch (err) {
-          console.error('获取用户角色异常:', err);
-          setUserRole('user');
+          setUserRole(profile?.role || 'user');
+          await syncAccountData(localSession.user.id);
+          console.log('validateAuthSession: 会话有效，已更新状态');
         }
-        
-        syncAccountData(session.user.id);
       } else {
-        setUserRole('user');
+        // 无本地会话 → 重置状态
+        setSession(null);
+        setUserRole('guest');
+        console.log('validateAuthSession: 无本地会话');
       }
+    } catch (err) {
+      console.error('validateAuthSession 失败:', err);
+      setSession(null);
+      setUserRole('guest');
+    } finally {
+      setIsLoading(false);
+      console.log('Auth 初始化完成，isLoading 设置为 false');
+    }
+  }, [syncAccountData]);
+
+  useEffect(() => {
+    // 演示模式也需要执行认证校验（核心修复）
+    if (isDemoMode) {
+      console.log('AppContent: 演示模式，强制校验认证状态');
+    }
+    
+    // 设置超时兜底
+    const timeoutId = setTimeout(() => {
+      console.log('Auth 初始化超时，强制结束加载');
+      setIsLoading(false);
+    }, 5000);
+    
+    // 执行统一的认证校验
+    validateAuthSession().finally(() => clearTimeout(timeoutId));
+
+    // 监听会话变化
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log('onAuthStateChange:', event, newSession);
       
-      // auth 状态变化时，确保加载状态已结束
-      handleAuthInitialized();
+      // 明确处理不同的认证事件
+      switch (event) {
+        case 'SIGNED_IN':
+          setSession(newSession);
+          // 获取用户角色
+          if (newSession?.user?.id) {
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', newSession.user.id)
+              .single();
+            setUserRole(profile?.role || 'user');
+            await syncAccountData(newSession.user.id);
+          }
+          break;
+        case 'SIGNED_OUT':
+        
+          // 登出/会话失效 → 清空状态
+          setSession(null);
+          setUserRole('guest');
+          break;
+        default:
+          break;
+      }
     });
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(timeoutId);
     };
-    }, [syncAccountData]);
+  }, [validateAuthSession, syncAccountData]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  // 处理进入平台按钮点击
+  // 修复：处理进入平台按钮点击（强制校验登录状态）
   const handleEnterPlatform = () => {
+    console.log('handleEnterPlatform: session=', session, 'userRole=', userRole);
+    
+    // 演示模式下强制检查session
+    if (isDemoMode) {
+      if (!session) {
+        console.log('演示模式：未登录，跳转到登录页');
+        navigate('/login');
+        return;
+      }
+    }
+
     if (session) {
       // 根据角色跳转
       const dashboardPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
@@ -263,21 +302,21 @@ const AppContent: React.FC = () => {
       user_metadata: { username: '证裕用户' }
     };
     
-    // 创建完整的session对象，创建Supabase的session结构
-    const session = {
+    // 创建完整的session对象，模拟Supabase的session结构
+    const newSession = {
       user: {
         id: finalUser.id || 'user-id-001',
         email: finalUser.email || 'user@zhengyu.com',
         user_metadata: finalUser.user_metadata || { username: finalUser.username || '证裕用户' }
       },
-      access_token: 'access-token',
-      refresh_token: 'refresh-token',
+      access_token: 'access-token-' + Date.now(), // 加时间戳避免重复
+      refresh_token: 'refresh-token-' + Date.now(),
       expires_at: Date.now() + 3600 * 1000, // 1小时后过期
       expires_in: 3600
     };
     
-    setSession(session);
-    // 注意：不在这里设置userRole，让onAuthStateChange回调从数据库获取正确的角色
+    setSession(newSession);
+    setUserRole(finalUser.role || 'user'); // 明确设置角色
     
     setAccount(prev => ({
       ...prev,
@@ -286,8 +325,9 @@ const AppContent: React.FC = () => {
       email: finalUser.email || prev.email
     }));
     
-    // 不在这里导航，让onAuthStateChange回调处理导航
-    // 因为我们需要等待获取用户角色
+    // 登录成功后跳转到仪表盘
+    const dashboardPath = finalUser.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    navigate(dashboardPath);
   };
 
   const executeTrade = useCallback(async (
@@ -355,12 +395,7 @@ const AppContent: React.FC = () => {
   // 登录页包装组件：已登录用户访问时重定向到仪表板
   const LoginWrapper = () => {
     if (isLoading) {
-      return <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">加载中...</p>
-        </div>
-      </div>;
+      return <LoadingSpinner />;
     }
     
     if (session) {
@@ -382,7 +417,7 @@ const AppContent: React.FC = () => {
 
         {/* 管理端路由 - 使用嵌套路由模式 */}
         <Route path="/admin/*" element={
-          <ProtectedRoute session={session} role={userRole} isAdmin={true} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isAdmin={true} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <Suspense fallback={<LoadingSpinner />}>
                 <AdminLayout />
@@ -493,7 +528,7 @@ const AppContent: React.FC = () => {
 
         {/* 聊天路由 */}
         <Route path="/chat" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <ChatView />
             </ErrorBoundary>
@@ -502,7 +537,7 @@ const AppContent: React.FC = () => {
 
         {/* 主应用布局路由 - 使用嵌套路由模式 */}
         <Route path="/*" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <Layout 
                 activeTab={location.pathname.split('/')[1] || 'dashboard'} 
@@ -546,49 +581,49 @@ const AppContent: React.FC = () => {
 
         {/* 独立全屏业务页面 */}
         <Route path="/stock/:symbol" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <StockDetailWrapper />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
         <Route path="/banner/:id" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <BannerDetailWrapper />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
         <Route path="/calendar" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <InvestmentCalendarView onBack={() => navigate(-1)} />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
         <Route path="/reports" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <ResearchReportsView onBack={() => navigate(-1)} />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
         <Route path="/education" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <EducationBaseView onBack={() => navigate(-1)} />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
         <Route path="/compliance" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <ComplianceShieldView onBack={() => navigate(-1)} />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
         <Route path="/settings" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <Suspense fallback={<LoadingSpinner />}>
                 <SettingsView onBack={() => navigate('/dashboard')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} riskLevel="C3-稳健型" onLogout={async () => { await authService.logout(); setSession(null); navigate('/'); }} />
@@ -641,7 +676,7 @@ const AppContent: React.FC = () => {
         </Route>
         
         <Route path="/profile" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <Suspense fallback={<LoadingSpinner />}>
                 <ProfileView account={account} onOpenAnalysis={() => navigate('/analysis')} onOpenConditional={() => navigate('/conditional')} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
@@ -680,14 +715,14 @@ const AppContent: React.FC = () => {
         </Route>
         
         <Route path="/analysis" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <AssetAnalysisView account={account} onBack={() => navigate(-1)} />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
         <Route path="/conditional" element={
-          <ProtectedRoute session={session} role={userRole} isLoading={isLoading}>
+          <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
               <ConditionalOrderPanel stock={MOCK_STOCKS[0]} onBack={() => navigate(-1)} onAddOrder={() => {}} />
             </ErrorBoundary>
