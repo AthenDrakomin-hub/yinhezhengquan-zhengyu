@@ -1,0 +1,5 @@
+{
+  "entrypoint_path": "index.ts",
+  "name": "新股数据抓取函数",
+  "verify_jwt": false
+}

@@ -411,7 +411,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
       {/* 7. 底部导航与版权 (Refined to match image) */}
       <footer className="bg-[#1A1A1A] pt-16 pb-4 text-slate-400">
         <div className="max-w-7xl mx-auto px-4 md:px-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-8 cursor-pointer group">
                 <h4 className="text-white text-sm font-bold">友情链接</h4>
@@ -459,19 +459,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                   <span>纪委邮箱：xfjb@chinastock.com.cn</span>
                 </li>
               </ul>
-            </div>
-            
-            <div className="flex flex-col items-center md:items-end">
-              <h4 className="text-white text-sm font-bold mb-8">关注我们</h4>
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-2 text-[13px]">
-                  <ICONS.Globe size={16} className="text-slate-500" />
-                  <span>微信公众号</span>
-                </div>
-                <div className="p-2 bg-white rounded-lg">
-                  <img src="https://www.chinastock.com.cn/newsite/images/wechat_qr.jpg" alt="QR Code" className="w-24 h-24" />
-                </div>
-              </div>
             </div>
           </div>
           

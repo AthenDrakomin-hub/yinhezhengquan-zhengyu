@@ -46,17 +46,17 @@ function mapSinaStatusToIPOStatus(sinaStatus: string): IPOStatus {
 }
 
 /**
- * 从新浪财经获取IPO数据
- * @param page 页码，默认1
- * @param num 每页数量，默认40
+ * 从新浪财经获取IPO数据（通过Edge Function抓取HTML）
+ * @param page 页码，默认1（目前Edge Function不支持分页，参数保留以保持接口兼容）
+ * @param num 每页数量，默认40（目前Edge Function不支持分页，参数保留以保持接口兼容）
  * @returns IPO数据数组，失败时返回空数组
  */
 export async function fetchSinaIPOData(page: number = 1, num: number = 40): Promise<IPOData[]> {
   try {
-    // 使用Vite代理路径
-    const apiUrl = `${import.meta.env.VITE_SINA_IPO_URL || '/api/sina/ipo'}?page=${page}&num=${num}`;
+    // 使用新的Edge Function获取IPO数据
+    const functionUrl = 'https://rfnrosyfeivcbkimjlwo.functions.supabase.co/fetch-ipo-data';
     
-    const response = await fetch(apiUrl, {
+    const response = await fetch(functionUrl, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -65,33 +65,37 @@ export async function fetchSinaIPOData(page: number = 1, num: number = 40): Prom
     });
 
     if (!response.ok) {
-      console.warn(`新浪财经IPO接口请求失败: HTTP ${response.status}`);
+      console.warn(`Edge Function请求失败: HTTP ${response.status}`);
       return [];
     }
 
-    const data = await response.json();
+    const result = await response.json();
     
-    // 假设返回的是数组，根据实际接口调整
-    if (!Array.isArray(data)) {
-      console.warn('新浪财经IPO接口返回数据格式异常，期望数组');
+    // Edge Function返回格式: { success: boolean, data: any[], count: number, timestamp: string }
+    if (!result.success || !Array.isArray(result.data)) {
+      console.warn('Edge Function返回数据格式异常，期望包含data数组');
       return [];
     }
 
     // 转换数据格式
     const ipoList: IPOData[] = [];
     
-    for (const item of data as SinaIPOItem[]) {
+    for (const item of result.data) {
       try {
-        // 解析股票代码和名称
-        const symbol = item.symbol || '';
-        const name = item.name || '';
+        // 解析股票代码和名称 - 使用Edge Function返回的字段
+        const symbol = item.stockCode || '';
+        const name = item.stockCode || ''; // Edge Function没有返回名称字段，暂用股票代码
         
-        if (!symbol || !name) {
-          continue; // 跳过无效数据
+        if (!symbol) {
+          continue; // 跳过无效数据（至少需要股票代码）
         }
 
         // 解析上市日期
-        let listingDate = item.listing_date || '';
+        let listingDate = item.listingDate || '';
+        // 处理"未定"情况
+        if (listingDate === '未定') {
+          listingDate = '';
+        }
         // 如果日期格式不是YYYY-MM-DD，尝试转换
         if (listingDate && !/^\d{4}-\d{2}-\d{2}$/.test(listingDate)) {
           // 尝试提取日期部分
@@ -104,25 +108,71 @@ export async function fetchSinaIPOData(page: number = 1, num: number = 40): Prom
 
         // 解析发行价
         let issuePrice = 0;
-        if (item.issue_price) {
-          if (typeof item.issue_price === 'string') {
-            issuePrice = parseFloat(item.issue_price);
+        if (item.issuePrice !== undefined && item.issuePrice !== null) {
+          if (typeof item.issuePrice === 'string') {
+            issuePrice = parseFloat(item.issuePrice);
           } else {
-            issuePrice = Number(item.issue_price);
+            issuePrice = Number(item.issuePrice);
           }
           if (isNaN(issuePrice)) issuePrice = 0;
         }
 
-        // 映射状态
-        const status = mapSinaStatusToIPOStatus(item.status_text || '');
+        // 映射状态 - Edge Function返回LISTED/UPCOMING，需要转换为系统内部状态
+        let status: IPOStatus = 'UPCOMING';
+        
+        // Edge Function返回的状态
+        const edgeStatus = item.status;
+        if (edgeStatus === 'LISTED') {
+          status = 'LISTED';
+        } else if (edgeStatus === 'UPCOMING') {
+          // 检查申购日期，判断是否为申购中状态
+          const subscribeDate = item.subscribeDate || '';
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          // 如果申购日期接近当前日期（3天内），则认为是申购中状态
+          if (subscribeDate) {
+            try {
+              const subDate = new Date(subscribeDate);
+              subDate.setHours(0, 0, 0, 0);
+              const diffTime = subDate.getTime() - today.getTime();
+              const diffDays = diffTime / (1000 * 60 * 60 * 24);
+              
+              // 如果申购日期在今天或未来3天内，认为是申购中
+              if (diffDays >= -1 && diffDays <= 3) {
+                status = 'ONGOING';
+              } else {
+                status = 'UPCOMING';
+              }
+            } catch (e) {
+              // 日期解析失败，保持UPCOMING状态
+              status = 'UPCOMING';
+            }
+          } else {
+            status = 'UPCOMING';
+          }
+        }
+
+        // 确定市场类型 - 使用Edge Function返回的market字段
+        let market = item.market;
+        if (!market) {
+          // 根据股票代码推断市场
+          if (symbol.startsWith('0') || symbol.startsWith('3')) {
+            market = 'SZ'; // 深市
+          } else if (symbol.startsWith('8') || symbol.startsWith('4')) {
+            market = 'BJ'; // 北交所
+          } else {
+            market = 'SH'; // 默认沪市
+          }
+        }
 
         ipoList.push({
           symbol,
-          name,
+          name: name || symbol, // 如果名称为空，使用股票代码
           listingDate,
           issuePrice,
           status,
-          market: item.market
+          market
         });
       } catch (error) {
         console.warn('解析IPO数据项失败:', error, item);
@@ -130,11 +180,11 @@ export async function fetchSinaIPOData(page: number = 1, num: number = 40): Prom
       }
     }
 
-    console.log(`从新浪财经获取到 ${ipoList.length} 条IPO数据`);
+    console.log(`从Edge Function获取到 ${ipoList.length} 条IPO数据`);
     return ipoList;
   } catch (error) {
-    console.error('获取新浪财经IPO数据失败:', error);
-    return [];
+    console.error('获取IPO数据失败，将使用模拟数据:', error);
+    return []; // 返回空数组触发降级机制
   }
 }
 
