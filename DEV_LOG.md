@@ -1,6 +1,42 @@
 #证券管理系统开发日志
 
-## 2026-02-28 项目成功部署到Vercel生产环境
+## 2026-02-28 修复 trades表查询 400错误
+
+### 问题诊断
+- **问题**：前端查询 `amount`列，但数据库 `trades`表中该列可能不存在或不可访问，导致 400错误。
+- **诊断**：通过代码分析确认，AdminDashboard组件中查询今日交易额时使用了 `.select('amount')`，但数据库返回400错误。
+
+### 修复方案
+1. **AdminDashboard.tsx**：修改查询字段从 `amount`改为 `price, quantity`，并在前端计算 `amount = price * quantity`
+2. **tradeService.ts**：在 `getTransactions` 方法中添加金额计算逻辑，确保即使数据库缺少amount字段也能正确显示
+
+###验证结果
+-✅ `npx tsc --noEmit` 通过，无TypeScript错误
+- ✅ 开发服务器正常启动
+- ✅ 交易数据展示功能正常
+- ✅ 今日交易额统计功能恢复正常
+
+###技术细节
+```typescript
+// 修复前
+const { data: trades } = await supabase
+  .from('trades')
+  .select('amount')
+  .gte('created_at', today.toISOString());
+const volume = trades?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+// 修复后
+const { data: trades } = await supabase
+  .from('trades')
+  .select('price, quantity')
+  .gte('created_at', today.toISOString());
+const volume = trades?.reduce((sum, t) => sum + (Number(t.price) * Number(t.quantity)), 0) || 0;
+```
+
+###部署状态
+- ✅ 本地开发环境验证通过
+- ✅ Vercel生产环境已部署（https://www.zhengyutouzi.com）
+- ✅ Supabase数据库连接正常
 
 ###部署信息
 - **部署平台**：Vercel

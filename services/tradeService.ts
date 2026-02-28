@@ -161,7 +161,12 @@ export const tradeService = {
     const { data, error } = await query;
 
     if (error) throw error;
-    return data;
+    
+    // 计算交易金额（如果数据库中没有amount字段）
+    return data.map(item => ({
+      ...item,
+      amount: item.amount || (Number(item.price) * Number(item.quantity))
+    }));
   },
 
   /**

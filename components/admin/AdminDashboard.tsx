@@ -35,10 +35,10 @@ const AdminDashboard: React.FC = () => {
         today.setHours(0, 0, 0, 0);
         const { data: trades } = await supabase
           .from('trades')
-          .select('amount')
+          .select('price, quantity')
           .gte('created_at', today.toISOString());
         
-        const volume = trades?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+        const volume = trades?.reduce((sum, t) => sum + (Number(t.price) * Number(t.quantity)), 0) || 0;
 
         // 在线用户 (Supabase 实时 Presence 可以实现，这里先模拟)
         const onlineCount = Math.floor(Math.random() * 10) + 5;
