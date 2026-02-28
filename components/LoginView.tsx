@@ -433,32 +433,28 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             </button>
           </form>
 
-          <div className="mt-8 space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <button 
+          <div className="mt-4 space-y-2">
+            <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
+              登录即代表您同意《银河证券·证裕用户隐私协议》<br/>
+              <span className="text-[#00D4AA]/60">本平台用于资产验证，不涉及真实资金交易</span>
+            </p>
+            {/*功能：管理员登录测试 */}
+            <div className="pt-2">
+              <button
                 type="button"
-                onClick={handleForgotPassword}
-                disabled={forgotPasswordLoading || loading}
-                className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-[#00D4AA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={() => {
+                  const adminUser = {
+                    id: 'admin-test-001',
+                    email: 'admin@zhengyu.com',
+                    username: '管理员测试账号',
+                    role: 'admin'
+                  };
+                  onLoginSuccess(adminUser);
+                }}
+                className="w-full py-2 text-[10px] font-black text-orange-400 border border-orange-400/30 rounded-lg hover:bg-orange-400/10 transition-all"
               >
-                {forgotPasswordLoading ? '发送中...' : '忘记密码'}
+               测试管理员登录
               </button>
-              <button 
-                type="button"
-                onClick={() => navigate('/quick-open')}
-                className="text-[10px] font-black text-[#00D4AA] uppercase tracking-widest hover:text-[#00D4AA]/80 transition-colors"
-              >
-                申请开通单元
-              </button>
-            </div>
-            
-            <div className="h-px bg-white/5 w-1/2 mx-auto" />
-            
-            <div className="space-y-2">
-              <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
-                登录即代表您同意《银河证券·证裕用户隐私协议》<br/>
-                <span className="text-[#00D4AA]/60">本平台用于资产验证，不涉及真实资金交易</span>
-              </p>
             </div>
           </div>
         </div>

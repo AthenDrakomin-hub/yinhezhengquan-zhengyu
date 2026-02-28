@@ -310,9 +310,12 @@ const AppContent: React.FC = () => {
       id: 'user-id-001',
       email: 'user@zhengyu.com', 
       username: '证裕用户',
-      user_metadata: { username: '证裕用户' }
+      user_metadata: { username: '证裕用户' },
+      role: 'user' // 默认为普通用户
     };
-    
+      
+    console.log('登录成功，用户数据:', finalUser);
+      
     // 创建完整的session对象，模拟Supabase的session结构
     const newSession = {
       user: {
@@ -326,19 +329,23 @@ const AppContent: React.FC = () => {
       expires_in: 3600,
       token_type: 'bearer' as const
     };
-    
+      
     setSession(newSession as any);
-    setUserRole(finalUser.role || 'user'); // 明确设置角色
-    
+    const userRole = finalUser.role || 'user';
+    setUserRole(userRole); //明确设置角色
+      
+    console.log('设置用户角色:', userRole);
+      
     setAccount(prev => ({
       ...prev,
       id: finalUser.id || prev.id,
       username: finalUser.username || prev.username,
       email: finalUser.email || prev.email
     }));
-    
+      
     // 登录成功后跳转到仪表盘
-    const dashboardPath = finalUser.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    const dashboardPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
+    console.log('跳转路径:', dashboardPath);
     navigate(dashboardPath);
   };
 
