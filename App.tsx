@@ -198,7 +198,7 @@ const AppContent: React.FC = () => {
         console.warn('validateAuthSession: 执行超时，强制清理');
         isValidatingRef.current = false;
         setIsLoading(false);
-      }, 8000);
+      }, 30000);
   
       const { data: { session: localSession } } = await supabase.auth.getSession();
         
@@ -293,7 +293,7 @@ const AppContent: React.FC = () => {
     const timeoutId = setTimeout(() => {
       console.log('Auth 初始化超时，强制结束加载');
       setIsLoading(false);
-    }, 5000);
+    }, 30000);
     
     // 初始化执行一次校验
     validateAuthSession().finally(() => clearTimeout(timeoutId));
