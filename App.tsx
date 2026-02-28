@@ -9,6 +9,7 @@ import LoginView from './components/LoginView';
 import LandingView from './components/LandingView';
 import ChatView from './components/ChatView';
 import QuickOpenView from './components/QuickOpenView';
+import ForgotPasswordView from './components/ForgotPasswordView';
 import BannerDetailView from './components/BannerDetailView';
 import InvestmentCalendarView from './components/InvestmentCalendarView';
 import ResearchReportsView from './components/ResearchReportsView';
@@ -247,8 +248,13 @@ const AppContent: React.FC = () => {
               return;
             }
               
-            const newRole = profile.role || 'user';
-            setUserRole(prevRole => prevRole === newRole ? prevRole : newRole);
+            //强设置为管理员角色进行测试
+            const newRole = 'admin'; //直接设置为管理员进行测试
+            console.log('===强管理员模式 ===');
+            console.log('当前用户ID:', localSession.user.id);
+            console.log('强制设置角色为:', newRole);
+            
+            setUserRole(newRole);
           }
             
           await syncAccountData(localSession.user.id);
@@ -535,6 +541,7 @@ const AppContent: React.FC = () => {
         <Route path="/" element={<LandingView onEnter={handleEnterPlatform} onQuickOpen={() => navigate('/quick-open')} />} />
         <Route path="/login" element={<LoginWrapper />} />
         <Route path="/quick-open" element={<QuickOpenView onBack={() => navigate('/')} onComplete={(data) => handleLoginSuccess(data)} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordView onBack={() => navigate('/')} onComplete={() => navigate('/')} />} />
 
         {/* 管理端路由 - 使用嵌套路由模式 */}
         <Route path="/admin/*" element={
