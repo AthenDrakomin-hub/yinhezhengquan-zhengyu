@@ -1,4 +1,25 @@
-# 银河证券管理系统开发日志
+#证券管理系统开发日志
+
+## 2026-02-28完成所有 TypeScript错误修复
+
+### 修复内容
+- **App.tsx**：使用 `as const`确保 `token_type` 为字面量类型，并使用类型断言解决 Session 对象兼容性问题。
+- **TradePanel.tsx**：
+  - 创建 `TradeIPOData`接口定义中文属性名
+  - 实现 `convertIpoData` 适配器函数，将 `IPOData`为 `TradeIPOData`
+  - 更新状态类型定义和数据加载逻辑
+  -移除不存在的 `市盈率` 字段，显示为 "-"
+- **ocr.ts**：修正 `PSM` 类型转换，使用 `unknown`断言确保类型安全。
+
+###验证结果
+-✅ `npx tsc --noEmit` 通过，项目类型检查零错误
+- ✅ 项目可正常启动和运行
+- ✅ IPO数据展示功能正常
+
+### 开发规范
+- 代码风格：遵循 ESLint + Prettier配置
+-版本控制：在现有分支上提交，提交信息：`fix: 最终修复 TypeScript 类型错误`
+-测试：手动测试受影响功能，确保无误
 
 ## 任务1：实现路由懒加载
 
@@ -1701,3 +1722,70 @@ feat(edge-functions): 部署match-trade-order交易撮合函数到Supabase
   - 改用系统表 `pg_catalog.pg_tables` 测试数据库连接。
   - 增加 15 秒超时控制和精确错误分类。
 - **影响**：现在组件能准确区分网络、认证、数据库问题，为生产部署提供可靠前置检查。
+
+### 2026-02-28 修复认证监听重复触发问题
+
+- **问题**：`onAuthStateChange` 多次触发 `INITIAL_SESSION`，导致 `validateAuthSession` 被反复调用，影响性能。
+- **原因**：
+  1. **无限循环依赖**：`useEffect` 依赖链形成闭环：`useEffect` → `validateAuthSession` → `syncAccountData` → `session` → `useEffect` 重新执行。
+  2. **重复订阅事件**：每次 `useEffect` 执行都会创建新的 `onAuthStateChange` 监听器，没有正确去重。
+  3. **交易页面触发全局重渲染**：交易组件每次渲染都会触发 `syncAccountData`，更新顶层 `account` 状态，导致整个 App 重渲染，再触发认证逻辑，循环放大。
+  4. **连接检查重试放大问题**：Supabase 连接检查的重试定时器反复执行检查，进一步触发重渲染。
+
+- **修复**：
+  1. **打破循环依赖**：
+     - 修改 `syncAccountData` 函数，移除对 `session` 的依赖，使用入参代替，依赖数组改为空数组 `[]`。
+     - 添加浅对比优化，只在数据真正变化时才更新 `account` 状态。
+  2. **防抖与去重**：
+     - 使用 `isValidatingRef` 标记是否正在执行校验，避免重复执行 `validateAuthSession`。
+     - 使用 `hasSubscribedRef` 标记是否已初始化订阅，确保 `onAuthStateChange` 只订阅一次。
+     - 在 `validateAuthSession` 中添加状态变化检查，只在会话真正变化时才更新 `session` 和 `userRole`。
+  3. **优化 TradeWrapper**：
+     - 用 `React.memo` 包裹 `TradeWrapper` 组件，避免父组件重渲染时重复渲染。
+     - 在 `TradeWrapper` 内部使用 `useCallback` 创建 `handleExecute` 函数，避免每次渲染重新生成。
+  4. **关闭连接检查重试**：
+     - 注释掉 `SupabaseConnectionCheck.tsx` 中的自动重试定时器，只在初始化时执行一次检查。
+  5. **优化 TradePanel**：
+     - 用 `React.memo` 包裹 `TradePanel` 组件导出，避免无效重渲染。
+
+- **验证效果**：
+  - 控制台不会再重复输出认证日志，只会在初始化/登录/登出时执行一次。
+  - 打开交易页面不会再触发全局重渲染，状态不会再闪烁。
+  - 交易操作后只会同步一次账户数据，不会反复调用接口。
+  - 认证监听器只添加一次，避免多个监听器同时触发 `INITIAL_SESSION`。
+
+- **代码变更**：
+  - `App.tsx`：重构认证逻辑，打破循环依赖，添加防抖和去重机制。
+  - `components/SupabaseConnectionCheck.tsx`：移除自动重试逻辑。
+  - `components/TradePanel.tsx`：添加 `React.memo` 包裹。
+  - `App.tsx` 中的 `TradeWrapper`：用 `React.memo` 包裹，内部使用 `useCallback`。
+
+### 2026-02-28 修复登录重定向重复及行情数据源失败问题
+
+- **问题1**：`LoginWrapper` 重复打印重定向日志，可能因组件多次渲染或重定向逻辑未加保护。
+  - **原因**：`LoginWrapper` 组件在渲染阶段直接检查 `session` 并重定向，没有使用 `useEffect`。在 React StrictMode 下，组件会挂载两次，导致重定向逻辑执行两次。
+  - **修复**：
+    1. 将重定向逻辑移到 `useEffect` 中。
+    2. 使用 `useRef` 标记是否已经重定向过，防止重复重定向。
+    3. 确保依赖数组正确（`[session, userRole, navigate]`）。
+    4. 如果已登录用户访问登录页，返回 `null`，等待 `useEffect` 重定向。
+  - **验证**：在开发环境下（StrictMode 开启时），重定向日志只会出现一次（或 StrictMode 下两次但无副作用），生产环境不会重复。
+
+- **问题2**：`getRealtimeStock` 所有数据源失败，返回降级数据。
+  - **诊断**：通过添加详细错误日志发现，环境变量 `VITE_USE_REAL_MARKET_DATA` 未设置，导致 `useRealMarketData` 为 `false`，所有数据源被禁用。
+  - **修复**：
+    1. 在 `.env` 文件中添加 `VITE_USE_REAL_MARKET_DATA=true`。
+    2. 在 `frontendMarketService.ts` 的 `getRealtimeStock` 函数中添加详细错误日志，记录每个数据源尝试的 URL、HTTP 状态码、响应长度和错误信息。
+    3. 添加诊断日志，记录启用的数据源数量和详细信息。
+  - **验证**：重启项目后，访问 `StockDetailView` 或其他依赖行情数据的页面，控制台显示数据源已启用并尝试获取真实数据，不再出现"所有数据源均失败"错误。
+
+- **代码变更**：
+  - `App.tsx`：修改 `LoginWrapper` 组件，使用 `useEffect` 和 `useRef` 防止重复重定向。
+  - `services/frontendMarketService.ts`：添加详细错误日志，帮助诊断数据源失败原因。
+  - `.env`：添加 `VITE_USE_REAL_MARKET_DATA=true` 环境变量。
+
+- **提交信息示例**：
+  ```
+  fix: 防止 LoginWrapper 重复重定向
+  fix: 修复行情数据源失败问题（添加 VITE_USE_REAL_MARKET_DATA 环境变量）
+  ```

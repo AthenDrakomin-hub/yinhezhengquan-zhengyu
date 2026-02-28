@@ -1,4 +1,4 @@
-import { createWorker, Worker } from 'tesseract.js';
+import { createWorker, Worker, PSM } from 'tesseract.js';
 
 export interface IdCardOcrResult {
   name: string;
@@ -32,21 +32,16 @@ class IdCardOcr {
     if (this.isInitialized) return;
 
     try {
-      // 创建 Worker
-      this.worker = await createWorker({
-        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-        corePath: 'https://unpkg.com/tesseract.js-core@v4.0.4/tesseract-core.wasm.js',
-        logger: options.debug ? (m) => console.log('OCR Logger:', m) : undefined,
-      });
-
-      // 加载语言模型
+      // 创建 Worker - 新版 API
       const language = options.language || 'chi_sim+eng';
-      await this.worker.loadLanguage(language);
-      await this.worker.initialize(language);
+      this.worker = await createWorker(language, 1, {
+        corePath: 'https://unpkg.com/tesseract.js-core@v4.0.4/tesseract-core.wasm.js',
+        logger: options.debug ? (m: any) => console.log('OCR Logger:', m) : undefined,
+      });
 
       // 设置 OCR 参数
       if (options.oem) await this.worker.setParameters({ tessedit_ocr_engine_mode: options.oem });
-      if (options.psm) await this.worker.setParameters({ tessedit_pageseg_mode: options.psm });
+      if (options.psm) await this.worker.setParameters({ tessedit_pageseg_mode: options.psm as unknown as PSM });
 
       // 设置中文身份证识别优化参数
       await this.worker.setParameters({

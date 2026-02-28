@@ -12,7 +12,7 @@ const getQOSProducts = (): string[] => {
       console.warn('VITE_QOS_PRODUCTS环境变量未配置');
       return [];
     }
-    return products.split(',').map(p => p.trim()).filter(p => p);
+    return products.split(',').map((p: string) => p.trim()).filter((p: string) => p);
   } catch (error) {
     console.error('解析QOS产品列表失败:', error);
     return [];

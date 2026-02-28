@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ICONS } from '../constants';
-import { TradingSettings, PersonalSettings } from '../types';
+import { TradingSettings, PersonalSettings, OrderStrategy } from '../types';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -27,7 +27,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
   // Local settings state
   const [tradingSettings, setTradingSettings] = useState<TradingSettings>({
     fastOrderMode: true,
-    defaultStrategy: 'NORMAL',
+    defaultStrategy: OrderStrategy.NORMAL,
     defaultLeverage: 10,
     autoStopLoss: false
   });

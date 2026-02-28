@@ -275,6 +275,17 @@ export const frontendMarketService = {
       .filter(([_, config]) => config.enabled)
       .sort((a, b) => a[1].priority - b[1].priority);
     
+    // 诊断日志：记录启用的数据源
+    console.log(`getRealtimeStock: 尝试获取 ${symbol} (${market}) 行情数据`);
+    console.log(`启用的数据源数量: ${sources.length}`);
+    sources.forEach(([key, config]) => {
+      console.log(`  - ${key}: ${config.name} (优先级: ${config.priority})`);
+    });
+    
+    if (sources.length === 0) {
+      console.warn('getRealtimeStock: 没有启用的数据源，检查 VITE_USE_REAL_MARKET_DATA 环境变量');
+    }
+    
     for (const [sourceKey, source] of sources) {
       try {
         let stockData: Partial<Stock> | null = null;
@@ -282,6 +293,8 @@ export const frontendMarketService = {
         if (sourceKey === 'SINA_REALTIME') {
           // 新浪财经实时行情 - 直接使用DATA_SOURCES.SINA_REALTIME避免类型问题
           const url = DATA_SOURCES.SINA_REALTIME.getRealtimeUrl(symbol, market);
+          console.log(`尝试数据源 ${source.name}: URL=${url}`);
+          
           const response = await fetch(url, {
             headers: {
               'Referer': 'https://finance.sina.com.cn',
@@ -289,19 +302,35 @@ export const frontendMarketService = {
             }
           });
           
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          console.log(`数据源 ${source.name} 响应状态: ${response.status} ${response.statusText}`);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
           
           const text = await response.text();
+          console.log(`数据源 ${source.name} 响应长度: ${text.length} 字符`);
+          
           stockData = DATA_SOURCES.SINA_REALTIME.parseRealtimeData(text, symbol, market);
           
           if (stockData) {
+            console.log(`数据源 ${source.name} 解析成功:`, stockData);
             // 获取K线数据生成走势图
             const klineUrl = DATA_SOURCES.TENCENT_KLINE.getKlineUrl(symbol, market, 'day');
+            console.log(`尝试获取K线数据: URL=${klineUrl}`);
+            
             const klineResponse = await fetch(klineUrl);
+            console.log(`K线数据响应状态: ${klineResponse.status} ${klineResponse.statusText}`);
+            
             if (klineResponse.ok) {
               const klineData = await klineResponse.json();
               stockData.sparkline = DATA_SOURCES.TENCENT_KLINE.parseKlineData(klineData);
+              console.log(`K线数据解析成功，生成 ${stockData.sparkline?.length || 0} 个数据点`);
+            } else {
+              console.warn(`K线数据获取失败: ${klineResponse.status} ${klineResponse.statusText}`);
             }
+          } else {
+            console.warn(`数据源 ${source.name} 解析失败，响应文本: ${text.substring(0, 200)}...`);
           }
         }
         
@@ -322,12 +351,14 @@ export const frontendMarketService = {
           MarketCache.set(cacheKey, fullStock);
           ErrorHandler.resetErrorCount(sourceKey);
           
+          console.log(`getRealtimeStock: 成功获取 ${symbol} 行情数据，来源: ${source.name}`);
           return fullStock;
         }
       } catch (error) {
-        console.warn(`数据源 ${source.name} 失败:`, error);
+        console.error(`数据源 ${source.name} 失败:`, error);
         if (!ErrorHandler.recordError(sourceKey)) {
           // 数据源被禁用，继续尝试下一个
+          console.warn(`数据源 ${source.name} 错误次数过多，暂时禁用`);
           continue;
         }
       }
@@ -335,6 +366,8 @@ export const frontendMarketService = {
     
     // 4. 所有数据源都失败，返回数据
     console.warn('所有数据源均失败，返回数据');
+    console.warn(`环境变量 VITE_USE_REAL_MARKET_DATA=${import.meta.env.VITE_USE_REAL_MARKET_DATA}`);
+    console.warn(`useRealMarketData=${useRealMarketData}`);
     const fallbackData = ErrorHandler.generateFallbackData(symbol, market);
     MarketCache.set(cacheKey, fallbackData, 60 * 1000); // 数据缓存1分钟
     return fallbackData;

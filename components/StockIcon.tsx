@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 interface StockIconProps {
   name: string;
   logoUrl?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
@@ -15,6 +15,7 @@ const StockIcon: React.FC<StockIconProps> = ({ name, logoUrl, size = 'md', class
     sm: 'w-8 h-8 rounded-lg text-[10px]',
     md: 'w-10 h-10 rounded-xl text-xs',
     lg: 'w-14 h-14 rounded-2xl text-lg',
+    xl: 'w-16 h-16 rounded-3xl text-xl',
   };
 
   if (logoUrl && !error) {

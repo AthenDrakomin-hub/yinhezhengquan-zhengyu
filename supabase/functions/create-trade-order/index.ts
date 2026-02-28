@@ -63,13 +63,6 @@ serve(async (req) => {
             status: 400,
           })
         }
-      } else if (trade_type === 'DERIVATIVES') {
-        if (leverage < config.min_leverage || leverage > config.max_leverage) {
-          return new Response(JSON.stringify({ error: `衍生品交易杠杆需在${config.min_leverage}-${config.max_leverage}倍之间，当前选择${leverage}倍，超出规则限制`, code: 1104 }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          })
-        }
       } else if (trade_type === 'LIMIT_UP') {
         // 涨停打板规则校验
         if (config.max_single_order && quantity > config.max_single_order) {
@@ -81,20 +74,6 @@ serve(async (req) => {
         // 触发阈值校验（需要前端传递当前涨幅，这里简化处理）
         // 实际应用中，需要获取当前股票价格和涨幅进行校验
       }
-    }
-
-    // 2. 风险等级校验
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('risk_level')
-      .eq('id', userId)
-      .single()
-
-    if (market_type === 'DERIVATIVES' && (!profile || profile.risk_level < 'C4')) {
-      return new Response(JSON.stringify({ error: '风险等级不足，无法进行衍生品交易', code: 1002 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      })
     }
 
     // 2. 获取资产信息

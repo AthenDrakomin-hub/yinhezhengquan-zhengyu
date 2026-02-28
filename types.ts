@@ -1,5 +1,6 @@
 
 export interface Stock {
+  id?: string;
   symbol: string;
   name: string;
   price: number;
@@ -93,6 +94,8 @@ export interface Banner {
   date: string;
   content: string;
   relatedSymbol?: string;
+  isActive?: boolean;
+  position?: number;
 }
 
 export interface ResearchReport {

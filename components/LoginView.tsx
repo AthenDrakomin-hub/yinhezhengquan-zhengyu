@@ -49,7 +49,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
     
     // 如果邮箱为空，提示用户输入
     if (!targetEmail || targetEmail.trim() === '') {
-      targetEmail = prompt('请输入您的邮箱地址以重置密码：');
+      const input = prompt('请输入您的邮箱地址以重置密码：');
+      if (input !== null) targetEmail = input;
       if (!targetEmail || targetEmail.trim() === '') {
         alert('请输入有效的邮箱地址');
         return;
@@ -213,7 +214,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             const { data, error } = await supabase.auth.verifyOtp({
               email,
               token: totpCode,
-              type: 'totp',
+              type: 'totp' as any,
             });
             if (error) throw error;
             onLoginSuccess(data.user);

@@ -71,7 +71,7 @@ function isSymbolAllowed(symbol: string): boolean {
       return false;
     }
     
-    const allowedProducts = products.split(',').map(p => p.trim());
+    const allowedProducts = products.split(',').map((p: string) => p.trim());
     return allowedProducts.includes(symbol);
   } catch (error) {
     console.error('检查QOS产品权限失败:', error);

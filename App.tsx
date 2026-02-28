@@ -1,7 +1,8 @@
 "use strict";
 
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Session } from '@supabase/supabase-js';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import LoginView from './components/LoginView';
@@ -105,7 +106,7 @@ const ProtectedRoute: React.FC<{
 };
 
 const AppContent: React.FC = () => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string>('guest'); // 默认为guest，而非user
   const [isDarkMode, setIsDarkMode] = useState(false); 
   const [isLoading, setIsLoading] = useState(true); // 添加加载状态
@@ -130,7 +131,7 @@ const AppContent: React.FC = () => {
     document.body.classList.toggle('light-mode', !isDarkMode);
   }, [isDarkMode]);
 
-  // 同步账户数据
+  // 同步账户数据（移除对 session 的依赖，用入参代替，打破循环）
   const syncAccountData = useCallback(async (userId: string) => {
     try {
       const { data: profile, error: profileError } = await supabase
@@ -144,67 +145,79 @@ const AppContent: React.FC = () => {
         return;
       }
 
-      // 使用 maybeSingle 而不是 single，因为 assets 可能不存在
       const { data: assets, error: assetsError } = await supabase
         .from('assets')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
       
-      if (assetsError && assetsError.code !== 'PGRST116') { // PGRST116 表示没有找到记录
+      if (assetsError && assetsError.code !== 'PGRST116') {
         console.error('获取资产数据失败:', assetsError);
       }
 
       const holdings = await tradeService.getHoldings(userId);
       const transactions = await tradeService.getTransactions(userId, 50);
 
-      setAccount(prev => ({
-        ...prev,
-        id: profile.id,
-        username: profile.username || prev.username,
-        email: session?.user?.email || prev.email,
-        balance: assets ? parseFloat(assets.available_balance) : prev.balance,
-        holdings: holdings || [],
-        transactions: transactions || []
-      }));
+      // 【关键】只在数据真正变化时才更新状态，避免无效重渲染
+      setAccount(prev => {
+        const newAccount = {
+          ...prev,
+          id: profile.id,
+          username: profile.username || prev.username,
+          email: prev.email,
+          balance: assets ? parseFloat(assets.available_balance) : prev.balance,
+          holdings: holdings || [],
+          transactions: transactions || []
+        };
+        // 浅对比，数据不变就不更新状态
+        if (JSON.stringify(prev) === JSON.stringify(newAccount)) return prev;
+        return newAccount;
+      });
     } catch (err) {
       console.error('同步账户数据失败:', err);
     }
-  }, [session]);
+  }, []); // 【关键】移除 session 依赖，彻底打破循环
 
-  // 核心修复：统一的认证校验逻辑（包含服务端验证）
+  // 用 ref 标记是否正在执行校验，避免重复执行
+  const isValidatingRef = useRef(false);
+
+  // 统一的认证校验逻辑（移除对 syncAccountData 的依赖，用函数内调用）
   const validateAuthSession = useCallback(async () => {
+    // 【关键】如果正在校验，直接返回，避免重复执行
+    if (isValidatingRef.current) return;
+    isValidatingRef.current = true;
+
     try {
-      // 1. 先获取本地会话
       const { data: { session: localSession } } = await supabase.auth.getSession();
       
       if (localSession) {
-        // 2. 关键：向服务端验证会话有效性
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError || !userData.user) {
-          // 会话无效 → 清空本地会话
           await supabase.auth.signOut();
           setSession(null);
           setUserRole('guest');
           console.log('validateAuthSession: 会话无效，已清空');
         } else {
-          // 会话有效 → 更新状态
-          setSession(localSession);
+          // 【关键】只在会话真正变化时才更新状态
+          setSession((prevSession: Session | null) => {
+            if (prevSession?.access_token === localSession.access_token) return prevSession;
+            return localSession;
+          });
           
-          // 获取用户角色
-          const { data: profile, error: profileError } = await supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', localSession.user.id)
             .single();
           
-          setUserRole(profile?.role || 'user');
+          const newRole = profile?.role || 'user';
+          setUserRole(prevRole => prevRole === newRole ? prevRole : newRole);
+          
           await syncAccountData(localSession.user.id);
           console.log('validateAuthSession: 会话有效，已更新状态');
         }
       } else {
-        // 无本地会话 → 重置状态
         setSession(null);
         setUserRole('guest');
         console.log('validateAuthSession: 无本地会话');
@@ -214,37 +227,36 @@ const AppContent: React.FC = () => {
       setSession(null);
       setUserRole('guest');
     } finally {
+      isValidatingRef.current = false;
       setIsLoading(false);
       console.log('Auth 初始化完成，isLoading 设置为 false');
     }
-  }, [syncAccountData]);
+  }, [syncAccountData]); // 仅依赖无循环的 syncAccountData
+
+  // 用 ref 标记是否已经初始化订阅，避免重复订阅
+  const hasSubscribedRef = useRef(false);
 
   useEffect(() => {
-    // 演示模式也需要执行认证校验（核心修复）
-    if (isDemoMode) {
-      console.log('AppContent: 演示模式，强制校验认证状态');
-    }
-    
-    // 设置超时兜底
+    // 超时兜底
     const timeoutId = setTimeout(() => {
       console.log('Auth 初始化超时，强制结束加载');
       setIsLoading(false);
     }, 5000);
     
-    // 执行统一的认证校验
+    // 初始化执行一次校验
     validateAuthSession().finally(() => clearTimeout(timeoutId));
 
-    // 监听会话变化
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log('onAuthStateChange:', event, newSession);
-      
-      // 明确处理不同的认证事件
-      switch (event) {
-        case 'SIGNED_IN':
+    // 【关键】只订阅一次，避免重复创建事件监听
+    if (!hasSubscribedRef.current) {
+      hasSubscribedRef.current = true;
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+        console.log('onAuthStateChange:', event);
+        
+        // 只处理关键事件，避免无关事件触发重渲染
+        if (event === 'SIGNED_IN' && newSession) {
           setSession(newSession);
-          // 获取用户角色
-          if (newSession?.user?.id) {
-            const { data: profile, error } = await supabase
+          if (newSession.user.id) {
+            const { data: profile } = await supabase
               .from('profiles')
               .select('role')
               .eq('id', newSession.user.id)
@@ -252,23 +264,22 @@ const AppContent: React.FC = () => {
             setUserRole(profile?.role || 'user');
             await syncAccountData(newSession.user.id);
           }
-          break;
-        case 'SIGNED_OUT':
-        
-          // 登出/会话失效 → 清空状态
+        } else if (event === 'SIGNED_OUT' || !newSession) {
           setSession(null);
           setUserRole('guest');
-          break;
-        default:
-          break;
-      }
-    });
+        }
+      });
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeoutId);
-    };
-  }, [validateAuthSession, syncAccountData]);
+      // 组件卸载时取消订阅
+      return () => {
+        subscription.unsubscribe();
+        clearTimeout(timeoutId);
+        hasSubscribedRef.current = false;
+      };
+    }
+
+    return () => clearTimeout(timeoutId);
+  }, [validateAuthSession, syncAccountData]); // 依赖稳定，不会反复执行
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
@@ -312,10 +323,11 @@ const AppContent: React.FC = () => {
       access_token: 'access-token-' + Date.now(), // 加时间戳避免重复
       refresh_token: 'refresh-token-' + Date.now(),
       expires_at: Date.now() + 3600 * 1000, // 1小时后过期
-      expires_in: 3600
+      expires_in: 3600,
+      token_type: 'bearer' as const
     };
     
-    setSession(newSession);
+    setSession(newSession as any);
     setUserRole(finalUser.role || 'user'); // 明确设置角色
     
     setAccount(prev => ({
@@ -381,27 +393,78 @@ const AppContent: React.FC = () => {
     return <BannerDetailView banner={banner} onBack={() => navigate(-1)} onAction={(s) => navigate(`/stock/${s}`)} />;
   };
 
-  const TradeWrapper = () => {
+  // 用 React.memo 包裹，避免父组件重渲染时重复渲染
+  const TradeWrapper = React.memo(() => {
     const [searchParams] = useSearchParams();
     const symbol = searchParams.get('symbol');
     const stock = MOCK_STOCKS.find(s => s.symbol === symbol) || null;
+
+    // 【关键】用 useCallback 包裹，避免每次渲染重新生成函数
+    const handleExecute = useCallback(async (
+      type: TradeType, 
+      symbol: string, 
+      name: string, 
+      price: number, 
+      quantity: number,
+      logoUrl?: string
+    ) => {
+      if (!session?.user?.id) {
+        alert("请先登录");
+        return false;
+      }
+      try {
+        const result = await tradeService.executeTrade({
+          userId: session.user.id,
+          type,
+        symbol,
+          name,
+          price,
+          quantity,
+          logoUrl
+        });
+        if (result?.error) {
+          alert(`交易失败: ${result.error}`);
+          return false;
+        }
+        await syncAccountData(session.user.id);
+        return true;
+      } catch (err: any) {
+        alert(err.message || "交易失败");
+        return false;
+      }
+    }, [session, syncAccountData]);
+
     return (
       <Suspense fallback={<LoadingSpinner />}>
-        <TradePanel account={account} onExecute={executeTrade} initialStock={stock} />
+        <TradePanel 
+          account={account} 
+          onExecute={handleExecute} 
+          initialStock={stock} 
+        />
       </Suspense>
     );
-  };
+  });
 
   // 登录页包装组件：已登录用户访问时重定向到仪表板
   const LoginWrapper = () => {
+    const hasRedirected = useRef(false);
+    
     if (isLoading) {
       return <LoadingSpinner />;
     }
     
+    useEffect(() => {
+      if (session && !hasRedirected.current) {
+        hasRedirected.current = true;
+        console.log('LoginWrapper: 已登录用户访问登录页，重定向到仪表板');
+        const dashboardPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
+        navigate(dashboardPath, { replace: true });
+      }
+    }, [session, userRole, navigate]);
+    
     if (session) {
-      console.log('LoginWrapper: 已登录用户访问登录页，重定向到仪表板');
-      const dashboardPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
-      return <Navigate to={dashboardPath} replace />;
+      // 已登录用户，等待 useEffect 重定向，返回空内容
+      return null;
     }
     
     return <LoginView onLoginSuccess={handleLoginSuccess} onBackToHome={() => navigate('/')} />;

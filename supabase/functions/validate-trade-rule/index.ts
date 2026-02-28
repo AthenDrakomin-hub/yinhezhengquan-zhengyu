@@ -76,11 +76,6 @@ serve(async (req) => {
         isValid = false
         errorMessage = `大宗交易需满足最低${config.min_quantity}股起买，当前委托数量为${quantity}股，不符合规则`
       }
-    } else if (order_type === 'DERIVATIVES') {
-      if (leverage < config.min_leverage || leverage > config.max_leverage) {
-        isValid = false
-        errorMessage = `衍生品交易杠杆需在${config.min_leverage}-${config.max_leverage}倍之间，当前选择${leverage}倍，超出规则限制`
-      }
     } else if (order_type === 'LIMIT_UP') {
       if (config.max_single_order && quantity > config.max_single_order) {
         isValid = false

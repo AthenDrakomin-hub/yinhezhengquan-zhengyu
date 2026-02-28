@@ -2,6 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase'; // 请根据实际路径调整
 
 const SupabaseConnectionCheck: React.FC = () => {
+  // 只在开发环境显示
+  if (import.meta.env.PROD) {
+    return null;
+  }
+
   const [connectionStatus, setConnectionStatus] = useState<string>('初始化中...');
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,14 +98,17 @@ const SupabaseConnectionCheck: React.FC = () => {
   };
 
   useEffect(() => {
+    // 只在初始化时执行一次，移除自动重试的定时器，避免反复执行
     checkSupabaseConnection();
-    const retryTimer = setTimeout(() => {
-      if (connectionStatus.includes('失败') || connectionStatus.includes('初始化')) {
-        console.log('🔄 重试连接检查...');
-        checkSupabaseConnection();
-      }
-    }, 5000);
-    return () => clearTimeout(retryTimer);
+
+    // 注释掉自动重试的定时器，避免反复执行
+    // const retryTimer = setTimeout(() => {
+    //   if (connectionStatus.includes('失败') || connectionStatus.includes('初始化')) {
+    //     console.log('🔄 重试连接检查...');
+    //     checkSupabaseConnection();
+    //   }
+    // }, 5000);
+    // return () => clearTimeout(retryTimer);
   }, []);
 
   return (

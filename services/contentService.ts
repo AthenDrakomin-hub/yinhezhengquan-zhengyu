@@ -278,6 +278,8 @@ export const getBanners = async (): Promise<Banner[]> => {
       date: banner.date,
       content: banner.content,
       relatedSymbol: banner.related_symbol || undefined,
+      isActive: banner.is_active,
+      position: banner.position,
     }));
   } catch (error) {
     console.error('获取横幅公告失败:', error);
@@ -503,7 +505,7 @@ export const updateBanner = async (id: string, banner: Partial<Banner>) => {
       date: banner.date,
       content: banner.content,
       related_symbol: banner.relatedSymbol,
-      is_active: banner.is_active,
+      is_active: banner.isActive,
       position: banner.position,
     })
     .eq('id', id);

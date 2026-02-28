@@ -23,6 +23,7 @@ export interface FaceDetectionResult {
   age?: number;
   gender?: 'male' | 'female';
   expression?: string;
+  message?: string;
 }
 
 export interface FaceVerificationResult {
