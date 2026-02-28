@@ -182,9 +182,12 @@ const AppContent: React.FC = () => {
   const isValidatingRef = useRef(false);
   const sessionCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // 改进的认证校验逻辑
+  // 改进的认证校验逻辑 - 添加详细时间戳日志用于诊断
   const validateAuthSession = useCallback(async () => {
+    console.log('[Auth] validateAuthSession start', Date.now());
+    
     if (isValidatingRef.current) {
+      console.log('[Auth] already validating, skipping', Date.now());
       return;
     }
       
@@ -196,70 +199,43 @@ const AppContent: React.FC = () => {
   
     try {
       sessionCheckTimeoutRef.current = setTimeout(() => {
-        console.warn('validateAuthSession: 执行超时，强制清理');
+        console.warn('[Auth] validateAuthSession: 执行超时，强制清理', Date.now());
         isValidatingRef.current = false;
         setIsLoading(false);
       }, 30000);
   
-      const { data: { session: localSession } } = await supabase.auth.getSession();
-        
-      if (localSession) {
-        // 验证会话有效性
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-          
-        if (userError || !userData?.user) {
-          console.log('validateAuthSession: 会话无效，执行登出');
-          await supabase.auth.signOut();
-          setSession(null);
+      // 获取 session
+      console.log('[Auth] calling authService.getSession()', Date.now());
+      const result = await authService.getSession();
+      console.log('[Auth] getSession returned', Date.now(), result);
+
+      if (result?.session) {
+        setSession(result.session);
+        console.log('[Auth] session set', Date.now());
+
+        // 获取用户角色
+        console.log('[Auth] fetching profile for user', result.session.user.id, Date.now());
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', result.session.user.id)
+          .single();
+        console.log('[Auth] profile query result', Date.now(), { profile, error });
+
+        if (error) {
+          console.error('[Auth] profile fetch error', error, Date.now());
           setUserRole('guest');
-          // 重置为初始状态
-          setAccount(prev => ({
-            ...prev,
-            id: 'ZY-USER-001',
-            username: '证裕资深用户',
-            email: '',
-            balance: 500000.00
-          }));
         } else {
-          // 仅在会话真正变化时更新状态
-          setSession((prevSession: Session | null) => {
-            if (prevSession?.access_token === localSession.access_token) {
-              return prevSession;
-            }
-            return localSession;
-          });
-            
-          // 获取用户角色和配置文件
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role, status')
-            .eq('id', localSession.user.id)
-            .single();
-            
-          if (profileError) {
-            console.error('validateAuthSession: 获取用户资料失败', profileError);
-          } else {
-            // 检查用户状态
-            if (profile.status === 'BANNED') {
-              console.log('validateAuthSession: 用户账户已被禁用');
-              await supabase.auth.signOut();
-              setSession(null);
-              setUserRole('guest');
-              return;
-            }
-              
-            //强设置为管理员角色进行测试
-            const newRole = 'admin'; //直接设置为管理员进行测试
-            console.log('===强管理员模式 ===');
-            console.log('当前用户ID:', localSession.user.id);
-            console.log('强制设置角色为:', newRole);
-            
-            setUserRole(newRole);
-          }
-            
-          await syncAccountData(localSession.user.id);
+          console.log('[Auth] setting userRole to', profile.role, Date.now());
+          setUserRole(profile.role);
         }
+
+        // 同步账户数据
+        console.log('[Auth] calling syncAccountData', Date.now());
+        await syncAccountData(result.session.user.id);
+        console.log('[Auth] syncAccountData completed', Date.now());
       } else {
+        console.log('[Auth] no session', Date.now());
         setSession(null);
         setUserRole('guest');
         setAccount(prev => ({
@@ -271,7 +247,7 @@ const AppContent: React.FC = () => {
         }));
       }
     } catch (err) {
-      console.error('validateAuthSession 失败:', err);
+      console.error('[Auth] validateAuthSession error', err, Date.now());
       setSession(null);
       setUserRole('guest');
       setAccount(prev => ({
@@ -282,6 +258,7 @@ const AppContent: React.FC = () => {
         balance: 500000.00
       }));
     } finally {
+      console.log('[Auth] validateAuthSession end', Date.now());
       isValidatingRef.current = false;
       if (sessionCheckTimeoutRef.current) {
         clearTimeout(sessionCheckTimeoutRef.current);
@@ -364,9 +341,9 @@ const AppContent: React.FC = () => {
   };
 
   const handleLoginSuccess = (userData?: any) => {
-    const finalUser = userData || { 
+    const finalUser = userData || {        
       id: 'user-id-001',
-      email: 'user@zhengyu.com', 
+      email: 'user@zhengyu.com',
       username: '证裕用户',
       user_metadata: { username: '证裕用户' },
       role: 'user' // 默认为普通用户
