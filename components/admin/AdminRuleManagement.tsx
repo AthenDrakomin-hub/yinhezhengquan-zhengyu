@@ -79,20 +79,26 @@ const AdminRuleManagement: React.FC = () => {
     if (!window.confirm('确定要修改交易规则吗？修改将实时生效。')) return;
 
     setSaving(true);
-    const { error } = await supabase.functions.invoke('admin-update-trade-rules', {
-      body: {
-        rule_type: editingRule.rule_type,
-        config: editingRule.config,
-        status: editingRule.status
-      }
-    });
+    try {
+      // 直接更新数据库，绕过可能不安全的函数调用
+      const { error } = await supabase
+        .from('trade_rules')
+        .update({
+          config: editingRule.config,
+          status: editingRule.status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('rule_type', editingRule.rule_type);
 
-    if (error) {
-      alert('保存失败: ' + error.message);
-    } else {
-      alert('规则更新成功');
-      setEditingRule(null);
-      fetchRules();
+      if (error) {
+        alert('保存失败: ' + error.message);
+      } else {
+        alert('规则更新成功');
+        setEditingRule(null);
+        fetchRules();
+      }
+    } catch (err: any) {
+      alert('保存失败: ' + err.message);
     }
     setSaving(false);
   };

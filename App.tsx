@@ -47,7 +47,6 @@ const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
 const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
 const AdminUserManagement = lazy(() => import('./components/admin/AdminUserManagement'));
 const AdminTradeManagement = lazy(() => import('./components/admin/AdminTradeManagement'));
-const AdminIntegrationPanel = lazy(() => import('./components/admin/AdminIntegrationPanel'));
 const AdminRuleManagement = lazy(() => import('./components/admin/AdminRuleManagement'));
 const AdminMatchIntervention = lazy(() => import('./components/admin/AdminMatchIntervention'));
 const AdminReports = lazy(() => import('./components/admin/AdminReports'));
@@ -596,13 +595,7 @@ const AppContent: React.FC = () => {
               </Suspense>
             </ErrorBoundary>
           } />
-          <Route path="integration" element={
-            <ErrorBoundary resetOnNavigate>
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminIntegrationPanel />
-              </Suspense>
-            </ErrorBoundary>
-          } />
+          
           <Route path="reports" element={
             <ErrorBoundary resetOnNavigate>
               <Suspense fallback={<LoadingSpinner />}>

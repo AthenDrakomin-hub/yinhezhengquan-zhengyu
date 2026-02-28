@@ -72,20 +72,22 @@ const AdminUserManagement: React.FC = () => {
         status: formData.status
       });
       
-      // 更新用户资产信息
+      // 更新用户资产信息 - 通过服务层进行，以确保安全验证
       if (selectedUser.balance !== undefined || selectedUser.total_asset !== undefined || selectedUser.frozen_balance !== undefined) {
-        // 直接更新资产表
-        const { error: assetError } = await supabase
-          .from('assets')
-          .update({
-            available_balance: selectedUser.balance || 0,
-            total_asset: selectedUser.total_asset || 0,
-            frozen_balance: selectedUser.frozen_balance || 0,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', selectedUser.id);
-          
-        if (assetError) throw assetError;
+        // 使用userService的adjustBalance方法来安全地更新用户资金
+        const currentAssets = users.find(u => u.id === selectedUser.id);
+        const balanceDiff = (selectedUser.balance || 0) - (currentAssets?.balance || 0);
+        const totalAssetDiff = (selectedUser.total_asset || 0) - (currentAssets?.total_asset || 0);
+        const frozenBalanceDiff = (selectedUser.frozen_balance || 0) - (currentAssets?.frozen_balance || 0);
+        
+        if (Math.abs(balanceDiff) > 0.01 || Math.abs(totalAssetDiff) > 0.01 || Math.abs(frozenBalanceDiff) > 0.01) {
+          // 根据差额进行相应的资金操作
+          if (balanceDiff > 0) {
+            await userService.adjustBalance(selectedUser.id, balanceDiff, 'RECHARGE', '管理员手动调整');
+          } else if (balanceDiff < 0) {
+            await userService.adjustBalance(selectedUser.id, Math.abs(balanceDiff), 'WITHDRAW', '管理员手动调整');
+          }
+        }
       }
       
       alert('用户信息更新成功！');

@@ -59,12 +59,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
     { id: 'trades', label: '交易管理', icon: ICONS.Trade, path: '/admin/trades' },
     { id: 'users', label: '用户管理', icon: ICONS.Shield, path: '/admin/users' },
     { id: 'tickets', label: '工单管理', icon: ICONS.MessageCircle, path: '/admin/tickets' },
-    { id: 'integration', label: '接入面板', icon: ICONS.Zap, path: '/admin/integration' },
     { id: 'reports', label: '研报管理', icon: ICONS.Book, path: '/admin/reports' },
     { id: 'education', label: '投教内容', icon: ICONS.Globe, path: '/admin/education' },
     { id: 'calendar', label: '日历事件', icon: ICONS.Calendar, path: '/admin/calendar' },
     { id: 'ipos', label: '新股管理', icon: ICONS.Chart, path: '/admin/ipos' },
-
     { id: 'banners', label: '横幅管理', icon: ICONS.Camera, path: '/admin/banners' },
   ];
 
