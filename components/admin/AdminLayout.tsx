@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { ICONS } from '@/constants';
+import { ICONS } from '../../constants';
 
 interface AdminLayoutProps {
   // 不再需要 children prop，使用 Outlet
@@ -9,6 +9,48 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Supabase 连接状态状态
+  const [connectionStatus, setConnectionStatus] = useState<string>('检查中...');
+  const [isConnectionOk, setIsConnectionOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // 只在开发环境检查连接状态
+    if (import.meta.env.DEV) {
+      const checkConnection = async () => {
+        try {
+          // 简化的连接检查
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          if (!supabaseUrl) {
+            setConnectionStatus('未配置');
+            setIsConnectionOk(false);
+            return;
+          }
+
+          // 检查 Supabase 基础连接
+          const response = await fetch(`${supabaseUrl}/health`, {
+            method: 'GET',
+            headers: {
+              'apikey': import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || '',
+            },
+          });
+
+          if (response.ok) {
+            setConnectionStatus('正常');
+            setIsConnectionOk(true);
+          } else {
+            setConnectionStatus('异常');
+            setIsConnectionOk(false);
+          }
+        } catch (error) {
+          setConnectionStatus('异常');
+          setIsConnectionOk(false);
+        }
+      };
+
+      checkConnection();
+    }
+  }, []);
 
   const menuItems = [
     { id: 'dashboard', label: '总览', icon: ICONS.Home, path: '/admin/dashboard' },
@@ -22,7 +64,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
     { id: 'education', label: '投教内容', icon: ICONS.Globe, path: '/admin/education' },
     { id: 'calendar', label: '日历事件', icon: ICONS.Calendar, path: '/admin/calendar' },
     { id: 'ipos', label: '新股管理', icon: ICONS.Chart, path: '/admin/ipos' },
-    { id: 'derivatives', label: '衍生品管理', icon: ICONS.Key, path: '/admin/derivatives' },
+
     { id: 'banners', label: '横幅管理', icon: ICONS.Camera, path: '/admin/banners' },
   ];
 
@@ -58,7 +100,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-industrial-800">
+        <div className="p-4 border-t border-industrial-800 space-y-4">
+          {/* Supabase 连接状态指示器 */}
+          {import.meta.env.DEV && (
+            <div className="flex items-center justify-center gap-2 text-[10px] font-bold p-2 rounded bg-industrial-800">
+              <div className={`w-2 h-2 rounded-full ${isConnectionOk === null ? 'bg-yellow-500' : isConnectionOk ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className={isConnectionOk === null ? 'text-yellow-500' : isConnectionOk ? 'text-green-400' : 'text-red-400'}>
+                DB: {connectionStatus}
+              </span>
+            </div>
+          )}
+          
           <button 
             onClick={() => navigate('/')}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold text-industrial-400 hover:bg-industrial-800 hover:text-white transition-all"

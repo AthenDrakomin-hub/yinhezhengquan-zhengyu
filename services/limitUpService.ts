@@ -134,34 +134,30 @@ async function getPreCloseFromMarketService(symbol: string): Promise<number | nu
 }
 
 /**
- * 生成模拟涨停打板数据
+ * 生成空的涨停打板数据占位符
+ * TODO: 集成真实的行情数据API
  */
-function generateMockLimitUpData(symbol: string, stockType: StockType = 'NORMAL'): LimitUpData {
-  const preClose = 10 + Math.random() * 40; // 10-50元
+function generateEmptyLimitUpData(symbol: string, stockType: StockType = 'NORMAL'): LimitUpData {
+  console.warn(`真实数据源不可用，返回空数据: ${symbol}`);
+  const preClose = 0;
   const { limitUpPrice, limitDownPrice } = calculateLimitPrices(preClose, stockType);
-  const currentPrice = limitUpPrice; // 假设在涨停价
-  const change = currentPrice - preClose;
-  const changePercent = (change / preClose) * 100;
-  const volume = Math.round(100000 + Math.random() * 900000); // 10万-100万手
-  const turnover = 1 + Math.random() * 9; // 1-10%换手率
-  const buyOneVolume = estimateBuyOneVolume(volume, turnover);
   
   return {
     symbol,
-    name: `${symbol}股票`,
-    preClose,
-    currentPrice,
-    change,
-    changePercent,
-    volume,
-    turnover,
-    limitUpPrice,
-    limitDownPrice,
-    buyOneVolume,
-    buyOnePrice: limitUpPrice,
-    sellOneVolume: Math.round(volume * 0.1),
-    sellOnePrice: limitUpPrice * 1.01,
-    market: symbol.startsWith('6') ? 'SH' : 'SZ',
+    name: '数据获取中',
+    preClose: 0,
+    currentPrice: 0,
+    change: 0,
+    changePercent: 0,
+    volume: 0,
+    turnover: 0,
+    limitUpPrice: 0,
+    limitDownPrice: 0,
+    buyOneVolume: 0,
+    buyOnePrice: 0,
+    sellOneVolume: 0,
+    sellOnePrice: 0,
+    market: 'CN',
     timestamp: new Date().toISOString()
   };
 }
@@ -235,9 +231,9 @@ export async function getLimitUpData(
     };
   }
   
-  // 3. 所有数据源失败，返回模拟数据
-  console.warn(`所有数据源失败，返回模拟数据: ${symbol}`);
-  return generateMockLimitUpData(symbol, stockType);
+  // 3. 所有数据源失败，返回空数据占位符
+  console.warn(`所有数据源失败，返回空数据: ${symbol}`);
+  return generateEmptyLimitUpData(symbol, stockType);
 }
 
 /**

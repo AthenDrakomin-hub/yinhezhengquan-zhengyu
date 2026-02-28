@@ -75,7 +75,13 @@ const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, to
   }, [session, user]);
 
   const handleChatClick = () => {
-    navigate('/chat');
+    if (session && user) {
+      navigate('/chat');
+    } else {
+      console.warn('用户未登录，无法访问客服');
+      // 可以选择跳转到登录页或显示提示
+      // navigate('/login');
+    }
   };
 
   return (

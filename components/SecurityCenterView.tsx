@@ -3,11 +3,38 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ICONS } from '../constants';
+import { userService } from '../services/userService';
 
 const SecurityCenterView: React.FC = () => {
   const navigate = useNavigate();
   const [faceIdEnabled, setFaceIdEnabled] = useState(true);
   const [privacyMode, setPrivacyMode] = useState(false);
+
+  // 更新生物识别设置
+  const updateBiometricSetting = async (enabled: boolean) => {
+    setFaceIdEnabled(enabled);
+    
+    try {
+      // 保存设置到后端
+      await userService.updatePersonalPreferences({ biometric_enabled: enabled });
+      console.log('生物识别设置已更新');
+    } catch (error) {
+      console.error('更新生物识别设置失败:', error);
+    }
+  };
+
+  // 更新隐私模式设置
+  const updatePrivacyMode = async (enabled: boolean) => {
+    setPrivacyMode(enabled);
+    
+    try {
+      // 保存设置到后端
+      await userService.updatePersonalPreferences({ privacy_mode: enabled });
+      console.log('隐私模式设置已更新');
+    } catch (error) {
+      console.error('更新隐私模式设置失败:', error);
+    }
+  };
 
   return (
     <div className="animate-slide-up flex flex-col h-full bg-[var(--color-bg)]">
@@ -59,7 +86,7 @@ const SecurityCenterView: React.FC = () => {
                   </div>
                </div>
                <div 
-                 onClick={() => setFaceIdEnabled(!faceIdEnabled)}
+                 onClick={() => updateBiometricSetting(!faceIdEnabled)}
                  className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${faceIdEnabled ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
                >
                  <div className={`w-3 h-3 bg-white rounded-full transition-transform ${faceIdEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -113,7 +140,7 @@ const SecurityCenterView: React.FC = () => {
                 <p className="text-[9px] text-[var(--color-text-muted)] leading-relaxed">启用后，应用在截图或录屏时会自动模糊资产金额。</p>
              </div>
              <div 
-               onClick={() => setPrivacyMode(!privacyMode)}
+               onClick={() => updatePrivacyMode(!privacyMode)}
                className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${privacyMode ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
              >
                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${privacyMode ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -121,7 +148,21 @@ const SecurityCenterView: React.FC = () => {
           </div>
         </div>
 
-        <button className="w-full py-4 rounded-2xl border border-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+        <button 
+          onClick={async () => {
+            if (window.confirm('确定要注销此设备的登录授权吗？此操作将使当前会话失效。')) {
+              try {
+                await userService.revokeDeviceSession();
+                console.log('设备授权已注销');
+                // 可以选择重定向到登录页面
+                window.location.href = '/login';
+              } catch (error) {
+                console.error('注销设备授权失败:', error);
+                alert('注销失败，请稍后再试');
+              }
+            }
+          }}
+          className="w-full py-4 rounded-2xl border border-[var(--color-border)] text-[var(--color-text-muted)] font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
           注销此设备授权登录
         </button>
       </div>

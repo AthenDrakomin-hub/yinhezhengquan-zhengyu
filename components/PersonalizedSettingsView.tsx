@@ -4,6 +4,7 @@ import React from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ICONS } from '../constants';
 import { PersonalSettings } from '../types';
+import { userService } from '../services/userService';
 
 const PersonalizedSettingsView: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +22,20 @@ const PersonalizedSettingsView: React.FC = () => {
   };
   
   const onUpdateSettings = context?.onUpdatePersonalSettings || (() => {});
+
+  // 更新设置并保存到后端
+  const updateAndSaveSettings = async (updates: Partial<PersonalSettings>) => {
+    onUpdateSettings(updates);
+    
+    // 尝试保存到后端
+    try {
+      await userService.updatePersonalPreferences(updates);
+      console.log('个性化设置已保存到服务器');
+    } catch (error) {
+      console.error('保存个性化设置失败:', error);
+      // 如果保存失败，可以选择回滚或提示用户
+    }
+  };
 
   return (
     <div className="animate-slide-up flex flex-col h-full bg-[var(--color-bg)]">
@@ -43,7 +58,7 @@ const PersonalizedSettingsView: React.FC = () => {
             ].map(lang => (
               <div 
                 key={lang.id}
-                onClick={() => onUpdateSettings({ language: lang.id as any })}
+                onClick={() => updateAndSaveSettings({ language: lang.id as any })}
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-[var(--color-surface-hover)] transition-all"
               >
                 <span className={`text-xs font-bold ${settings.language === lang.id ? 'text-[#00D4AA]' : 'text-[var(--color-text-primary)]'}`}>
@@ -60,13 +75,13 @@ const PersonalizedSettingsView: React.FC = () => {
           <h3 className="px-2 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">行情字体大小</h3>
           <div className="glass-card flex p-1 gap-1">
             <button 
-              onClick={() => onUpdateSettings({ fontSize: 'standard' })}
+              onClick={() => updateAndSaveSettings({ fontSize: 'standard' })}
               className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.fontSize === 'standard' ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)]'}`}
             >
               标准视图
             </button>
             <button 
-              onClick={() => onUpdateSettings({ fontSize: 'large' })}
+              onClick={() => updateAndSaveSettings({ fontSize: 'large' })}
               className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.fontSize === 'large' ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)]'}`}
             >
               大字增强
@@ -85,7 +100,7 @@ const PersonalizedSettingsView: React.FC = () => {
                 <p className="text-[9px] text-[var(--color-text-muted)]">按钮点击及报单成功时伴有轻微物理振动</p>
               </div>
               <div 
-                onClick={() => onUpdateSettings({ hapticFeedback: !settings.hapticFeedback })}
+                onClick={() => updateAndSaveSettings({ hapticFeedback: !settings.hapticFeedback })}
                 className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.hapticFeedback ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
               >
                 <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.hapticFeedback ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -97,7 +112,7 @@ const PersonalizedSettingsView: React.FC = () => {
                 <p className="text-[9px] text-[var(--color-text-muted)]">开启成交撮合、价格警示等场景的声音提示</p>
               </div>
               <div 
-                onClick={() => onUpdateSettings({ soundEffects: !settings.soundEffects })}
+                onClick={() => updateAndSaveSettings({ soundEffects: !settings.soundEffects })}
                 className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.soundEffects ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
               >
                 <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.soundEffects ? 'translate-x-5' : 'translate-x-0'}`} />

@@ -4,19 +4,25 @@ import { ICONS } from '@/constants';
 import { getIPOs, createIPO, updateIPO, deleteIPO } from '@/services/contentService';
 import { Stock } from '@/types';
 
+// 扩展Stock类型以包含IPO特有字段
+interface IPO extends Stock {
+  listing_date?: string;
+  status?: string;
+}
+
 const AdminIPOs: React.FC = () => {
-  const [ipos, setIpos] = useState<Stock[]>([]);
+  const [ipos, setIpos] = useState<IPO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedIPO, setSelectedIPO] = useState<Stock | null>(null);
+  const [selectedIPO, setSelectedIPO] = useState<IPO | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [formData, setFormData] = useState({
     symbol: '',
     name: '',
     price: 0,
     change: 0,
     changePercent: 0,
-    market: 'CN' as 'CN' | 'HK' | 'US' | 'BOND' | 'FUND' | 'FUTURES',
+    market: 'CN' as 'CN' | 'HK' | 'US' | 'BOND' | 'FUND',
     listing_date: '',
     status: 'UPCOMING',
   });
@@ -69,7 +75,7 @@ const AdminIPOs: React.FC = () => {
     try {
       await updateIPO(selectedIPO.id || '', formData);
       alert('新股更新成功！');
-      setIsEditModalOpen(false);
+      setShowEditForm(false);
       fetchIPOs();
     } catch (err: any) {
       alert(err.message || '更新失败');
@@ -151,8 +157,7 @@ const AdminIPOs: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-[9px] font-black px-2 py-0.5 rounded bg-industrial-100 text-industrial-600">
-                      {/* 状态未知，默认为UPCOMING */}
-                      UPCOMING
+                      {formData.status || 'UPCOMING'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -167,10 +172,10 @@ const AdminIPOs: React.FC = () => {
                             change: ipo.change,
                             changePercent: ipo.changePercent,
                             market: ipo.market,
-                            listing_date: '',
-                            status: 'UPCOMING',
+                            listing_date: ipo.listing_date || '',
+                            status: ipo.status || 'UPCOMING',
                           });
-                          setIsEditModalOpen(true);
+                          setShowEditForm(true);
                         }}
                         className="text-[10px] font-black text-blue-600 uppercase hover:underline"
                       >
@@ -240,7 +245,7 @@ const AdminIPOs: React.FC = () => {
                     <option value="US">US</option>
                     <option value="BOND">BOND</option>
                     <option value="FUND">FUND</option>
-                    <option value="FUTURES">FUTURES</option>
+
                   </select>
                 </div>
                 <div>
@@ -265,36 +270,34 @@ const AdminIPOs: React.FC = () => {
         </div>
       )}
 
-      {/* 编辑模态框 */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-industrial-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="industrial-card w-full max-w-lg p-8 bg-white"
+      {/* 编辑表单 */}
+      {showEditForm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-industrial-900 p-6 rounded-2xl border border-industrial-700 w-full max-w-md max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">编辑新股</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-industrial-400 hover:text-industrial-800">
-                <ICONS.Plus className="rotate-45" size={24} />
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-black text-white">编辑新股</h3>
+              <button onClick={() => setShowEditForm(false)} className="text-industrial-400 hover:text-white">
+                ✕
               </button>
             </div>
-
-            <form onSubmit={handleUpdateIPO} className="space-y-4">
+            <form onSubmit={handleUpdateIPO}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">代码</label>
-                  <input required type="text" value={formData.symbol} onChange={e => setFormData({...formData, symbol: e.target.value})} className="industrial-input" />
+                  <input required value={formData.symbol} onChange={e => setFormData({...formData, symbol: e.target.value})} className="industrial-input" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">名称</label>
-                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="industrial-input" />
+                  <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="industrial-input" />
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">价格</label>
-                  <input required type="number" step="0.01" value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value) || 0})} className="industrial-input" />
+                  <input type="number" step="0.01" required value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value) || 0})} className="industrial-input" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">涨跌</label>
@@ -314,7 +317,6 @@ const AdminIPOs: React.FC = () => {
                     <option value="US">US</option>
                     <option value="BOND">BOND</option>
                     <option value="FUND">FUND</option>
-                    <option value="FUTURES">FUTURES</option>
                   </select>
                 </div>
                 <div>

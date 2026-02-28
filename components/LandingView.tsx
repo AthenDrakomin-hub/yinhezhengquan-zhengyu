@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as Constants from '../constants';
 
 const ICONS = Constants.ICONS;
@@ -12,6 +13,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const navigate = useNavigate(); // 添加导航钩子
 
   const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
   const QR_PLACEHOLDER = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.zhengyutouzi.com/";
@@ -70,7 +72,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
             {['首页', '银河证券-证裕交易单元APP', '快速开户', '进入平台'].map(item => (
               <span 
                 key={item} 
-                onClick={item === '快速开户' ? onQuickOpen : item === '进入平台' ? onEnter : undefined}
+                onClick={item === '快速开户' ? onQuickOpen : item === '进入平台' ? onEnter : item === '银河证券-证裕交易单元APP' ? () => navigate('/app-download') : undefined}
                 className={`text-[13px] font-bold ${item === '首页' ? 'text-[#E30613]' : 'text-slate-700'} hover:text-[#E30613] cursor-pointer transition-colors whitespace-nowrap`}
               >
                 {item}
@@ -155,6 +157,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                 src="https://cdn.chinastock.com.cn/downloadwz/yhzp/indexvideo2024.m4v" 
                 className="w-full h-full object-cover" 
                 loop 
+                muted // 添加静音属性以提高自动播放成功率
                 playsInline
                 onClick={() => {
                   if (videoRef.current) {
@@ -162,8 +165,19 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                       videoRef.current.pause();
                       setIsVideoPlaying(false);
                     } else {
-                      videoRef.current.play();
-                      setIsVideoPlaying(true);
+                      // 尝试播放视频，捕获可能的Promise错误
+                      const playPromise = videoRef.current.play();
+                      if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                          setIsVideoPlaying(true);
+                        }).catch(error => {
+                          console.warn('自动播放被阻止:', error);
+                          // 如果自动播放被阻止，仍然更新状态
+                          setIsVideoPlaying(true);
+                        });
+                      } else {
+                        setIsVideoPlaying(true);
+                      }
                     }
                   }
                 }}
@@ -257,7 +271,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
                       // 图片加载失败时使用备用图片
-                      e.currentTarget.src = `https://picsum.photos/800/600?random=${i + 10}`;
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://picsum.photos/800/600?random=${i + 10}`;
+                      // 再次失败则隐藏图片或显示占位符
+                      target.onerror = null; // 防止无限循环
                     }}
                   />
                 </div>
@@ -388,7 +405,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       onError={(e) => {
                         // 图片加载失败时使用备用图片
-                        e.currentTarget.src = `https://picsum.photos/800/600?random=${i + 110}`;
+                        const target = e.target as HTMLImageElement;
+                        target.src = `https://picsum.photos/800/600?random=${i + 110}`;
+                        // 再次失败则隐藏图片或显示占位符
+                        target.onerror = null; // 防止无限循环
                       }}
                     />
                   </div>

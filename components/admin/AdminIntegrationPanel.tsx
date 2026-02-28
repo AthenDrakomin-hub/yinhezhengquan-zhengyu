@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ICONS } from '@/constants';
 import { integrationService } from '@/services/integrationService';
+import { supabase } from '@/lib/supabase';
 
 const AdminIntegrationPanel: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<any[]>([]);
@@ -17,14 +18,20 @@ const AdminIntegrationPanel: React.FC = () => {
       const data = await integrationService.getApiKeys();
       setApiKeys(data || []);
       
-      // Fetch audit logs (simulated or from service if available)
-      // For now, let's assume userService.getAuditLogs can be used or we just show a placeholder
-      // Actually, let's use a mock for now since integrationService doesn't have getLogs yet
-      setLogs([
-        { id: '1', type: 'API_KEY_GEN', remark: '为用户 ZY-8821 生成了新密钥', time: '14:20:05' },
-        { id: '2', type: 'API_KEY_DISABLE', remark: '禁用了用户 ZY-1029 的接入权限', time: '12:15:30' },
-        { id: '3', type: 'VALIDATION', remark: '执行了系统全量接口安全性校验', time: '10:05:12' },
-      ]);
+      // Fetch audit logs from the database
+      const { data: logData, error: logError } = await supabase
+        .from('admin_operation_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (logError) {
+        console.error('获取操作日志失败:', logError);
+        // Fallback to empty array if there's an error
+        setLogs([]);
+      } else {
+        setLogs(logData || []);
+      }
     } catch (err) {
       console.error('获取 API Key 失败:', err);
     } finally {
@@ -177,10 +184,10 @@ const AdminIntegrationPanel: React.FC = () => {
               <div key={log.id} className="flex justify-between items-start p-4 bg-industrial-50 rounded-lg border border-industrial-100">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-industrial-800 uppercase">{log.type}</span>
-                    <span className="text-[9px] text-industrial-400 font-bold">{log.time}</span>
+                    <span className="text-[10px] font-black text-industrial-800 uppercase">{log.operation_type || log.type || 'SYSTEM'}</span>
+                    <span className="text-[9px] text-industrial-400 font-bold">{new Date(log.created_at || log.created_at || log.time).toLocaleTimeString()}</span>
                   </div>
-                  <p className="text-xs font-bold text-industrial-600">{log.remark}</p>
+                  <p className="text-xs font-bold text-industrial-600">{log.remark || log.description || log.content || '系统操作记录'}</p>
                 </div>
                 <ICONS.Shield size={14} className="text-industrial-300" />
               </div>

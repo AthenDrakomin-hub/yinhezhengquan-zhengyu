@@ -101,20 +101,7 @@ serve(async (req) => {
           throw new Error('调整新股中签结果需要提供中签用户ID和数量')
         }
         break
-      case 'DERIVATIVES_LIQUIDATION':
-        operateTypeForLog = 'DERIVATIVES_LIQUIDATION'
-        // 设置衍生品强制平仓
-        const { liquidation_threshold } = params || {}
-        if (liquidation_threshold) {
-          // 更新衍生品规则中的平仓阈值
-          await supabaseClient.from('trade_rules').update({
-            config: { ...order.config, liquidation_threshold }
-          }).eq('rule_type', 'DERIVATIVES')
-          result = { success: true, message: `衍生品强制平仓阈值已设置为 ${liquidation_threshold}` }
-        } else {
-          throw new Error('设置衍生品强制平仓需要提供平仓阈值')
-        }
-        break
+
       case 'TOGGLE_MATCH_SWITCH':
         operateTypeForLog = 'MATCH_SWITCH_TOGGLE'
         // 关闭/开启撮合开关

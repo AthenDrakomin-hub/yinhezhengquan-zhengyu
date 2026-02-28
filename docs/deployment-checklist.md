@@ -35,7 +35,7 @@
   - `education_topics`（投教内容）
   - `calendar_events`（日历事件）
   - `ipos`（新股）
-  - `derivatives`（衍生品）
+  
   - `banners`（横幅）
   - `support_tickets`（工单）
 - [ ] **索引验证**：确认所有索引已创建
@@ -87,7 +87,7 @@
   - `/admin/education`（投教内容管理）
   - `/admin/calendar`（日历事件管理）
   - `/admin/ipos`（新股管理）
-  - `/admin/derivatives`（衍生品管理）
+  
   - `/admin/banners`（横幅管理）
 - [ ] **权限验证**：普通用户无法访问管理页面
 

@@ -1,12 +1,8 @@
 import { supabase, isDemoMode } from '../lib/supabase';
 import { SupportTicket, Message } from '../types';
 
-// 模拟数据
-const MOCK_MESSAGES: Message[] = [
-  { id: 'msg1', ticketId: 'T-9921', senderId: 'user-id-001', senderType: 'user', content: '您好，我想咨询一下两融账户展期的问题。', isRead: true, createdAt: '2025-03-26T10:00:00Z' },
-  { id: 'msg2', ticketId: 'T-9921', senderId: 'admin-id-001', senderType: 'admin', content: '您好，我是客服专员。请提供您的账户信息和具体需求。', isRead: true, createdAt: '2025-03-26T10:05:00Z' },
-  { id: 'msg3', ticketId: 'T-9921', senderId: 'user-id-001', senderType: 'user', content: '我的账户是ZY-USER-001，需要将两融账户展期3个月。', isRead: false, createdAt: '2025-03-26T10:10:00Z' },
-];
+// 已移除模拟消息数据，使用真实数据库
+const MOCK_MESSAGES: Message[] = [];
 
 export const chatService = {
   /**

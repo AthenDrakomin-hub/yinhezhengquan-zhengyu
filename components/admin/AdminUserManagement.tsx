@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ICONS } from '@/constants';
 import { userService } from '@/services/userService';
+import { supabase } from '@/lib/supabase';
 
 const AdminUserManagement: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -14,8 +15,10 @@ const AdminUserManagement: React.FC = () => {
     username: '',
     phone: '',
     id_card: '',
+    real_name: '',
     role: 'USER',
     risk_level: '稳健型',
+    status: 'ACTIVE',
     initial_balance: 500000
   });
   const [amount, setAmount] = useState('');
@@ -58,12 +61,33 @@ const AdminUserManagement: React.FC = () => {
     if (!selectedUser) return;
     setSubmitting(true);
     try {
+      // 更新用户基础信息
       await userService.updateUser(selectedUser.id, {
         username: formData.username,
         phone: formData.phone,
+        id_card: formData.id_card,
+        real_name: formData.real_name,
         risk_level: formData.risk_level,
-        role: formData.role
+        role: formData.role,
+        status: formData.status
       });
+      
+      // 更新用户资产信息
+      if (selectedUser.balance !== undefined || selectedUser.total_asset !== undefined || selectedUser.frozen_balance !== undefined) {
+        // 直接更新资产表
+        const { error: assetError } = await supabase
+          .from('assets')
+          .update({
+            available_balance: selectedUser.balance || 0,
+            total_asset: selectedUser.total_asset || 0,
+            frozen_balance: selectedUser.frozen_balance || 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', selectedUser.id);
+          
+        if (assetError) throw assetError;
+      }
+      
       alert('用户信息更新成功！');
       setIsEditModalOpen(false);
       fetchUsers();
@@ -86,10 +110,10 @@ const AdminUserManagement: React.FC = () => {
   };
 
   const handleResetPassword = async (userId: string) => {
-    if (!window.confirm('确定要重置该用户的密码吗？')) return;
+    if (!window.confirm('确定要重置该用户的密码吗？新密码将设置为：123456')) return;
     try {
       await userService.resetPassword(userId);
-      alert('密码已重置为初始密码');
+      alert('密码已重置为123456');
     } catch (err: any) {
       alert(err.message || '重置失败');
     }
@@ -132,7 +156,7 @@ const AdminUserManagement: React.FC = () => {
             <ICONS.Market size={16} className={loading ? 'animate-spin' : ''} /> 刷新
           </button>
           <button className="industrial-button-primary" onClick={() => {
-            setFormData({ username: '', phone: '', id_card: '', role: 'USER', risk_level: '稳健型', initial_balance: 500000 });
+            setFormData({ username: '', phone: '', id_card: '', real_name: '', role: 'USER', risk_level: '稳健型', status: 'ACTIVE', initial_balance: 500000 });
             setIsCreateModalOpen(true);
           }}>
             <ICONS.Plus size={16} /> 新建用户
@@ -146,26 +170,34 @@ const AdminUserManagement: React.FC = () => {
             <thead>
               <tr className="bg-industrial-50 border-b border-industrial-200">
                 <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">用户ID</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">用户名</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">用户信息</th>
                 <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">账户余额</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">总资产</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">冻结资金</th>
                 <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">状态</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">风险等级</th>
                 <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">角色</th>
                 <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest text-right">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-industrial-100">
               {loading ? (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">加载中...</td></tr>
+                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">加载中...</td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">暂无用户</td></tr>
+                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">暂无用户</td></tr>
               ) : users.map((user) => (
                 <tr key={user.id} className="hover:bg-industrial-50 transition-colors">
                   <td className="px-6 py-4 text-xs font-black text-industrial-800 truncate max-w-[120px]">{user.id}</td>
                   <td className="px-6 py-4">
                     <p className="text-xs font-bold text-industrial-700">{user.username || '未设置'}</p>
+                    <p className="text-[9px] text-industrial-400 font-mono">{user.real_name || '未填写姓名'}</p>
                     <p className="text-[9px] text-industrial-400 font-mono">{user.phone}</p>
+                    <p className="text-[9px] text-industrial-400 font-mono">{user.id_card}</p>
+                    <p className="text-[9px] text-industrial-400 font-mono">{user.email || '未设置邮箱'}</p>
                   </td>
                   <td className="px-6 py-4 text-xs font-black text-industrial-900">¥{parseFloat(user.balance).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-xs font-black text-industrial-900">¥{parseFloat(user.total_asset).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-xs font-black text-industrial-900">¥{parseFloat(user.frozen_balance).toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <button 
                       onClick={() => toggleUserStatus(user)}
@@ -176,6 +208,7 @@ const AdminUserManagement: React.FC = () => {
                       {user.status === 'ACTIVE' ? '已激活' : '已封禁'}
                     </button>
                   </td>
+                  <td className="px-6 py-4 text-[10px] text-industrial-400 font-bold uppercase">{user.risk_level}</td>
                   <td className="px-6 py-4 text-[10px] text-industrial-400 font-bold uppercase">{user.role}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex gap-3 justify-end">
@@ -195,8 +228,11 @@ const AdminUserManagement: React.FC = () => {
                             username: user.username || '',
                             phone: user.phone || '',
                             id_card: user.id_card || '',
+                            real_name: user.real_name || '',
                             role: user.role || 'USER',
                             risk_level: user.risk_level || '稳健型',
+                            status: user.status || 'ACTIVE',
+
                             initial_balance: 0
                           });
                           setIsEditModalOpen(true);
@@ -309,10 +345,22 @@ const AdminUserManagement: React.FC = () => {
                   <input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="industrial-input" />
                 </div>
                 <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">真实姓名</label>
+                  <input type="text" value={formData.real_name} onChange={e => setFormData({...formData, real_name: e.target.value})} className="industrial-input" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">手机号</label>
                   <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="industrial-input" />
                 </div>
+                <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">身份证号</label>
+                  <input type="text" value={formData.id_card} onChange={e => setFormData({...formData, id_card: e.target.value})} className="industrial-input" />
+                </div>
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">角色</label>
@@ -329,6 +377,59 @@ const AdminUserManagement: React.FC = () => {
                     <option value="稳健型">稳健型</option>
                     <option value="积极型">积极型</option>
                   </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">用户状态</label>
+                  <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="industrial-input">
+                    <option value="ACTIVE">活跃</option>
+                    <option value="BANNED">封禁</option>
+                    <option value="PENDING">待审核</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">账户余额</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={selectedUser?.balance || 0} 
+                    onChange={e => {
+                      const newBalance = parseFloat(e.target.value) || 0;
+                      setSelectedUser((prev: any) => prev ? {...prev, balance: newBalance} : null);
+                    }} 
+                    className="industrial-input font-mono" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">总资产</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={selectedUser?.total_asset || 0} 
+                    onChange={e => {
+                      const newTotalAsset = parseFloat(e.target.value) || 0;
+                      setSelectedUser((prev: any) => prev ? {...prev, total_asset: newTotalAsset} : null);
+                    }} 
+                    className="industrial-input font-mono" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">冻结资金</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={selectedUser?.frozen_balance || 0} 
+                    onChange={e => {
+                      const newFrozenBalance = parseFloat(e.target.value) || 0;
+                      setSelectedUser((prev: any) => prev ? {...prev, frozen_balance: newFrozenBalance} : null);
+                    }} 
+                    className="industrial-input font-mono" 
+                  />
                 </div>
               </div>
 

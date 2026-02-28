@@ -1765,6 +1765,11 @@ feat(edge-functions): 部署match-trade-order交易撮合函数到Supabase
 
 ---
 
+### 2026-02-28 修复 errorHandler.ts 类型检查错误
+- **问题**：`utils/errorHandler.ts` 包含 JSX 但扩展名为 `.ts`，导致 TypeScript 解析失败。
+- **修复**：重命名为 `errorHandler.tsx`，使 TypeScript 正确处理 JSX。
+- **验证**：运行 `npx tsc --noEmit` 通过，无该文件相关错误。
+
 ### 2026-02-28 修复登录页输入框文字不可见问题
 
 - **问题**：登录页面用户名/密码输入框的文字颜色与背景色相同，导致内容不可见。

@@ -6,7 +6,7 @@ export interface Stock {
   price: number;
   change: number;
   changePercent: number;
-  market: 'CN' | 'HK' | 'US' | 'BOND' | 'FUND' | 'FUTURES';
+  market: 'CN' | 'HK' | 'US' | 'BOND' | 'FUND';
   sparkline: number[];
   logoUrl?: string;
 }
@@ -120,7 +120,7 @@ export interface Holding {
   marketValue: number;
   profit: number;
   profitRate: number;
-  category: 'STOCK' | 'FUND' | 'BOND' | 'OPTION' | 'MARGIN';
+  category: 'STOCK' | 'FUND' | 'BOND' | 'MARGIN';
   logoUrl?: string;
 }
 

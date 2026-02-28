@@ -177,7 +177,7 @@ yinhezhengquan-zhengyu/
 │   │   ├── AdminBanners.tsx        # 公告横幅管理（新增、编辑、上下线）
 │   │   ├── AdminCalendar.tsx       # 投资日历管理（事件录入、审核）
 │   │   ├── AdminDashboard.tsx      # 管理员仪表盘（系统数据、风控告警）
-│   │   ├── AdminDerivatives.tsx    # 衍生品管理（期权、期货合约配置）
+
 │   │   ├── AdminEducation.tsx      # 投资者教育内容管理
 │   │   ├── AdminIntegrationPanel.tsx # 第三方集成面板（行情接口、支付、短信）
 │   │   ├── AdminIPOs.tsx           # IPO数据管理（新股录入、申购规则）

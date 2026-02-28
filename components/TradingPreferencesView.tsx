@@ -4,6 +4,7 @@ import React from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ICONS } from '../constants';
 import { OrderStrategy, TradingSettings } from '../types';
+import { userService } from '../services/userService';
 
 interface TradingPreferencesViewProps {
   settings: TradingSettings;
@@ -25,6 +26,20 @@ const TradingPreferencesView: React.FC = () => {
   };
   
   const onUpdateSettings = context?.onUpdateTradingSettings || (() => {});
+
+  // 更新设置并保存到后端
+  const updateAndSaveSettings = async (updates: Partial<TradingSettings>) => {
+    onUpdateSettings(updates);
+    
+    // 尝试保存到后端
+    try {
+      await userService.updateTradingPreferences(updates);
+      console.log('交易偏好设置已保存到服务器');
+    } catch (error) {
+      console.error('保存交易偏好设置失败:', error);
+      // 如果保存失败，可以选择回滚或提示用户
+    }
+  };
 
   const strategies = Object.values(OrderStrategy);
   const leverageOptions = [5, 10, 20, 50, 100];
@@ -50,7 +65,7 @@ const TradingPreferencesView: React.FC = () => {
                   <p className="text-[9px] text-[var(--color-text-muted)]">开启后，下单将跳过二次风险合规确认弹窗</p>
                 </div>
                 <div 
-                  onClick={() => onUpdateSettings({ fastOrderMode: !settings.fastOrderMode })}
+                  onClick={() => updateAndSaveSettings({ fastOrderMode: !settings.fastOrderMode })}
                   className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.fastOrderMode ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
                 >
                   <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.fastOrderMode ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -63,7 +78,7 @@ const TradingPreferencesView: React.FC = () => {
                 <p className="text-[9px] text-[var(--color-text-muted)]">开仓后自动按默认比例挂出止损单</p>
               </div>
               <div 
-                onClick={() => onUpdateSettings({ autoStopLoss: !settings.autoStopLoss })}
+                onClick={() => updateAndSaveSettings({ autoStopLoss: !settings.autoStopLoss })}
                 className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.autoStopLoss ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
               >
                 <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.autoStopLoss ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -79,7 +94,7 @@ const TradingPreferencesView: React.FC = () => {
             {strategies.map((strategy) => (
               <div 
                 key={strategy}
-                onClick={() => onUpdateSettings({ defaultStrategy: strategy })}
+                onClick={() => updateAndSaveSettings({ defaultStrategy: strategy })}
                 className={`glass-card p-4 flex items-center justify-between cursor-pointer border-2 transition-all ${
                   settings.defaultStrategy === strategy ? 'border-[#00D4AA] bg-[#00D4AA]/5' : 'border-transparent hover:border-[var(--color-border)]'
                 }`}
@@ -114,7 +129,7 @@ const TradingPreferencesView: React.FC = () => {
               {leverageOptions.map((lv) => (
                 <button 
                   key={lv}
-                  onClick={() => onUpdateSettings({ defaultLeverage: lv })}
+                  onClick={() => updateAndSaveSettings({ defaultLeverage: lv })}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black font-mono transition-all border ${
                     settings.defaultLeverage === lv 
                       ? 'bg-[#00D4AA] text-[#0A1628] border-transparent shadow-[0_0_15px_rgba(0,212,170,0.3)]' 

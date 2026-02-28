@@ -4,15 +4,6 @@ import { ICONS } from '@/constants';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/lib/supabase';
 
-const data = [
-  { name: '09:30', users: 12, trades: 45 },
-  { name: '10:30', users: 25, trades: 120 },
-  { name: '11:30', users: 32, trades: 89 },
-  { name: '13:30', users: 28, trades: 67 },
-  { name: '14:30', users: 45, trades: 210 },
-  { name: '15:00', users: 50, trades: 340 },
-];
-
 const AdminDashboard: React.FC = () => {
   const [stats, setStats] = React.useState({
     onlineUsers: '0',
@@ -20,6 +11,7 @@ const AdminDashboard: React.FC = () => {
     activeAccounts: '0',
     systemLoad: '0%'
   });
+  const [chartData, setChartData] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -35,19 +27,84 @@ const AdminDashboard: React.FC = () => {
         today.setHours(0, 0, 0, 0);
         const { data: trades } = await supabase
           .from('trades')
-          .select('price, quantity')
+          .select('price, quantity, created_at')
           .gte('created_at', today.toISOString());
         
         const volume = trades?.reduce((sum, t) => sum + (Number(t.price) * Number(t.quantity)), 0) || 0;
 
-        // 在线用户 (Supabase 实时 Presence 可以实现，这里先模拟)
-        const onlineCount = Math.floor(Math.random() * 10) + 5;
+        // 获取最近24小时的交易数据用于图表
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        const { data: hourlyTrades } = await supabase
+          .from('trades')
+          .select('price, quantity, created_at')
+          .gte('created_at', yesterday.toISOString());
+        
+        // 按小时聚合数据
+        const hourlyData: Record<string, { trades: number; users: Set<string> }> = {};
+        
+        hourlyTrades?.forEach(trade => {
+          const hour = new Date(trade.created_at).getHours().toString().padStart(2, '0') + ':00';
+          if (!hourlyData[hour]) {
+            hourlyData[hour] = { trades: 0, users: new Set() };
+          }
+          hourlyData[hour].trades += 1;
+          // 使用 trade 对象本身作为标识，如果没有特定的用户ID
+          hourlyData[hour].users.add(trade.created_at + trade.price + trade.quantity); // 使用时间戳和价格数量组合作为唯一标识
+        });
+        
+        // 转换为图表所需格式
+        const chartPoints = Object.keys(hourlyData).map(hour => ({
+          name: hour,
+          trades: hourlyData[hour].trades,
+          users: hourlyData[hour].users.size
+        })).sort((a, b) => a.name.localeCompare(b.name));
+        
+        // 如果没有足够的数据点，生成一些默认的时间段
+        if (chartPoints.length === 0) {
+          const hours = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00'];
+          for (const hour of hours) {
+            chartPoints.push({ name: hour, trades: 0, users: 0 });
+          }
+        }
+        
+        setChartData(chartPoints);
+        
+        // 获取在线用户数 (通过实时交易活动估算)
+        const recentMinutes = 10; // 过去10分钟内有活动的用户视为在线
+        const recentTime = new Date();
+        recentTime.setMinutes(recentTime.getMinutes() - recentMinutes);
+        
+        // 从多个表获取用户活动数据，不只是交易
+        const { data: recentTradeActivity } = await supabase
+          .from('trades')
+          .select('user_id')
+          .gte('created_at', recentTime.toISOString());
+        
+        const { data: recentPositionActivity } = await supabase
+          .from('positions')
+          .select('user_id')
+          .gte('updated_at', recentTime.toISOString());
+        
+        // 合并所有活动用户ID
+        const activeUserIds = new Set<string>();
+        
+        recentTradeActivity?.forEach(activity => {
+          if (activity.user_id) activeUserIds.add(activity.user_id);
+        });
+        
+        recentPositionActivity?.forEach(activity => {
+          if (activity.user_id) activeUserIds.add(activity.user_id);
+        });
+        
+        const uniqueUsers = activeUserIds.size;
 
         setStats({
-          onlineUsers: onlineCount.toString(),
+          onlineUsers: uniqueUsers.toString(),
           todayVolume: `¥${volume.toLocaleString()}`,
           activeAccounts: (userCount || 0).toString(),
-          systemLoad: `${Math.floor(Math.random() * 20 + 5)}%`
+          systemLoad: `${Math.floor(Math.random() * 20 + 5)}%` // 系统负载仍需后端监控服务
         });
       } catch (error) {
         console.error('Fetch stats error:', error);
@@ -106,7 +163,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorTrades" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ff4500" stopOpacity={0.1}/>

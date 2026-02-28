@@ -1,7 +1,7 @@
 -- ==========================================================
 -- 中国银河证券——证裕交易单元 Nexus 内容管理表结构
 -- 版本: v2.11.0
--- 功能: 研报、投教、工单、日历、新股、衍生品、横幅等内容的数据库驱动
+-- 功能: 研报、投教、工单、日历、新股、横幅等内容的数据库驱动
 -- ==========================================================
 
 -- 1. 研报表 (reports)
@@ -72,22 +72,6 @@ CREATE TABLE IF NOT EXISTS public.ipos (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. 衍生品表 (derivatives)
-CREATE TABLE IF NOT EXISTS public.derivatives (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    symbol TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    price NUMERIC(10,2),
-    change NUMERIC(10,2) DEFAULT 0,
-    change_percent NUMERIC(5,2) DEFAULT 0,
-    market TEXT NOT NULL DEFAULT 'FUTURES',
-    type TEXT NOT NULL CHECK (type IN ('FUTURES', 'OPTIONS', 'WARRANTS', 'OTHER')),
-    underlying TEXT,
-    strike NUMERIC(10,2),
-    expiry DATE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
 
 -- 7. 横幅公告表 (banners)
 CREATE TABLE IF NOT EXISTS public.banners (
@@ -113,7 +97,6 @@ ALTER TABLE public.education_topics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ipos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.derivatives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.banners ENABLE ROW LEVEL SECURITY;
 
 -- 创建策略
@@ -178,16 +161,6 @@ CREATE POLICY "仅管理员可管理新股信息" ON public.ipos
         EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
     );
 
--- 衍生品表：所有人可读，仅管理员可写
-DROP POLICY IF EXISTS "所有人可读衍生品信息" ON public.derivatives;
-CREATE POLICY "所有人可读衍生品信息" ON public.derivatives
-    FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "仅管理员可管理衍生品信息" ON public.derivatives;
-CREATE POLICY "仅管理员可管理衍生品信息" ON public.derivatives
-    FOR ALL USING (
-        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-    );
 
 -- 横幅公告表：所有人可读，仅管理员可写
 DROP POLICY IF EXISTS "所有人可读横幅公告" ON public.banners;
@@ -233,8 +206,6 @@ CREATE TRIGGER update_calendar_events_updated_at BEFORE UPDATE ON public.calenda
 DROP TRIGGER IF EXISTS update_ipos_updated_at ON public.ipos;
 CREATE TRIGGER update_ipos_updated_at BEFORE UPDATE ON public.ipos FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_derivatives_updated_at ON public.derivatives;
-CREATE TRIGGER update_derivatives_updated_at BEFORE UPDATE ON public.derivatives FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_banners_updated_at ON public.banners;
 CREATE TRIGGER update_banners_updated_at BEFORE UPDATE ON public.banners FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
@@ -262,9 +233,6 @@ INSERT INTO public.ipos (id, symbol, name, price, market, status) VALUES
 (gen_random_uuid(), '780123', '银河量子', 18.50, 'CN', 'UPCOMING')
 ON CONFLICT (symbol) DO NOTHING;
 
-INSERT INTO public.derivatives (id, symbol, name, price, change, change_percent, market, type) VALUES
-(gen_random_uuid(), 'IF2506', '沪深300指数期货2506', 3624.5, 12.4, 0.34, 'FUTURES', 'FUTURES')
-ON CONFLICT (symbol) DO NOTHING;
 
 INSERT INTO public.banners (id, title, desc, img, category, date, content, related_symbol) VALUES
 ('b1', '银河证券·证裕单元 26 周年庆', '深度解析：2000-2026 见证专业价值的数字化转型', 'https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/60905537-802a-466d-862d-03487372b64b.jpg', '年度品牌', '2025-03-27', '在 2026 年全球资产配置的新坐标下，中国银河证券研究部认为，数字化转型正迈入以“证裕交易单元”为核心的 2.0 阶段。', NULL),

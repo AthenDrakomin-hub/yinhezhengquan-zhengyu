@@ -23,15 +23,8 @@ export const COLORS = {
   textPrimary: '#FFFFFF',
 };
 
-export const MOCK_ASSET_HISTORY: AssetSnapshot[] = [
-  { date: '03-20', equity: 950000, balance: 100000, profit: -5000 },
-  { date: '03-21', equity: 965000, balance: 100000, profit: 15000 },
-  { date: '03-22', equity: 940000, balance: 120000, profit: -25000 },
-  { date: '03-23', equity: 980000, balance: 120000, profit: 40000 },
-  { date: '03-24', equity: 1020000, balance: 150000, profit: 40000 },
-  { date: '03-25', equity: 1050000, balance: 150000, profit: 30000 },
-  { date: '03-26', equity: 1000000, balance: 100000, profit: -50000 },
-];
+// 已移除模拟资产历史数据，使用真实数据库查询
+export const MOCK_ASSET_HISTORY: AssetSnapshot[] = [];
 
 export const BANNER_MOCK: Banner[] = [
   { 
@@ -76,32 +69,23 @@ export const MOCK_CALENDAR: CalendarEvent[] = [
   { id: 'c3', date: '2026-03-28', title: '银河证券年度策略会', type: '活动', time: '09:00', markets: ['CN'] },
 ];
 
-export const MOCK_STOCKS: Stock[] = [
-  { symbol: '600000', name: '浦发银行', price: 7.52, change: 0.05, changePercent: 0.67, market: 'CN', sparkline: [7.4, 7.5, 7.45, 7.52], logoUrl: 'https://img.icons8.com/color/48/000000/bank.png' },
-  { symbol: '00700', name: '腾讯控股', price: 382.40, change: -4.20, changePercent: -1.09, market: 'HK', sparkline: [385, 380, 384, 382.4], logoUrl: 'https://img.icons8.com/color/48/000000/tencent-wechat.png' },
-  { symbol: 'NVDA', name: '英伟达', price: 925.35, change: 12.45, changePercent: 1.36, market: 'US', sparkline: [900, 910, 930, 925], logoUrl: 'https://img.icons8.com/color/48/000000/nvidia.png' },
-  { symbol: '600519', name: '贵州茅台', price: 1750.00, change: 15.00, changePercent: 0.87, market: 'CN', sparkline: [1730, 1740, 1760, 1750], logoUrl: 'https://img.icons8.com/color/48/000000/liquor.png' },
-];
+// 已移除模拟股票数据，使用真实行情数据源
+export const MOCK_STOCKS: Stock[] = [];
 
 export const MOCK_IPO_STOCKS: Stock[] = [
   { symbol: '780123', name: '银河量子', price: 18.50, change: 0, changePercent: 0, market: 'CN', sparkline: [], logoUrl: 'https://img.icons8.com/color/48/000000/cpu.png' },
 ];
 
-export const MOCK_DERIVATIVES: Stock[] = [
-  { symbol: 'IF2506', name: '沪深300指数期货2506', price: 3624.5, change: 12.4, changePercent: 0.34, market: 'FUTURES', sparkline: [] },
-];
 
-export const MOCK_REPORTS: ResearchReport[] = [
-  { id: 'r1', title: '银河策略 2025: 分布式算力节点深度价值评估', author: '银河证券投研总部', date: '2025-03-26', category: '行业', summary: '分布式算力需求进入爆发期，建议投资者关注“能源+算力”双重护城河标的。', sentiment: '看多' },
-];
 
-export const MOCK_TICKETS: SupportTicket[] = [
-  { id: 'T-9921', subject: '两融账户展期申请审核', status: 'IN_PROGRESS', lastUpdate: '2025-03-26' },
-];
+// 已移除模拟研报数据，使用真实数据库查询
+export const MOCK_REPORTS: ResearchReport[] = [];
 
-export const MOCK_EDUCATION: EducationTopic[] = [
-  { id: 'e1', title: '两融交易进阶指南', category: '进阶', image: 'https://images.unsplash.com/photo-1611974717482-58f00017963d?auto=format&fit=crop&q=80&w=400', duration: '15 mins' },
-];
+// 已移除模拟客服工单数据，使用真实数据库查询
+export const MOCK_TICKETS: SupportTicket[] = [];
+
+// 已移除模拟投教数据，使用真实数据库查询
+export const MOCK_EDUCATION: EducationTopic[] = [];
 
 export const ICONS = {
   Home: (props: any) => (

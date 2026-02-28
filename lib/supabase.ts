@@ -98,7 +98,8 @@ export const isAdmin = async (): Promise<boolean> => {
   }
 };
 
-// 9. 演示环境标识（调整判断逻辑）
+// 9. 演示环境标识（统一判断逻辑）
+// 检查是否为演示模式：URL包含placeholder或不包含有效的supabase域名
 export const isDemoMode = supabaseUrl.includes('placeholder') || !supabaseUrl.includes('supabase.co');
 
 // 10. 兜底导出

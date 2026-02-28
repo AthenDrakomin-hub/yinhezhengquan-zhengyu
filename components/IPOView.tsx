@@ -33,7 +33,7 @@ const IPOView: React.FC = () => {
   // 处理申购操作
   const handleApply = async (ipo: IPOData) => {
     if (ipo.status !== 'ONGOING') {
-      alert(`新股 ${ipo.symbol} 当前状态为 ${getStatusText(ipo.status)}，不可申购`);
+      alert(`新股 ${ipo.name} 当前状态为 ${getStatusText(ipo.status)}，不可申购`);
       return;
     }
 
@@ -42,10 +42,15 @@ const IPOView: React.FC = () => {
       return;
     }
 
-    const quantity = 500; // 默认申购数量，可根据业务调整
+    // 使用IPO数据中的最小申购单位或默认值
+    const minUnit = ipo.minSubscriptionUnit || 500;
+    const maxQuantity = ipo.maxSubscriptionQuantity || minUnit; // 如果没有最大申购量，就使用最小单位
+    
+    // 计算申购数量（可以考虑使用最大申购量或用户输入）
+    const quantity = Math.min(maxQuantity, minUnit); // 使用最小单位或最大可申购数量
     const amount = ipo.issuePrice * quantity;
 
-    if (!confirm(`确认申购 ${ipo.name}(${ipo.symbol}) ${quantity}股，发行价 ¥${ipo.issuePrice}，总金额 ¥${amount.toFixed(2)}？`)) {
+    if (!confirm(`确认申购 ${ipo.name}(${ipo.symbol}) ${quantity}股，发行价 ¥${ipo.issuePrice}，总金额 ¥${amount.toFixed(2)}？\n\n最小申购单位: ${minUnit}股`)) {
       return;
     }
 
@@ -154,49 +159,81 @@ const IPOView: React.FC = () => {
       ) : (
         <div className="flex-1 overflow-auto">
           <div className="glass-card rounded-2xl overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-[var(--color-surface)] border-b border-[var(--color-border)]">
-                <tr>
-                  <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">股票代码</th>
-                  <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">名称</th>
-                  <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">发行价 (CNY)</th>
-                  <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">上市日期</th>
-                  <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">状态</th>
-                  <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">操作</th>
+            {/* 严格对齐新浪表头的表格 */}
+            <table className="w-full min-w-[1400px] border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--color-border)]">
+                  <th className="text-left py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">证券代码</th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">申购代码</th>
+                  <th className="text-left py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">证券简称</th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">
+                    上网发行日期 ↓
+                  </th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">上市日期</th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">发行数量(万股)</th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">上网发行数量(万股)</th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">发行价格(元)</th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">市盈率</th>
+                  <th className="text-center py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider">申购操作</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {ipoList.map((ipo) => (
-                  <tr key={ipo.symbol} className="hover:bg-[var(--color-surface)] transition-colors">
-                    <td className="p-4">
-                      <div className="font-mono font-bold">{ipo.symbol}</div>
+              <tbody>
+                {ipoList.map((ipo, index) => (
+                  <tr 
+                    key={`${ipo.symbol}-${index}`} 
+                    className={`border-b border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-all`}
+                  >
+                    {/* 证券代码 */}
+                    <td className="py-4 px-3 text-left font-mono text-sm font-black">
+                      {ipo.symbol}
                     </td>
-                    <td className="p-4">
+                    {/* 申购代码 */}
+                    <td className="py-4 px-3 text-center font-mono text-sm font-black text-[#00D4AA]">
+                      {ipo.subscriptionCode || ipo.symbol}
+                    </td>
+                    {/* 证券简称 */}
+                    <td className="py-4 px-3 text-left">
                       <div className="font-bold">{ipo.name}</div>
                       <div className="text-xs text-[var(--color-text-muted)] mt-1">{ipo.market || 'A股'}</div>
                     </td>
-                    <td className="p-4">
-                      <div className="font-mono font-bold">¥{ipo.issuePrice.toFixed(2)}</div>
+                    {/* 上网发行日期 */}
+                    <td className="py-4 px-3 text-center font-mono text-sm">
+                      {ipo.onlineIssueDate || '-'}
                     </td>
-                    <td className="p-4">
-                      <div className="font-mono">{ipo.listingDate || '待定'}</div>
+                    {/* 上市日期 */}
+                    <td className="py-4 px-3 text-center font-mono text-sm">
+                      {ipo.listingDate || '待上市'}
                     </td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase ${getStatusClass(ipo.status)}`}>
-                        {getStatusText(ipo.status)}
-                      </span>
+                    {/* 发行数量(万股) */}
+                    <td className="py-4 px-3 text-center font-mono text-sm">
+                      {ipo.issueVolume ? ipo.issueVolume.toLocaleString() : '-'}
                     </td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => handleApply(ipo)}
-                        disabled={ipo.status !== 'ONGOING' || executing === ipo.symbol}
-                        className={`px-4 py-2 rounded-xl font-black text-xs tracking-widest uppercase transition-all ${ipo.status === 'ONGOING'
-                            ? 'bg-[#00D4AA] text-[#0A1628] hover:opacity-90'
-                            : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] cursor-not-allowed'
-                          } ${executing === ipo.symbol ? 'opacity-50 cursor-wait' : ''}`}
-                      >
-                        {executing === ipo.symbol ? '申购中...' : '申购'}
-                      </button>
+                    {/* 上网发行数量(万股) */}
+                    <td className="py-4 px-3 text-center font-mono text-sm">
+                      {ipo.onlineIssueVolume ? ipo.onlineIssueVolume.toLocaleString() : '-'}
+                    </td>
+                    {/* 发行价格(元) */}
+                    <td className="py-4 px-3 text-center font-mono text-sm font-black">
+                      {ipo.issuePrice > 0 ? `¥${ipo.issuePrice.toFixed(2)}` : '待定'}
+                    </td>
+                    {/* 市盈率 */}
+                    <td className="py-4 px-3 text-center font-mono text-sm">
+                      {ipo.peRatio ? ipo.peRatio.toFixed(2) : '-'}
+                    </td>
+                    {/* 申购操作 */}
+                    <td className="py-4 px-3 text-center">
+                      <div className="w-28 mx-auto">
+                        <button 
+                          onClick={() => handleApply(ipo)}
+                          disabled={ipo.status !== 'ONGOING' || executing === ipo.symbol}
+                          className="w-full py-2.5 rounded-xl bg-[#00D4AA] text-[#0A1628] font-black text-xs uppercase tracking-wider hover:bg-[#00b88f] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {executing === ipo.symbol ? '申购中...' : '申购'}
+                        </button>
+                        <p className="text-[9px] text-[var(--color-text-muted)] mt-1">
+                          {ipo.maxSubscriptionQuantity ? `上限：${(ipo.maxSubscriptionQuantity/10000).toFixed(0)}万股` : ''}
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -5,7 +5,6 @@ import {
   MOCK_TICKETS,
   MOCK_CALENDAR,
   MOCK_IPO_STOCKS,
-  MOCK_DERIVATIVES,
   BANNER_MOCK,
 } from '@/constants';
 import type {
@@ -18,14 +17,14 @@ import type {
 } from '@/types';
 
 /**
- * 内容服务 - 从 Supabase 数据库获取内容，失败时回退到模拟数据
+ * 内容服务 - 从 Supabase 数据库获取内容，失败时返回空数组
  */
 
 // ==================== 研报 ====================
 export const getReports = async (): Promise<ResearchReport[]> => {
   if (isDemoMode) {
-    console.warn('演示模式：使用模拟研报数据');
-    return MOCK_REPORTS;
+    console.warn('演示模式：返回空研报数据');
+    return [];
   }
 
   try {
@@ -36,10 +35,10 @@ export const getReports = async (): Promise<ResearchReport[]> => {
 
     if (error) throw error;
 
-    // 如果数据库为空，返回模拟数据
+    // 如果数据库为空，返回空数组
     if (!data || data.length === 0) {
-      console.warn('数据库无研报数据，回退到模拟数据');
-      return MOCK_REPORTS;
+      console.warn('数据库无研报数据，返回空数组');
+      return [];
     }
 
     // 转换数据库格式到前端类型
@@ -56,16 +55,16 @@ export const getReports = async (): Promise<ResearchReport[]> => {
     }));
   } catch (error) {
     console.error('获取研报失败:', error);
-    console.warn('回退到模拟研报数据');
-    return MOCK_REPORTS;
+    console.warn('数据库查询失败，返回空数组');
+    return [];
   }
 };
 
 // ==================== 投教内容 ====================
 export const getEducationTopics = async (): Promise<EducationTopic[]> => {
   if (isDemoMode) {
-    console.warn('演示模式：使用模拟投教数据');
-    return MOCK_EDUCATION;
+    console.warn('演示模式：返回空投教数据');
+    return [];
   }
 
   try {
@@ -78,8 +77,8 @@ export const getEducationTopics = async (): Promise<EducationTopic[]> => {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      console.warn('数据库无投教内容，回退到模拟数据');
-      return MOCK_EDUCATION;
+      console.warn('数据库无投教内容，返回空数组');
+      return [];
     }
 
     return data.map((topic) => ({
@@ -91,8 +90,8 @@ export const getEducationTopics = async (): Promise<EducationTopic[]> => {
     }));
   } catch (error) {
     console.error('获取投教内容失败:', error);
-    console.warn('回退到模拟投教数据');
-    return MOCK_EDUCATION;
+    console.warn('数据库查询失败，返回空数组');
+    return [];
   }
 };
 
@@ -200,7 +199,7 @@ export const getIPOs = async (): Promise<Stock[]> => {
       price: ipo.price || 0,
       change: ipo.change || 0,
       changePercent: ipo.change_percent || 0,
-      market: ipo.market as 'CN' | 'HK' | 'US' | 'BOND' | 'FUND' | 'FUTURES',
+      market: ipo.market as 'CN' | 'HK' | 'US' | 'BOND' | 'FUND',
       sparkline: [],
       logoUrl: undefined,
     }));
@@ -211,42 +210,7 @@ export const getIPOs = async (): Promise<Stock[]> => {
   }
 };
 
-// ==================== 衍生品信息 ====================
-export const getDerivatives = async (): Promise<Stock[]> => {
-  if (isDemoMode) {
-    console.warn('演示模式：使用模拟衍生品数据');
-    return MOCK_DERIVATIVES;
-  }
 
-  try {
-    const { data, error } = await supabase
-      .from('derivatives')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      console.warn('数据库无衍生品信息，回退到模拟数据');
-      return MOCK_DERIVATIVES;
-    }
-
-    return data.map((derivative) => ({
-      symbol: derivative.symbol,
-      name: derivative.name,
-      price: derivative.price || 0,
-      change: derivative.change || 0,
-      changePercent: derivative.change_percent || 0,
-      market: derivative.market as 'CN' | 'HK' | 'US' | 'BOND' | 'FUND' | 'FUTURES',
-      sparkline: [],
-      logoUrl: undefined,
-    }));
-  } catch (error) {
-    console.error('获取衍生品信息失败:', error);
-    console.warn('回退到模拟衍生品数据');
-    return MOCK_DERIVATIVES;
-  }
-};
 
 // ==================== 横幅公告 ====================
 export const getBanners = async (): Promise<Banner[]> => {
@@ -434,48 +398,7 @@ export const deleteIPO = async (id: string) => {
   if (error) throw error;
 };
 
-// ==================== 衍生品信息 CRUD ====================
-export const createDerivative = async (derivative: Omit<Stock, 'id' | 'sparkline' | 'logoUrl'> & { type: string, underlying: string, strike?: number, expiry?: string }) => {
-  const { error } = await supabase.from('derivatives').insert({
-    symbol: derivative.symbol,
-    name: derivative.name,
-    price: derivative.price || 0,
-    change: derivative.change || 0,
-    change_percent: derivative.changePercent || 0,
-    market: derivative.market,
-    type: derivative.type,
-    underlying: derivative.underlying,
-    strike: derivative.strike,
-    expiry: derivative.expiry,
-  });
 
-  if (error) throw error;
-};
-
-export const updateDerivative = async (id: string, derivative: Partial<Stock> & { type?: string, underlying?: string, strike?: number, expiry?: string }) => {
-  const { error } = await supabase
-    .from('derivatives')
-    .update({
-      symbol: derivative.symbol,
-      name: derivative.name,
-      price: derivative.price,
-      change: derivative.change,
-      change_percent: derivative.changePercent,
-      market: derivative.market,
-      type: derivative.type,
-      underlying: derivative.underlying,
-      strike: derivative.strike,
-      expiry: derivative.expiry,
-    })
-    .eq('id', id);
-
-  if (error) throw error;
-};
-
-export const deleteDerivative = async (id: string) => {
-  const { error } = await supabase.from('derivatives').delete().eq('id', id);
-  if (error) throw error;
-};
 
 // ==================== 横幅公告 CRUD ====================
 export const createBanner = async (banner: Omit<Banner, 'id'>) => {

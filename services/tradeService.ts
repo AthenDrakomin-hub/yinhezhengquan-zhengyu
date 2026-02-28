@@ -2,9 +2,101 @@ import { supabase } from '../lib/supabase';
 import { TradeType } from '../types';
 import { getRealtimeStock } from './marketService';
 
+// 交易服务缓存
+const tradeCache = new Map<string, any>();
+const CACHE_TTL = 300000; // 5分钟
+
+// 清理过期缓存
+function cleanupTradeCache() {
+  const now = Date.now();
+  for (const [key, value] of tradeCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      tradeCache.delete(key);
+    }
+  }
+}
+
+// 定期清理缓存
+setInterval(cleanupTradeCache, 60000);
+
 export const tradeService = {
   /**
-   * 执行交易 (买入/卖出)
+   * 获取用户交易历史（带缓存优化）
+   */
+  async getTradeHistory(userId: string, limit: number = 50) {
+    const cacheKey = `trade_history_${userId}_${limit}`;
+    const cached = tradeCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+
+    const { data, error } = await supabase
+      .from('trades')
+      .select(`
+        *,
+        stock_info:stock_code (
+          name,
+          logo_url
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('获取交易历史失败:', error);
+      throw error;
+    }
+
+    // 缓存结果
+    tradeCache.set(cacheKey, {
+      data: data || [],
+      timestamp: Date.now()
+    });
+
+    return data || [];
+  },
+
+  /**
+   * 获取用户持仓（带缓存优化）
+   */
+  async getUserPositions(userId: string) {
+    const cacheKey = `positions_${userId}`;
+    const cached = tradeCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+
+    const { data, error } = await supabase
+      .from('positions')
+      .select(`
+        *,
+        stock_info:stock_code (
+          name,
+          logo_url,
+          current_price
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('获取持仓失败:', error);
+      throw error;
+    }
+
+    // 缓存结果
+    tradeCache.set(cacheKey, {
+      data: data || [],
+      timestamp: Date.now()
+    });
+
+    return data || [];
+  },
+  /**
+   * 执行交易 (买入/卖出) - 增强版（包含幂等性检查）
    * 调用 Edge Function 处理复杂的交易逻辑 (原子性保证)
    */
   async executeTrade(params: {
@@ -18,8 +110,11 @@ export const tradeService = {
     leverage?: number;
     logoUrl?: string;
     metadata?: Record<string, any>;
+    // 新增幂等性字段
+    requestId?: string; // 客户端生成的唯一请求ID
   }) {
     const { 
+      userId,
       type, 
       symbol, 
       name, 
@@ -28,8 +123,12 @@ export const tradeService = {
       marketType = 'A_SHARE', 
       leverage = 1,
       logoUrl,
-      metadata = {}
+      metadata = {},
+      requestId // 用于幂等性检查
     } = params;
+
+    // 生成幂等性标识（如果客户端未提供）
+    const transactionId = requestId || `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // 根据交易类型进行数据验证
     try {
@@ -110,7 +209,13 @@ export const tradeService = {
         price,
         quantity,
         leverage,
-        logo_url: logoUrl
+        logo_url: logoUrl,
+        transaction_id: transactionId, // 添加幂等性标识
+        metadata: {
+          ...metadata,
+          request_id: requestId,
+          client_timestamp: Date.now()
+        }
       }
     });
 
@@ -120,7 +225,11 @@ export const tradeService = {
       throw new Error(error.message || '交易执行失败');
     }
 
-    return data;
+    return {
+      ...data,
+      transactionId, // 返回交易ID供客户端跟踪
+      requestId: requestId || transactionId
+    };
   },
 
   /**

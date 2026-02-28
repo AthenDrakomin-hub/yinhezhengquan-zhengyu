@@ -254,7 +254,7 @@ const AdminMatchIntervention: React.FC = () => {
                     <p className="text-[10px] text-industrial-400 font-bold">{pos.quantity} 股 | 市值: ¥{Number(pos.market_value).toFixed(2)}</p>
                   </div>
                   <button 
-                    onClick={() => handleIntervene('', 'DERIVATIVES_LIQUIDATE', { position_id: pos.id })}
+                    onClick={() => handleIntervene('', 'POSITION_CLOSE', { position_id: pos.id })}
                     className="text-[10px] font-black text-accent-red uppercase hover:underline"
                   >
                     强制平仓
@@ -270,6 +270,7 @@ const AdminMatchIntervention: React.FC = () => {
               <li><strong className="text-industrial-200">强制撮合:</strong> 直接将订单标记为成功，不经过价格匹配。</li>
               <li><strong className="text-industrial-200">中签/未中签:</strong> 针对新股申购订单的手动抽签干预。</li>
               <li><strong className="text-industrial-200">强制平仓:</strong> 立即清空用户指定持仓，并按当前市值结算资金。</li>
+              <li><strong className="text-industrial-200">持仓管理:</strong> 管理用户持仓状态，包括冻结、解冻等操作。</li>
               <li>所有干预操作均会记录在审计日志中，请谨慎操作。</li>
             </ul>
           </div>

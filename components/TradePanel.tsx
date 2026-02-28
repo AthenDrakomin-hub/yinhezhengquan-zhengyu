@@ -26,7 +26,7 @@ interface TradeIPOData {
   申购代码: string;
   证券简称: string;
   发行价格: number;
- 率?: number;
+  市盈率?: number;
   个人申购上限: number;
 }
 
@@ -37,7 +37,7 @@ function convertIpoData(ipoList: IPOData[]): TradeIPOData[] {
     申购代码: ipo.symbol, // 申购代码通常与股票代码相同
     证券简称: ipo.name,
     发行价格: ipo.issuePrice,
-   市率: undefined, // sinaIPOAdapter 未提供此字段
+    市盈率: ipo.peRatio || undefined, // 使用适配器提供的市盈率，如果有的话
     个人申购上限: Math.floor(1000000 / (ipo.issuePrice || 1)), // 临时计算：100万资金对应的股数（万股）
   }));
 }
@@ -221,6 +221,68 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     }
   }, []);
 
+  // 交易输入验证
+  const validateTradeInput = (price: number, quantity: number, tradeType: TradeType) => {
+    const errors: string[] = [];
+    
+    // 基础数值验证
+    if (price <= 0) {
+      errors.push('价格必须大于0');
+    }
+    
+    if (quantity <= 0) {
+      errors.push('数量必须大于0');
+    }
+    
+    // 数值范围验证
+    if (price > 999999) {
+      errors.push('价格超出合理范围（最大999999）');
+    }
+    
+    if (quantity > 1000000) {
+      errors.push('数量超出合理范围（最大1000000）');
+    }
+    
+    // 整数验证（股票数量）
+    if (quantity % 1 !== 0) {
+      errors.push('交易数量必须为整数');
+    }
+    
+    // 交易类型特定验证
+    if (tradeType === TradeType.IPO) {
+      // 新股申购验证
+      if (quantity < 500) {
+        errors.push('新股申购数量不得少于500股');
+      }
+      if (quantity % 500 !== 0) {
+        errors.push('新股申购数量必须为500的整数倍');
+      }
+    } else if (tradeType === TradeType.BLOCK) {
+      // 大宗交易验证
+      if (quantity < 100000) {
+        errors.push('大宗交易数量不得少于10万股');
+      }
+    } else if (tradeType === TradeType.LIMIT_UP) {
+      // 涨停打板验证
+      if (quantity < 100) {
+        errors.push('涨停打板数量不得少于100股');
+      }
+    }
+    
+    // 金额验证
+    const totalAmount = price * quantity;
+    if (totalAmount > 10000000) {
+      errors.push('交易金额超出单笔限制（最大1000万）');
+    }
+    
+    // 恶意输入检测
+    if (price.toString().includes('e') || quantity.toString().includes('e')) {
+      errors.push('检测到异常数值格式');
+    }
+    
+    return errors;
+  };
+
   // 通用交易执行
   const handleTrade = useCallback(async (
     tradeType: TradeType,
@@ -230,14 +292,37 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     quantity: number,
     logoUrl?: string
   ) => {
+    // 输入验证
+    const validationErrors = validateTradeInput(price, quantity, tradeType);
+    if (validationErrors.length > 0) {
+      alert(`输入验证失败: ${validationErrors.join(', ')}`);
+      return false;
+    }
+    
     if (quantity <= 0 || price <= 0) {
       alert('请输入有效的价格和数量');
       return false;
     }
+    
+    // 额外验证：检查交易金额是否超过账户余额
+    const totalAmount = price * quantity;
+    if (tradeType === TradeType.BUY && totalAmount > account.balance) {
+      alert('交易金额超出可用资金');
+      return false;
+    }
+    
     setIsSubmitting(true);
     try {
       const { validateTradeRisk } = await import('../services/marketService');
-      await validateTradeRisk(name, price * quantity);
+      const riskValidation = await validateTradeRisk(name, totalAmount);
+      
+      if (!riskValidation.isAppropriate) {
+        const confirm = window.confirm(`${riskValidation.riskWarning}\n\n是否继续交易？`);
+        if (!confirm) {
+          return false;
+        }
+      }
+      
       const success = await onExecute(tradeType, symbol, name, price, quantity, logoUrl);
       if (success) {
         setQuantity('');
@@ -252,7 +337,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     } finally {
       setIsSubmitting(false);
     }
-  }, [onExecute]);
+  }, [onExecute, account.balance]);
 
   // ===================== 生命周期控制（无循环）=====================
   // 模式切换时加载对应数据
@@ -410,13 +495,36 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
 
           {/* 交易按钮 */}
           <button 
-            onClick={() => handleTrade(
-              tradeSide === 'BUY' ? TradeType.BUY : TradeType.SELL,
-              selectedStock.symbol,
-              selectedStock.name,
-              parseFloat(price),
-              parseInt(quantity)
-            )}
+            onClick={() => {
+              const qty = parseInt(quantity) || 0;
+              const p = parseFloat(price) || 0;
+              
+              if (qty <= 0 || p <= 0) {
+                alert('请输入有效的价格和数量');
+                return;
+              }
+              
+              if (tradeSide === 'BUY') {
+                const totalAmount = p * qty;
+                if (totalAmount > account.balance) {
+                  alert('交易金额超出可用资金');
+                  return;
+                }
+              } else if (tradeSide === 'SELL') {
+                if (!currentHolding || qty > currentHolding.availableQuantity) {
+                  alert('卖出数量超出可用持仓');
+                  return;
+                }
+              }
+              
+              handleTrade(
+                tradeSide === 'BUY' ? TradeType.BUY : TradeType.SELL,
+                selectedStock.symbol,
+                selectedStock.name,
+                p,
+                qty
+              );
+            }}
             disabled={isSubmitting || !quantity || parseInt(quantity) <= 0}
             className={`w-full py-6 rounded-[32px] font-black text-sm tracking-[0.4em] uppercase shadow-2xl transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed ${
               tradeSide === 'BUY' 
@@ -531,13 +639,24 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                   <td className="py-4 px-4 text-center">
                     <div className="w-32 mx-auto">
                       <button 
-                        onClick={() => handleTrade(
-                          TradeType.IPO,
-                          ipo.申购代码,
-                          ipo.证券简称,
-                          ipo.发行价格,
-                          ipo.个人申购上限 * 10000
-                        )}
+                        onClick={() => {
+                          // 计算实际申购数量，不超过个人上限和账户资金可购买的最大数量
+                          const maxQtyByFund = Math.floor(account.balance / ipo.发行价格);
+                          const actualQuantity = Math.min(ipo.个人申购上限 * 10000, maxQtyByFund);
+                          
+                          if (actualQuantity <= 0) {
+                            alert('可用资金不足，无法申购');
+                            return;
+                          }
+                          
+                          handleTrade(
+                            TradeType.IPO,
+                            ipo.申购代码,
+                            ipo.证券简称,
+                            ipo.发行价格,
+                            actualQuantity
+                          );
+                        }}
                         disabled={isSubmitting}
                         className="w-full py-3 rounded-xl bg-[#00D4AA] text-[#0A1628] font-black text-xs uppercase tracking-wider hover:bg-[#00b88f] transition-all disabled:opacity-50"
                       >
@@ -659,13 +778,28 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
 
             {/* 提交按钮 */}
             <button 
-              onClick={() => handleTrade(
-                TradeType.BLOCK,
-                selectedStock.symbol,
-                selectedStock.name,
-                blockPrice,
-                parseInt(blockQuantity)
-              )}
+              onClick={() => {
+                const qty = parseInt(blockQuantity) || 0;
+                
+                if (qty < minQuantity) {
+                  alert(`大宗交易数量不得少于${minQuantity}股`);
+                  return;
+                }
+                
+                const totalAmount = blockPrice * qty;
+                if (totalAmount > account.balance) {
+                  alert('交易金额超出可用资金');
+                  return;
+                }
+                
+                handleTrade(
+                  TradeType.BLOCK,
+                  selectedStock.symbol,
+                  selectedStock.name,
+                  blockPrice,
+                  qty
+                );
+              }}
               disabled={isSubmitting || (parseInt(blockQuantity) || 0) < minQuantity}
               className="w-full py-6 rounded-[32px] font-black text-sm tracking-[0.4em] uppercase shadow-2xl transition-all active:scale-[0.97] bg-[#00D4AA] text-[#0A1628] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -764,13 +898,20 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                   {/* 操作按钮 */}
                   <div className="col-span-3 text-right">
                     <button 
-                      onClick={() => handleTrade(
-                        TradeType.LIMIT_UP,
-                        stock.symbol,
-                        stock.name,
-                        limitUpPrice,
-                        maxQty
-                      )}
+                      onClick={() => {
+                        if (maxQty <= 0) {
+                          alert('可用资金不足，无法买入');
+                          return;
+                        }
+                        
+                        handleTrade(
+                          TradeType.LIMIT_UP,
+                          stock.symbol,
+                          stock.name,
+                          limitUpPrice,
+                          maxQty
+                        );
+                      }}
                       disabled={isSubmitting || maxQty <= 0}
                       className="w-full py-3 rounded-xl bg-[#FF6B6B] text-white font-black text-xs uppercase tracking-wider hover:bg-[#FF5252] transition-all disabled:opacity-50"
                     >

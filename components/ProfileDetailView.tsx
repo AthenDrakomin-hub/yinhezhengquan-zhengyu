@@ -4,6 +4,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ICONS } from '../constants';
 import StockIcon from './StockIcon';
+import { userService } from '../services/userService';
 
 interface ProfileItem {
   label: string;

@@ -61,8 +61,52 @@ export const authService = {
    * 登出
    */
   async logout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // 清除本地存储的数据
+      localStorage.removeItem('user_preferences');
+      localStorage.removeItem('session_data');
+      
+      // 重定向到首页
+      window.location.href = '/';
+      return { success: true };
+    } catch (error: any) {
+      console.error('登出失败:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 检查会话是否有效
+   */
+  async checkSessionValidity(): Promise<boolean> {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.warn('会话无效:', error);
+        return false;
+      }
+      return !!user;
+    } catch (error) {
+      console.error('检查会话失败:', error);
+      return false;
+    }
+  },
+
+  /**
+   * 刷新会话
+   */
+  async refreshSession(): Promise<any> {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      return data.session;
+    } catch (error: any) {
+      console.error('刷新会话失败:', error);
+      throw error;
+    }
   },
 
   /**

@@ -28,7 +28,7 @@ src/
 │   │   ├── AdminEducation.tsx    # 投教内容管理
 │   │   ├── AdminCalendar.tsx     # 日历事件管理
 │   │   ├── AdminIPOs.tsx         # 新股管理
-│   │   ├── AdminDerivatives.tsx  # 衍生品管理
+
 │   │   ├── AdminBanners.tsx      # 横幅管理
 │   │   └── AdminLayout.tsx       # 管理后台布局
 ├── services/
@@ -96,7 +96,7 @@ CREATE TABLE ipos (
     price DECIMAL(10,2),
     change DECIMAL(10,2),
     change_percent DECIMAL(5,2),
-    market TEXT NOT NULL CHECK (market IN ('CN', 'HK', 'US', 'BOND', 'FUND', 'FUTURES')),
+    market TEXT NOT NULL CHECK (market IN ('CN', 'HK', 'US', 'BOND', 'FUND')),
     listing_date DATE,
     status TEXT DEFAULT 'UPCOMING',
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -104,24 +104,6 @@ CREATE TABLE ipos (
 );
 ```
 
-### 2.5 衍生品表 (derivatives)
-```sql
-CREATE TABLE derivatives (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    symbol TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    price DECIMAL(10,2),
-    change DECIMAL(10,2),
-    change_percent DECIMAL(5,2),
-    market TEXT NOT NULL CHECK (market IN ('CN', 'HK', 'US', 'BOND', 'FUND', 'FUTURES')),
-    type TEXT,
-    underlying TEXT,
-    strike DECIMAL(10,2),
-    expiry DATE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
 
 ### 2.6 横幅表 (banners)
 ```sql
@@ -175,7 +157,7 @@ export const getReports = async (): Promise<ResearchReport[]>
 export const getEducationTopics = async (): Promise<EducationTopic[]>
 export const getCalendarEvents = async (): Promise<CalendarEvent[]>
 export const getIPOs = async (): Promise<Stock[]>
-export const getDerivatives = async (): Promise<Stock[]>
+
 export const getBanners = async (): Promise<Banner[]>
 
 // 创建函数

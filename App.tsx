@@ -40,6 +40,7 @@ const AboutInvestZYView = lazy(() => import('./components/AboutInvestZYView'));
 const ComplianceCenter = lazy(() => import('./components/ComplianceCenter'));
 const ServiceCenter = lazy(() => import('./components/ServiceCenter'));
 const EducationCenter = lazy(() => import('./components/EducationCenter'));
+const AppDownloadView = lazy(() => import('./components/AppDownloadView'));
 
 // 懒加载管理员组件
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
@@ -53,7 +54,6 @@ const AdminReports = lazy(() => import('./components/admin/AdminReports'));
 const AdminEducation = lazy(() => import('./components/admin/AdminEducation'));
 const AdminCalendar = lazy(() => import('./components/admin/AdminCalendar'));
 const AdminIPOs = lazy(() => import('./components/admin/AdminIPOs'));
-const AdminDerivatives = lazy(() => import('./components/admin/AdminDerivatives'));
 const AdminBanners = lazy(() => import('./components/admin/AdminBanners'));
 const AdminTickets = lazy(() => import('./components/admin/AdminTickets'));
 const AdminTicketDetail = lazy(() => import('./components/admin/AdminTicketDetail'));
@@ -178,60 +178,113 @@ const AppContent: React.FC = () => {
     }
   }, []); // 【关键】移除 session 依赖，彻底打破循环
 
-  // 用 ref 标记是否正在执行校验，避免重复执行
+  // 用 ref 标记是否正在执行校验，避免重复执行和竞态条件
   const isValidatingRef = useRef(false);
-
-  // 统一的认证校验逻辑（移除对 syncAccountData 的依赖，用函数内调用）
+  const sessionCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 改进的认证校验逻辑
   const validateAuthSession = useCallback(async () => {
-    // 【关键】如果正在校验，直接返回，避免重复执行
-    if (isValidatingRef.current) return;
-    isValidatingRef.current = true;
-
-    try {
-      const { data: { session: localSession } } = await supabase.auth.getSession();
+    if (isValidatingRef.current) {
+      return;
+    }
       
-      if (localSession) {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+    isValidatingRef.current = true;
+      
+    if (sessionCheckTimeoutRef.current) {
+      clearTimeout(sessionCheckTimeoutRef.current);
+    }
+  
+    try {
+      sessionCheckTimeoutRef.current = setTimeout(() => {
+        console.warn('validateAuthSession: 执行超时，强制清理');
+        isValidatingRef.current = false;
+        setIsLoading(false);
+      }, 8000);
+  
+      const { data: { session: localSession } } = await supabase.auth.getSession();
         
-        if (userError || !userData.user) {
+      if (localSession) {
+        // 验证会话有效性
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+          
+        if (userError || !userData?.user) {
+          console.log('validateAuthSession: 会话无效，执行登出');
           await supabase.auth.signOut();
           setSession(null);
           setUserRole('guest');
-          console.log('validateAuthSession: 会话无效，已清空');
+          // 重置为初始状态
+          setAccount(prev => ({
+            ...prev,
+            id: 'ZY-USER-001',
+            username: '证裕资深用户',
+            email: '',
+            balance: 500000.00
+          }));
         } else {
-          // 【关键】只在会话真正变化时才更新状态
+          // 仅在会话真正变化时更新状态
           setSession((prevSession: Session | null) => {
-            if (prevSession?.access_token === localSession.access_token) return prevSession;
+            if (prevSession?.access_token === localSession.access_token) {
+              return prevSession;
+            }
             return localSession;
           });
-          
-          const { data: profile } = await supabase
+            
+          // 获取用户角色和配置文件
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, status')
             .eq('id', localSession.user.id)
             .single();
-          
-          const newRole = profile?.role || 'user';
-          setUserRole(prevRole => prevRole === newRole ? prevRole : newRole);
-          
+            
+          if (profileError) {
+            console.error('validateAuthSession: 获取用户资料失败', profileError);
+          } else {
+            // 检查用户状态
+            if (profile.status === 'BANNED') {
+              console.log('validateAuthSession: 用户账户已被禁用');
+              await supabase.auth.signOut();
+              setSession(null);
+              setUserRole('guest');
+              return;
+            }
+              
+            const newRole = profile.role || 'user';
+            setUserRole(prevRole => prevRole === newRole ? prevRole : newRole);
+          }
+            
           await syncAccountData(localSession.user.id);
-          console.log('validateAuthSession: 会话有效，已更新状态');
         }
       } else {
         setSession(null);
         setUserRole('guest');
-        console.log('validateAuthSession: 无本地会话');
+        setAccount(prev => ({
+          ...prev,
+          id: 'ZY-USER-001',
+          username: '证裕资深用户',
+          email: '',
+          balance: 500000.00
+        }));
       }
     } catch (err) {
       console.error('validateAuthSession 失败:', err);
       setSession(null);
       setUserRole('guest');
+      setAccount(prev => ({
+        ...prev,
+        id: 'ZY-USER-001',
+        username: '证裕资深用户',
+        email: '',
+        balance: 500000.00
+      }));
     } finally {
       isValidatingRef.current = false;
+      if (sessionCheckTimeoutRef.current) {
+        clearTimeout(sessionCheckTimeoutRef.current);
+        sessionCheckTimeoutRef.current = null;
+      }
       setIsLoading(false);
-      console.log('Auth 初始化完成，isLoading 设置为 false');
     }
-  }, [syncAccountData]); // 仅依赖无循环的 syncAccountData
+  }, [syncAccountData]);
 
   // 用 ref 标记是否已经初始化订阅，避免重复订阅
   const hasSubscribedRef = useRef(false);
@@ -479,7 +532,6 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      <SupabaseConnectionCheck />
       <Routes>
         <Route path="/" element={<LandingView onEnter={handleEnterPlatform} onQuickOpen={() => navigate('/quick-open')} />} />
         <Route path="/login" element={<LoginWrapper />} />
@@ -579,13 +631,7 @@ const AppContent: React.FC = () => {
               </Suspense>
             </ErrorBoundary>
           } />
-          <Route path="derivatives" element={
-            <ErrorBoundary resetOnNavigate>
-              <Suspense fallback={<LoadingSpinner />}>
-                <AdminDerivatives />
-              </Suspense>
-            </ErrorBoundary>
-          } />
+
           <Route path="banners" element={
             <ErrorBoundary resetOnNavigate>
               <Suspense fallback={<LoadingSpinner />}>
@@ -787,7 +833,7 @@ const AppContent: React.FC = () => {
         <Route path="/analysis" element={
           <ProtectedRoute session={session} role={userRole} isLoading={isLoading} isDemoMode={isDemoMode}>
             <ErrorBoundary resetOnNavigate>
-              <AssetAnalysisView account={account} onBack={() => navigate(-1)} />
+              <AssetAnalysisView account={account} onBack={() => navigate('/profile')} />
             </ErrorBoundary>
           </ProtectedRoute>
         } />
@@ -797,6 +843,14 @@ const AppContent: React.FC = () => {
               <ConditionalOrderPanel stock={MOCK_STOCKS[0]} onBack={() => navigate(-1)} onAddOrder={() => {}} />
             </ErrorBoundary>
           </ProtectedRoute>
+        } />
+        
+        <Route path="/app-download" element={
+          <ErrorBoundary resetOnNavigate>
+            <Suspense fallback={<LoadingSpinner />}>
+              <AppDownloadView />
+            </Suspense>
+          </ErrorBoundary>
         } />
         
         <Route path="*" element={<Navigate to="/" replace />} />
