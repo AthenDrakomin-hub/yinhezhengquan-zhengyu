@@ -409,22 +409,27 @@ const AppContent: React.FC = () => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   // 修复：处理进入平台按钮点击（强制校验登录状态）
-  const handleEnterPlatform = () => {
+  const handleEnterPlatform = async () => {
     console.log('handleEnterPlatform: session=', session, 'userRole=', userRole);
     
-    // 演示模式下强制检查session
-    if (isDemoMode) {
-      if (!session) {
-        console.log('演示模式：未登录，跳转到登录页');
-        navigate('/login');
-        return;
-      }
-    }
-
     if (session) {
-      // 根据角色跳转
-      const dashboardPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
-      navigate(dashboardPath);
+      // 重新获取最新角色
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        const latestRole = profile?.role || 'user';
+        setUserRole(latestRole);
+        
+        // 根据最新角色跳转
+        const dashboardPath = latestRole === 'admin' ? '/admin/dashboard' : '/dashboard';
+        navigate(dashboardPath);
+      } catch (error) {
+        console.error('获取角色失败:', error);
+        navigate('/dashboard');
+      }
     } else {
       navigate('/login');
     }

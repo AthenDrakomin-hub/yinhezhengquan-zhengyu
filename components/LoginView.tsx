@@ -394,7 +394,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
 
   return (
     <div 
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-8 animate-slide-up relative"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-4 sm:p-8 animate-slide-up relative"
       style={{ backgroundImage: `url('${BG_URL}')` }}
     >
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-[4px] z-0" />
@@ -402,31 +402,33 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
       {/* 返回官网 */}
       <button 
         onClick={onBackToHome}
-        className="absolute top-8 left-8 z-20 flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-white uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95"
+        className="absolute top-4 left-4 sm:top-8 sm:left-8 z-20 flex items-center gap-2 px-3 py-2 sm:px-4 bg-white/5 border border-white/10 rounded-xl text-[9px] sm:text-[10px] font-black text-white uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95"
       >
-        <ICONS.ArrowRight className="rotate-180" size={14} />
-        返回官网首页
+        <ICONS.ArrowRight className="rotate-180" size={12} />
+        <span className="hidden sm:inline">返回官网首页</span>
+        <span className="sm:hidden">返回</span>
       </button>
 
       <div className="w-full max-w-md text-center relative z-10">
-        <div className="glass-card p-8 bg-slate-900/60 border-white/10 backdrop-blur-2xl shadow-2xl rounded-[32px]">
+        <div className="glass-card p-6 sm:p-8 bg-slate-900/60 border-white/10 backdrop-blur-2xl shadow-2xl rounded-[24px] sm:rounded-[32px]">
           {/* Logo 合并到UI框架内部 */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-full max-w-[280px] aspect-[2.5/1] bg-white rounded-[24px] flex items-center justify-center p-4 shadow-xl border border-white/30 transition-transform hover:scale-105 duration-500">
+          <div className="flex flex-col items-center mb-6 sm:mb-8">
+            <div className="w-full max-w-[240px] sm:max-w-[280px] aspect-[2.5/1] bg-white rounded-[20px] sm:rounded-[24px] flex items-center justify-center p-3 sm:p-4 shadow-xl border border-white/30 transition-transform hover:scale-105 duration-500">
               <img src={LOGO_URL} alt="中国银河证券 证裕交易单元" className="w-full h-full object-contain" />
             </div>
-            <p className="mt-4 text-xs font-black text-slate-400 uppercase tracking-widest">NEXUS 交易单元认证中心</p>
+            <p className="mt-3 sm:mt-4 text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">NEXUS 交易单元认证中心</p>
           </div>
 
-          <div className="flex border-b border-white/5 mb-8">
+          <div className="flex border-b border-white/5 mb-6 sm:mb-8">
             <button 
               onClick={() => {
                 setLoginMethod('phone');
                 setTwoFactorStep(1);
               }}
-              className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${loginMethod === 'phone' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
+              className={`flex-1 pb-3 sm:pb-4 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all relative ${loginMethod === 'phone' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
             >
-              验证码登录
+              <span className="hidden sm:inline">验证码登录</span>
+              <span className="sm:hidden">验证码</span>
               {loginMethod === 'phone' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00D4AA] shadow-[0_0_10px_#00D4AA]" />}
             </button>
             <button 
@@ -434,9 +436,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                 setLoginMethod('email');
                 setTwoFactorStep(1);
               }}
-              className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${loginMethod === 'email' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
+              className={`flex-1 pb-3 sm:pb-4 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all relative ${loginMethod === 'email' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
             >
-              账号密码登录
+              <span className="hidden sm:inline">账号密码登录</span>
+              <span className="sm:hidden">密码</span>
               {loginMethod === 'email' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00D4AA] shadow-[0_0_10px_#00D4AA]" />}
             </button>
             <button 
@@ -444,76 +447,77 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                 setLoginMethod('2fa');
                 setTwoFactorStep(1);
               }}
-              className={`flex-1 pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${loginMethod === '2fa' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
+              className={`flex-1 pb-3 sm:pb-4 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all relative ${loginMethod === '2fa' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
             >
-              双因素登录
+              <span className="hidden sm:inline">双因素登录</span>
+              <span className="sm:hidden">2FA</span>
               {loginMethod === '2fa' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00D4AA] shadow-[0_0_10px_#00D4AA]" />}
             </button>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
             {loginMethod === 'phone' ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 pointer-events-none">
-                    <span className="text-[11px] font-black">+86</span>
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <span className="text-[10px] sm:text-[11px] font-black">+86</span>
                   </div>
                   <input
                     type="tel"
                     placeholder="请输入手机号"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                    className="w-full h-14 bg-white/5 pl-14 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-12 sm:pl-14 pr-4 sm:pr-6 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 pointer-events-none">
-                    <ICONS.Shield size={18} />
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <ICONS.Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </div>
                   <input
                     type="text"
                     placeholder="请输入验证码"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full h-14 bg-white/5 pl-12 pr-32 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-10 sm:pl-12 pr-24 sm:pr-32 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                   <button
                     type="button"
                     onClick={handleSendOtp}
                     disabled={countdown > 0 || loading || phone.length < 11}
-                    className="absolute right-2 top-2 bottom-2 px-4 bg-[#00D4AA]/10 text-[#00D4AA] rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-30 active:scale-95 transition-all"
+                    className="absolute right-2 top-2 bottom-2 px-3 sm:px-4 bg-[#00D4AA]/10 text-[#00D4AA] rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest disabled:opacity-30 active:scale-95 transition-all"
                   >
                     {countdown > 0 ? `${countdown}S` : '获取验证码'}
                   </button>
                 </div>
               </div>
             ) : loginMethod === 'email' ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 pointer-events-none">
-                    <ICONS.User size={18} />
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <ICONS.User size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </div>
                   <input
                     type="email"
                     placeholder="请输入登录邮箱"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-10 sm:pl-12 pr-4 sm:pr-6 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 pointer-events-none">
-                    <ICONS.Shield size={18} />
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <ICONS.Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </div>
                   <input
                     type="password"
                     placeholder="请输入登录密码"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-10 sm:pl-12 pr-4 sm:pr-6 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                 </div>
@@ -586,12 +590,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             <button
               type="submit"
               disabled={loading}
-              className={`w-full h-16 rounded-2xl font-black text-base tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group ${loading ? 'bg-amber-500 text-white cursor-not-allowed' : 'bg-[#00D4AA] text-[#0A1628] hover:bg-[#00C49A]'}`}
+              className={`w-full h-14 sm:h-16 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base tracking-[0.15em] sm:tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 group ${loading ? 'bg-amber-500 text-white cursor-not-allowed' : 'bg-[#00D4AA] text-[#0A1628] hover:bg-[#00C49A]'}`}
             >
               {loading ? (
                 <>
-                  <ICONS.Refresh className="animate-spin" size={20} />
-                 正在进行安全验证...
+                  <ICONS.Refresh className="animate-spin" size={18} />
+                  <span className="text-xs sm:text-base">正在进行安全验证...</span>
                 </>
               ) : (
                 <>
@@ -599,18 +603,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                     (twoFactorStep === 1 ? '验证身份并继续' : '完成双因素验证') : 
                     '确认登录'
                   }
-                  <ICONS.ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  <ICONS.ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
             
-            <div className="flex items-center justify-between pt-4 text-sm">
+            <div className="flex items-center justify-between pt-3 sm:pt-4 text-xs sm:text-sm">
               <button 
                 type="button"
                 onClick={() => {
                   window.location.hash = '#/forgot-password';
                 }}
-                className="text-[#00D4AA]/70 hover:text-[#00D4AA] font-medium transition-colors text-sm underline"
+                className="text-[#00D4AA]/70 hover:text-[#00D4AA] font-medium transition-colors underline"
               >
                忘密码？
               </button>
@@ -622,23 +626,23 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                     window.open('https://kaihu.zhengyu.com', '_blank');
                   }
                 }}
-                className="text-[#00D4AA]/70 hover:text-[#00D4AA] font-medium transition-colors text-sm underline"
+                className="text-[#00D4AA]/70 hover:text-[#00D4AA] font-medium transition-colors underline"
               >
                 申请开通账户
               </button>
             </div>
           </form>
 
-          <div className="mt-4">
-            <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
+          <div className="mt-3 sm:mt-4">
+            <p className="text-[8px] sm:text-[9px] text-slate-500 font-medium leading-relaxed">
               登录即代表您同意《银河证券·证裕用户隐私协议》<br/>
               <span className="text-[#00D4AA]/60">本平台用于银河证裕交易单元快速交易通道</span>
             </p>
           </div>
         </div>
 
-        <div className="pt-4 opacity-50">
-          <p className="text-[8px] font-black text-slate-500 leading-loose uppercase tracking-[0.2em]">
+        <div className="pt-3 sm:pt-4 opacity-50">
+          <p className="text-[7px] sm:text-[8px] font-black text-slate-500 leading-loose uppercase tracking-[0.15em] sm:tracking-[0.2em]">
             中国银河证券 · 证裕交易系统 2.0 <br/>
             数字资产安全审计中心 
           </p>
