@@ -122,3 +122,135 @@
 .animate-marquee {
   animation: marquee 30s linear infinite;
 }
+
+
+/* ==================== 移动端响应式优化 ==================== */
+@layer utilities {
+  @media (max-width: 768px) {
+    .glass-card {
+      border-radius: 16px !important;
+      padding: 1rem !important;
+    }
+    
+    button {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    .text-3xl {
+      font-size: 1.5rem !important;
+    }
+    
+    .text-2xl {
+      font-size: 1.25rem !important;
+    }
+    
+    input, textarea {
+      font-size: 16px !important;
+    }
+    
+    table {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+  }
+  
+  @media (max-width: 768px) and (orientation: landscape) {
+    .min-h-screen {
+      min-height: 100vh;
+    }
+  }
+  
+  @media (hover: none) and (pointer: coarse) {
+    button:active,
+    .cursor-pointer:active {
+      transform: scale(0.95);
+      transition: transform 0.1s;
+    }
+  }
+  
+  @supports (padding: max(0px)) {
+    .safe-area-inset-top {
+      padding-top: max(1rem, env(safe-area-inset-top));
+    }
+    
+    .safe-area-inset-bottom {
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+  }
+}
+
+/* 移动端响应式优化 */
+@media (max-width: 768px) {
+  /* 底部导航留白 */
+  body {
+    padding-bottom: 4rem;
+  }
+
+  /* 表格横向滚动 */
+  .glass-card table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* 移动端字体调整 */
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.125rem; }
+
+  /* 移动端按钮 */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 移动端输入框 */
+  input, select, textarea {
+    font-size: 16px; /* 防止iOS自动缩放 */
+  }
+
+  /* 移动端卡片间距 */
+  .glass-card {
+    margin: 0.5rem;
+    padding: 1rem;
+  }
+
+  /* 移动端模态框 */
+  .modal {
+    width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 增大可点击区域 */
+  a, button {
+    padding: 0.75rem;
+  }
+
+  /* 移除hover效果 */
+  *:hover {
+    opacity: 1 !important;
+  }
+}
+
+/* 骨架屏动画 */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse {
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.1) 25%,
+    rgba(148, 163, 184, 0.2) 50%,
+    rgba(148, 163, 184, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

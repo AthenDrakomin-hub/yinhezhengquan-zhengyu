@@ -4,7 +4,6 @@ import {
   MOCK_EDUCATION,
   MOCK_TICKETS,
   MOCK_CALENDAR,
-  MOCK_IPO_STOCKS,
   BANNER_MOCK,
 } from '@/constants';
 import type {
@@ -176,8 +175,8 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
 // ==================== 新股信息 ====================
 export const getIPOs = async (): Promise<Stock[]> => {
   if (isDemoMode) {
-    console.warn('演示模式：使用模拟新股数据');
-    return MOCK_IPO_STOCKS;
+    console.warn('演示模式：返回空数组');
+    return [];
   }
 
   try {
@@ -189,8 +188,8 @@ export const getIPOs = async (): Promise<Stock[]> => {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      console.warn('数据库无新股信息，回退到模拟数据');
-      return MOCK_IPO_STOCKS;
+      console.warn('数据库无新股信息，返回空数组');
+      return [];
     }
 
     return data.map((ipo) => ({
@@ -199,14 +198,14 @@ export const getIPOs = async (): Promise<Stock[]> => {
       price: ipo.price || 0,
       change: ipo.change || 0,
       changePercent: ipo.change_percent || 0,
-      market: ipo.market as 'CN' | 'HK' | 'US' | 'BOND' | 'FUND',
+      market: ipo.market as 'CN' | 'HK' | 'BOND' | 'FUND',
       sparkline: [],
       logoUrl: undefined,
     }));
   } catch (error) {
     console.error('获取新股信息失败:', error);
-    console.warn('回退到模拟新股数据');
-    return MOCK_IPO_STOCKS;
+    console.warn('返回空数组');
+    return [];
   }
 };
 

@@ -1,5 +1,18 @@
-# Logs
-logs
+# ==================== 环境变量（绝对不能提交） ====================
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ==================== 依赖与构建产物 ====================
+node_modules/
+dist/
+dist-ssr/
+.vercel/
+*.tsbuildinfo
+
+# ==================== 日志文件 ====================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,34 +20,33 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
-node_modules
-
-# Build outputs
-dist
-dist-ssr
-
-# Environment variables
-.env
-.env.*
-!.env.example
-
-# Supabase
-.supabase/
-
-# Testing
+# ==================== 测试覆盖率 ====================
 coverage/
+.nyc_output/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# ==================== 系统文件 ====================
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# Local development files
+# ==================== IDE配置（可选） ====================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# ==================== Supabase本地 ====================
+.supabase/
+
+# ==================== 归档文档（仅本地） ====================
+docs/archive/
+database/archive/
+
+# ==================== Amazon Q 配置（仅本地） ====================
+.amazonq/
+
+# ==================== 本地开发文件 ====================
 *.local

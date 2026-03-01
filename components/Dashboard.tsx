@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../constants';
 import { getGalaxyNews } from '../services/marketService';
 import { Transaction, Banner, TradeType } from '../types';
+import { HotStocksPanel } from './HotStocksPanel';
+import { SmartRecommendations } from './SmartRecommendations';
+import { usePerformanceMonitor } from '../utils/performanceMonitor';
 
 // 图片加载组件：处理加载/错误状态
 const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
@@ -51,6 +54,9 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [news, setNews] = useState<any[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
+  
+  // 性能监控
+  usePerformanceMonitor('Dashboard');
 
   // 获取银河新闻数据
   const fetchNews = async () => {
@@ -123,6 +129,14 @@ const Dashboard: React.FC<DashboardProps> = ({
               <span className="text-[11px] font-black text-[var(--color-text-secondary)] uppercase tracking-widest text-center">{feat.label}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* 热门股票和智能推荐 */}
+      <section className="px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <HotStocksPanel />
+          <SmartRecommendations />
         </div>
       </section>
 

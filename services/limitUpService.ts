@@ -1,303 +1,154 @@
 /**
- * 涨停打板数据服务
- * 使用东方财富SDK获取实时行情，计算涨停价和封单量
+ * 涨停板数据服务
+ * 从 Supabase 数据库获取涨停板数据
  */
 
-import { frontendMarketService } from './frontendMarketService';
+import { supabase } from '../lib/supabase';
 
-// 股票类型
-export type StockType = 'NORMAL' | 'ST' | 'GEM';
-
-// 涨停打板数据
 export interface LimitUpData {
-  symbol: string;           // 股票代码
-  name: string;            // 股票名称
-  preClose: number;        // 前收盘价
-  currentPrice: number;    // 当前价格
-  change: number;          // 涨跌额
-  changePercent: number;   // 涨跌幅
-  volume: number;          // 成交量
-  turnover: number;        // 换手率
-  limitUpPrice: number;    // 涨停价
-  limitDownPrice: number;  // 跌停价
-  buyOneVolume: number;    // 买一量（封单量）
-  buyOnePrice: number;     // 买一价
-  sellOneVolume: number;   // 卖一量
-  sellOnePrice: number;    // 卖一价
-  market: string;          // 市场类型
-  timestamp: string;       // 数据时间戳
-}
-
-// 东方财富SDK返回的数据格式（根据文档推测）
-interface EastmoneyQuote {
-  code?: string;           // 股票代码
-  name?: string;          // 股票名称
-  preClose?: number;      // 前收盘价
-  price?: number;         // 当前价格
-  change?: number;        // 涨跌额
-  changePercent?: number; // 涨跌幅
-  volume?: number;        // 成交量（手）
-  turnover?: number;      // 换手率（%）
-  buyOneVolume?: number;  // 买一量（手）
-  buyOnePrice?: number;   // 买一价
-  sellOneVolume?: number; // 卖一量（手）
-  sellOnePrice?: number;  // 卖一价
-  market?: string;        // 市场
-  time?: string;          // 时间
-}
-
-/**
- * 根据股票类型计算涨停/跌停百分比
- */
-function getLimitPercent(stockType: StockType = 'NORMAL'): number {
-  switch (stockType) {
-    case 'ST':
-      return 0.05; // 5%
-    case 'GEM':
-      return 0.20; // 20%
-    case 'NORMAL':
-    default:
-      return 0.10; // 10%
-  }
-}
-
-/**
- * 计算涨停价和跌停价
- */
-function calculateLimitPrices(preClose: number, stockType: StockType = 'NORMAL'): {
+  symbol: string;
+  name: string;
+  market: string;
+  stockType: string;
+  currentPrice: number;
+  preClose: number;
   limitUpPrice: number;
   limitDownPrice: number;
-} {
-  const limitPercent = getLimitPercent(stockType);
-  const limitUpPrice = Math.round(preClose * (1 + limitPercent) * 100) / 100;
-  const limitDownPrice = Math.round(preClose * (1 - limitPercent) * 100) / 100;
-  
-  return { limitUpPrice, limitDownPrice };
+  change: number;
+  changePercent: number;
+  volume: number;
+  turnover: number;
+  buyOneVolume: number;
+  buyOnePrice: number;
+  isLimitUp: boolean;
+  timestamp: string;
 }
 
 /**
- * 估算封单量（买一量）
- * 当SDK未提供买一量时，根据成交量和换手率估算
+ * 获取单只股票的涨停板数据
  */
-function estimateBuyOneVolume(volume: number, turnover: number = 0): number {
-  // 如果换手率数据可用，根据换手率估算封单比例
-  if (turnover > 0 && turnover < 100) {
-    // 换手率越低，封单比例可能越高
-    const estimatedRatio = 0.3 * (1 - turnover / 100); // 0-30%范围
-    return Math.round(volume * estimatedRatio);
-  }
-  
-  // 默认估算：成交量 * 30%
-  return Math.round(volume * 0.3);
-}
-
-/**
- * 使用东方财富SDK获取实时行情
- * 注意：需要先安装 eastmoney-data-sdk
- */
-async function fetchEastmoneyQuote(symbol: string): Promise<EastmoneyQuote | null> {
+export async function getLimitUpData(symbol: string): Promise<LimitUpData> {
   try {
-    // 动态导入东方财富SDK，避免未安装时直接报错
-    const { EastmoneyClient } = await import('eastmoney-data-sdk');
-    
-    // 创建客户端实例
-    const client = new EastmoneyClient();
-    
-    // 调用quote方法获取行情数据
-    // 根据实际SDK文档调整参数
-    const quote = await client.quote(symbol);
-    
-    if (!quote || !quote.code) {
-      console.warn(`东方财富SDK返回数据异常: ${symbol}`);
-      return null;
-    }
-    
-    return quote as EastmoneyQuote;
-  } catch (error) {
-    console.error(`东方财富SDK调用失败 (${symbol}):`, error);
-    return null;
-  }
-}
+    const { data, error } = await supabase
+      .from('limit_up_stocks')
+      .select('*')
+      .eq('symbol', symbol)
+      .eq('status', 'ACTIVE')
+      .order('update_time', { ascending: false })
+      .limit(1)
+      .single();
 
-/**
- * 从frontendMarketService获取前收盘价
- */
-async function getPreCloseFromMarketService(symbol: string): Promise<number | null> {
-  try {
-    // 假设CN市场
-    const stock = await frontendMarketService.getRealtimeStock(symbol, 'CN');
-    return stock.price || null;
-  } catch (error) {
-    console.error(`从marketService获取前收盘价失败 (${symbol}):`, error);
-    return null;
-  }
-}
-
-/**
- * 生成空的涨停打板数据占位符
- * TODO: 集成真实的行情数据API
- */
-function generateEmptyLimitUpData(symbol: string, stockType: StockType = 'NORMAL'): LimitUpData {
-  console.warn(`真实数据源不可用，返回空数据: ${symbol}`);
-  const preClose = 0;
-  const { limitUpPrice, limitDownPrice } = calculateLimitPrices(preClose, stockType);
-  
-  return {
-    symbol,
-    name: '数据获取中',
-    preClose: 0,
-    currentPrice: 0,
-    change: 0,
-    changePercent: 0,
-    volume: 0,
-    turnover: 0,
-    limitUpPrice: 0,
-    limitDownPrice: 0,
-    buyOneVolume: 0,
-    buyOnePrice: 0,
-    sellOneVolume: 0,
-    sellOnePrice: 0,
-    market: 'CN',
-    timestamp: new Date().toISOString()
-  };
-}
-
-/**
- * 获取涨停打板数据
- * 优先使用东方财富SDK，失败时降级到marketService，最后使用模拟数据
- */
-export async function getLimitUpData(
-  symbol: string, 
-  stockType: StockType = 'NORMAL'
-): Promise<LimitUpData> {
-  // 1. 尝试使用东方财富SDK
-  const eastmoneyQuote = await fetchEastmoneyQuote(symbol);
-  
-  if (eastmoneyQuote) {
-    const preClose = eastmoneyQuote.preClose || 0;
-    const currentPrice = eastmoneyQuote.price || 0;
-    const { limitUpPrice, limitDownPrice } = calculateLimitPrices(preClose, stockType);
-    
-    return {
-      symbol: eastmoneyQuote.code || symbol,
-      name: eastmoneyQuote.name || symbol,
-      preClose,
-      currentPrice,
-      change: eastmoneyQuote.change || 0,
-      changePercent: eastmoneyQuote.changePercent || 0,
-      volume: eastmoneyQuote.volume || 0,
-      turnover: eastmoneyQuote.turnover || 0,
-      limitUpPrice,
-      limitDownPrice,
-      buyOneVolume: eastmoneyQuote.buyOneVolume || estimateBuyOneVolume(eastmoneyQuote.volume || 0, eastmoneyQuote.turnover || 0),
-      buyOnePrice: eastmoneyQuote.buyOnePrice || limitUpPrice,
-      sellOneVolume: eastmoneyQuote.sellOneVolume || 0,
-      sellOnePrice: eastmoneyQuote.sellOnePrice || 0,
-      market: eastmoneyQuote.market || (symbol.startsWith('6') ? 'SH' : 'SZ'),
-      timestamp: eastmoneyQuote.time || new Date().toISOString()
-    };
-  }
-  
-  // 2. SDK失败，降级从marketService获取前收盘价
-  console.warn(`东方财富SDK失败，降级使用marketService: ${symbol}`);
-  const preClose = await getPreCloseFromMarketService(symbol);
-  
-  if (preClose !== null) {
-    const { limitUpPrice, limitDownPrice } = calculateLimitPrices(preClose, stockType);
-    
-    // 使用marketService获取当前价格
-    const stock = await frontendMarketService.getRealtimeStock(symbol, 'CN');
-    const currentPrice = stock.price || preClose;
-    const change = currentPrice - preClose;
-    const changePercent = (change / preClose) * 100;
-    
-    return {
-      symbol,
-      name: stock.name || symbol,
-      preClose,
-      currentPrice,
-      change,
-      changePercent,
-      volume: 0, // 无法获取
-      turnover: 0, // 无法获取
-      limitUpPrice,
-      limitDownPrice,
-      buyOneVolume: estimateBuyOneVolume(0),
-      buyOnePrice: limitUpPrice,
-      sellOneVolume: 0,
-      sellOnePrice: 0,
-      market: symbol.startsWith('6') ? 'SH' : 'SZ',
-      timestamp: new Date().toISOString()
-    };
-  }
-  
-  // 3. 所有数据源失败，返回空数据占位符
-  console.warn(`所有数据源失败，返回空数据: ${symbol}`);
-  return generateEmptyLimitUpData(symbol, stockType);
-}
-
-/**
- * 批量获取涨停打板数据
- */
-export async function getBatchLimitUpData(
-  symbols: string[],
-  stockType: StockType = 'NORMAL'
-): Promise<Record<string, LimitUpData>> {
-  const results: Record<string, LimitUpData> = {};
-  
-  // 顺序请求，避免并发限制
-  for (const symbol of symbols) {
-    results[symbol] = await getLimitUpData(symbol, stockType);
-  }
-  
-  return results;
-}
-
-/**
- * 检查是否为涨停状态
- */
-export function isLimitUp(limitUpData: LimitUpData): boolean {
-  const { currentPrice, limitUpPrice } = limitUpData;
-  // 允许±0.01元误差
-  return Math.abs(currentPrice - limitUpPrice) <= 0.01;
-}
-
-/**
- * 检查是否为跌停状态
- */
-export function isLimitDown(limitUpData: LimitUpData): boolean {
-  const { currentPrice, limitDownPrice } = limitUpData;
-  // 允许±0.01元误差
-  return Math.abs(currentPrice - limitDownPrice) <= 0.01;
-}
-
-/**
- * 缓存装饰器
- */
-export function withCache<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
-  cacheKey: string,
-  ttl: number = 10 * 1000 // 默认10秒缓存（涨停数据变化快）
-): T {
-  const cache = {
-    data: null as any,
-    timestamp: 0
-  };
-
-  return (async (...args: any[]) => {
-    const now = Date.now();
-    
-    if (cache.data && now - cache.timestamp < ttl) {
-      return cache.data;
+    if (error || !data) {
+      throw new Error(`涨停板数据不存在: ${symbol}`);
     }
 
-    const result = await fn(...args);
-    cache.data = result;
-    cache.timestamp = now;
-    
-    return result;
-  }) as T;
+    return {
+      symbol: data.symbol,
+      name: data.name,
+      market: data.market,
+      stockType: data.stock_type || 'NORMAL',
+      currentPrice: Number(data.current_price),
+      preClose: Number(data.pre_close),
+      limitUpPrice: Number(data.limit_up_price),
+      limitDownPrice: Number(data.limit_down_price),
+      change: Number(data.change),
+      changePercent: Number(data.change_percent),
+      volume: Number(data.volume || 0),
+      turnover: Number(data.turnover || 0),
+      buyOneVolume: Number(data.buy_one_volume || 0),
+      buyOnePrice: Number(data.buy_one_price || 0),
+      isLimitUp: data.is_limit_up || false,
+      timestamp: data.update_time || new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('获取涨停板数据失败:', error);
+    throw error;
+  }
 }
 
-// 带缓存的涨停数据获取函数
-export const getLimitUpDataWithCache = withCache(getLimitUpData, 'limit_up_data');
+/**
+ * 获取所有涨停股票列表
+ */
+export async function getLimitUpList(): Promise<LimitUpData[]> {
+  try {
+    const { data, error } = await supabase
+      .from('limit_up_stocks')
+      .select('*')
+      .eq('status', 'ACTIVE')
+      .eq('is_limit_up', true)
+      .order('change_percent', { ascending: false });
+
+    if (error || !data) {
+      console.error('获取涨停板列表失败:', error);
+      return [];
+    }
+
+    return data.map(item => ({
+      symbol: item.symbol,
+      name: item.name,
+      market: item.market,
+      stockType: item.stock_type || 'NORMAL',
+      currentPrice: Number(item.current_price),
+      preClose: Number(item.pre_close),
+      limitUpPrice: Number(item.limit_up_price),
+      limitDownPrice: Number(item.limit_down_price),
+      change: Number(item.change),
+      changePercent: Number(item.change_percent),
+      volume: Number(item.volume || 0),
+      turnover: Number(item.turnover || 0),
+      buyOneVolume: Number(item.buy_one_volume || 0),
+      buyOnePrice: Number(item.buy_one_price || 0),
+      isLimitUp: item.is_limit_up || false,
+      timestamp: item.update_time || new Date().toISOString()
+    }));
+  } catch (error) {
+    console.error('获取涨停板列表失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 计算涨停价（根据股票类型）
+ */
+export function calculateLimitUpPrice(preClose: number, stockType: string = 'NORMAL'): number {
+  let limitPercent = 0.10; // 默认10%
+
+  switch (stockType) {
+    case 'ST':
+      limitPercent = 0.05; // ST股票5%
+      break;
+    case 'GEM':
+      limitPercent = 0.20; // 创业板20%
+      break;
+    case 'STAR':
+      limitPercent = 0.20; // 科创板20%
+      break;
+    default:
+      limitPercent = 0.10; // 普通股票10%
+  }
+
+  return Number((preClose * (1 + limitPercent)).toFixed(2));
+}
+
+/**
+ * 计算跌停价（根据股票类型）
+ */
+export function calculateLimitDownPrice(preClose: number, stockType: string = 'NORMAL'): number {
+  let limitPercent = 0.10; // 默认10%
+
+  switch (stockType) {
+    case 'ST':
+      limitPercent = 0.05; // ST股票5%
+      break;
+    case 'GEM':
+      limitPercent = 0.20; // 创业板20%
+      break;
+    case 'STAR':
+      limitPercent = 0.20; // 科创板20%
+      break;
+    default:
+      limitPercent = 0.10; // 普通股票10%
+  }
+
+  return Number((preClose * (1 - limitPercent)).toFixed(2));
+}

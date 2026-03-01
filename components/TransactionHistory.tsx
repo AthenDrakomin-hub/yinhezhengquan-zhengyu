@@ -12,7 +12,7 @@ interface Transaction {
   quantity: number;
   amount: number;
   timestamp: string;
-  status: 'SUCCESS' | 'PENDING' | 'FAILED' | 'MATCHING';
+  status: 'SUCCESS' | 'PENDING' | 'FAILED' | 'MATCHING' | 'PARTIAL' | 'CANCELLED';
   metadata?: Record<string, any>;
 }
 
@@ -30,6 +30,26 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
+  // 撤单
+  const handleCancel = async (tradeId: string) => {
+    if (!confirm('确定要撤销该订单吗？')) return;
+    
+    try {
+      setCancelling(tradeId);
+      const { cancelService } = await import('../services/cancelService');
+      const result = await cancelService.cancelOrder(tradeId, '用户主动撤单');
+      
+      alert(`撤单成功，退款金额：¥${result.refundAmount.toFixed(2)}`);
+      loadTransactions();
+    } catch (err: any) {
+      alert(`撤单失败: ${err.message}`);
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   // 加载交易记录
   const loadTransactions = async () => {
@@ -82,6 +102,8 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
       case 'PENDING': return 'bg-yellow-500/20 text-yellow-500';
       case 'FAILED': return 'bg-red-500/20 text-red-500';
       case 'MATCHING': return 'bg-blue-500/20 text-blue-500';
+      case 'PARTIAL': return 'bg-orange-500/20 text-orange-500';
+      case 'CANCELLED': return 'bg-gray-500/20 text-gray-500';
       default: return 'bg-gray-500/20 text-gray-500';
     }
   };
@@ -93,6 +115,8 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
       case 'PENDING': return '待处理';
       case 'FAILED': return '失败';
       case 'MATCHING': return '撮合中';
+      case 'PARTIAL': return '部分成交';
+      case 'CANCELLED': return '已撤销';
       default: return status;
     }
   };
@@ -243,6 +267,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                 <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">价格/数量</th>
                 <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">金额</th>
                 <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">状态</th>
+                <th className="text-left p-4 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
@@ -272,6 +297,17 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase ${getStatusClass(transaction.status)}`}>
                       {getStatusText(transaction.status)}
                     </span>
+                  </td>
+                  <td className="p-4">
+                    {['MATCHING', 'PARTIAL'].includes(transaction.status) && (
+                      <button
+                        onClick={() => handleCancel(transaction.id)}
+                        disabled={cancelling === transaction.id}
+                        className="px-3 py-1 bg-red-500/20 text-red-500 rounded-lg text-xs font-black hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                      >
+                        {cancelling === transaction.id ? '撤单中...' : '撤单'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

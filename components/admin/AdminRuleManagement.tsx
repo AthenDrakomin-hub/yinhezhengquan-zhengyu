@@ -80,15 +80,14 @@ const AdminRuleManagement: React.FC = () => {
 
     setSaving(true);
     try {
-      // 直接更新数据库，绕过可能不安全的函数调用
-      const { error } = await supabase
-        .from('trade_rules')
-        .update({
+      const { error } = await supabase.functions.invoke('admin-operations', {
+        body: { 
+          operation: 'update_rules',
+          rule_type: editingRule.rule_type,
           config: editingRule.config,
-          status: editingRule.status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('rule_type', editingRule.rule_type);
+          status: editingRule.status
+        }
+      });
 
       if (error) {
         alert('保存失败: ' + error.message);

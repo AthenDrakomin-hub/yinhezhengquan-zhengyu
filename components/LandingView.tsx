@@ -12,6 +12,7 @@ interface LandingViewProps {
 const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [announcementTab, setAnnouncementTab] = useState<'business' | 'company' | 'media'>('business');
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate(); // 添加导航钩子
 
@@ -155,9 +156,9 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
               <video 
                 ref={videoRef}
                 src="https://cdn.chinastock.com.cn/downloadwz/yhzp/indexvideo2024.m4v" 
-                className="w-full h-full object-cover" 
+                className="w-full h-full object-cover cursor-pointer" 
                 loop 
-                muted // 添加静音属性以提高自动播放成功率
+                muted
                 playsInline
                 onClick={() => {
                   if (videoRef.current) {
@@ -165,25 +166,12 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                       videoRef.current.pause();
                       setIsVideoPlaying(false);
                     } else {
-                      // 尝试播放视频，捕获可能的Promise错误
-                      const playPromise = videoRef.current.play();
-                      if (playPromise !== undefined) {
-                        playPromise.then(() => {
-                          setIsVideoPlaying(true);
-                        }).catch(error => {
-                          console.warn('自动播放被阻止:', error);
-                          // 如果自动播放被阻止，仍然更新状态
-                          setIsVideoPlaying(true);
-                        });
-                      } else {
-                        setIsVideoPlaying(true);
-                      }
+                      videoRef.current.play();
+                      setIsVideoPlaying(true);
                     }
                   }
                 }}
-                onEnded={() => {
-                  setIsVideoPlaying(false);
-                }}
+                onEnded={() => setIsVideoPlaying(false)}
               />
               <div className="absolute inset-0 flex items-center justify-center">
                 <button 
@@ -191,24 +179,12 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (videoRef.current) {
-                      if (isVideoPlaying) {
-                        videoRef.current.pause();
-                        setIsVideoPlaying(false);
-                      } else {
-                        videoRef.current.play();
-                        setIsVideoPlaying(true);
-                      }
+                      videoRef.current.play();
+                      setIsVideoPlaying(true);
                     }
                   }}
                 >
-                  {isVideoPlaying ? (
-                    <div className="flex items-center justify-center w-8 h-8">
-                      <div className="w-2 h-8 bg-white mx-1"></div>
-                      <div className="w-2 h-8 bg-white mx-1"></div>
-                    </div>
-                  ) : (
-                    <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2"></div>
-                  )}
+                  <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2"></div>
                 </button>
               </div>
               <div className="absolute bottom-8 left-8 text-white text-left">
@@ -241,25 +217,25 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
               {
                 title: '财富管理',
                 desc: '为客户提供证券经纪、金融产品、投资顾问、证券金融、机构服务等多元化、智能化、专业化服务。',
-                img: 'https://www.chinastock.com.cn/newsite/images/wealth_management.jpg',
+                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_wealth_management@2x.96211330.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfd2VhbHRoX21hbmFnZW1lbnRAMnguOTYyMTEzMzAucG5nIiwiaWF0IjoxNzcyMzg5MzU1LCJleHAiOjE4MDM5MjUzNTV9.7V8gVGq24tWFBSLDUfDXMUB1rX8jJOiUtzHvPP5rETQ',
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/wealthManagement.html'
               },
               {
                 title: '投融资业务',
                 desc: '为企业提供IPO、再融资、并购重组、债券发行等全周期投融资服务，支持实体经济发展。',
-                img: 'https://www.chinastock.com.cn/newsite/images/invest_finance.jpg',
+                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_investment_financing@2x.541f016f.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW52ZXN0bWVudF9maW5hbmNpbmdAMnguNTQxZjAxNmYucG5nIiwiaWF0IjoxNzcyMzg5MzEwLCJleHAiOjE4MDM5MjUzMTB9.gNSFeBBk35kDEPVwV2wJmchpMNlXqUN1Vto5JqCQfD8',
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/investFinance.html'
               },
               {
                 title: '研究业务',
                 desc: '银河研究院提供宏观、策略、行业、企业研究，为机构投资者和政府企业提供智库支持。',
-                img: 'https://www.chinastock.com.cn/newsite/images/research_business.jpg',
+                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_research_service@2x.213da3c3.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfcmVzZWFyY2hfc2VydmljZUAyeC4yMTNkYTNjMy5wbmciLCJpYXQiOjE3NzIzODkzMzcsImV4cCI6MTgwMzkyNTMzN30.nc7RAyo25jplNNl9R2Xuhv7DTg1RcCDSwW8bls5GEYk',
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchBusiness.html'
               },
               {
                 title: '国际业务',
                 desc: '通过银河国际及银河海外网络，为境内外客户提供跨境交易、融资、投资和财富管理服务。',
-                img: 'https://www.chinastock.com.cn/newsite/images/international_business.jpg',
+                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_international_business@2x.d9987cf6.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW50ZXJuYXRpb25hbF9idXNpbmVzc0AyeC5kOTk4N2NmNi5wbmciLCJpYXQiOjE3NzIzODkyNzgsImV4cCI6MTgwMzkyNTI3OH0.EUasMximyC8PwoBmvG5IXPsX69crOsiC2AJNha-cCxs',
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/internationalBusiness.html'
               }
             ].map((item, i) => (
@@ -288,115 +264,175 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
         </div>
       </section>
 
-      {/* 6. 业务公告板块 (使用真实公告内容和官网背景) */}
+      {/* 6. 业务公告板块 */}
       <section className="py-16 md:py-24 relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img src="https://www.chinastock.com.cn/newsite/images/background_announcement.jpg" alt="Background" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-[#2B3B52]/90 backdrop-blur-sm"></div>
+        {/* 底图 */}
+        <div className="absolute inset-0">
+          <img 
+            src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_investment_financing@2x.541f016f.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW52ZXN0bWVudF9maW5hbmNpbmdAMnguNTQxZjAxNmYucG5nIiwiaWF0IjoxNzcyMzkxMzU2LCJleHAiOjE4MDM5MjczNTZ9.uDT5S9E7Zl0fVoEgLWqcqg0TpDQgxFdOpYfGx4Ls7iI"
+            alt="背景"
+            className="w-full h-full object-cover"
+          />
+          {/* 蓝色渐变遮罩 */}
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(145deg, rgba(18, 89, 207, 0.85) 0%, rgba(8, 45, 110, 0.75) 60%, rgba(2, 20, 60, 0.7) 100%)'
+          }} />
         </div>
         
         <div className="max-w-7xl mx-auto px-4 md:px-12 relative z-10">
-          <div className="flex flex-col lg:flex-row gap-12">
-            {/* 左侧 Tabs */}
-            <div className="lg:w-1/4 flex flex-col gap-8 text-white/60">
-              {[
-                { text: '业务公告', url: 'https://www.chinastock.com.cn/newsite/cgs-services/stockFinance/information.html', active: true },
-                { text: '公司公告', url: 'https://www.chinastock.com.cn/newsite/announcement.html', active: false },
-                { text: '媒体关注', url: 'https://www.chinastock.com.cn/newsite/mediaAttention.html', active: false }
-              ].map((tab, i) => (
-                <a key={tab.text} href={tab.url} target="_blank" rel="noopener noreferrer" className={`text-2xl font-black cursor-pointer transition-all flex items-center gap-4 ${tab.active ? 'text-white' : 'hover:text-white'}`}>
-                  {i === 2 && <span className="w-1 h-6 bg-white"></span>}
-                  {tab.text}
-                </a>
-              ))}
-            </div>
-            
-            {/* 右侧列表 - 真实公告内容 */}
-            <div className="lg:w-3/4">
+          <div className="flex flex-col lg:flex-row rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+            {/* 左侧标签导航 */}
+            <div className="w-full lg:w-64 p-8 bg-black/40 backdrop-blur-sm">
               <div className="space-y-6">
                 {[
-                  { title: '关于融券卖出证券权益补偿的公告', date: '2026-02-13', url: 'https://www.chinastock.com.cn/newsite/cgs-services/stockFinance/information.html' },
-                  { title: '融券标的证券 （2026-02-25起）', date: '2026-02-25', url: 'https://www.chinastock.com.cn/newsite/cgs-services/stockFinance/information.html' },
-                  { title: '可充抵保证金证券 （2026-02-25起）', date: '2026-02-25', url: 'https://www.chinastock.com.cn/newsite/cgs-services/stockFinance/information.html' },
-                  { title: '中国银河证券股份有限公司2026年面向专业投资者公开发行永续次级债券(第一期)发行结果公告', date: '2026-02-24', url: 'http://vip.stock.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?id=11917683' },
-                  { title: '中国银河证券股份有限公司2025年度第二十三期短期融资券兑付完成的公告', date: '2026-02-12', url: 'http://paper.cnstock.com/html/2026-02/12/content_2180487.htm' },
-                  { title: '关于调整深圳质押式报价回购业务（"金自来"）"百元资金提前购回年收益"的公告', date: '2025-06-24', url: 'https://www.chinastock.com.cn/newsite/cgs-services/jzl/jzlProduct.html' }
-                ].map((item, i) => (
-                  <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between text-white/80 hover:text-white transition-colors cursor-pointer group pb-4 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                      <span className="w-1 h-1 bg-white rounded-full"></span>
-                      <span className="text-sm font-medium group-hover:translate-x-2 transition-transform">{item.title}</span>
-                    </div>
-                    <span className="text-xs font-mono opacity-60">{item.date}</span>
-                  </a>
+                  { key: 'business', text: '业务公告' },
+                  { key: 'company', text: '公司公告' },
+                  { key: 'media', text: '媒体关注' }
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setAnnouncementTab(tab.key as 'business' | 'company' | 'media')}
+                    style={{
+                      color: 'white',
+                      backgroundColor: announcementTab === tab.key ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                      borderLeft: announcementTab === tab.key ? '4px solid white' : 'none'
+                    }}
+                    className="w-full text-left font-bold text-lg py-3 px-4 rounded-lg transition-all duration-300 hover:bg-white/10"
+                  >
+                    {tab.text}
+                  </button>
                 ))}
               </div>
-              <div className="mt-8 flex justify-end">
-                <a href="https://www.chinastock.com.cn/newsite/announcement.html" target="_blank" rel="noopener noreferrer" className="text-white text-sm font-bold flex items-center gap-2 hover:underline">
+            </div>
+            
+            {/* 右侧内容区域 */}
+            <div className="flex-1 p-8 relative bg-black/40 backdrop-blur-sm">
+              {/* 更多按钮 */}
+              <div className="absolute top-6 right-6 z-20">
+                <a 
+                  href={announcementTab === 'business' ? 'https://www.chinastock.com.cn/newsite/cgs-services/stockFinance/information.html' : announcementTab === 'company' ? 'https://www.chinastock.com.cn/newsite/announcement.html' : 'https://www.chinastock.com.cn/newsite/mediaAttention.html'}
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-white/80 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold"
+                >
                   更多 <ICONS.ArrowRight size={16} />
                 </a>
               </div>
+
+              {/* 业务公告内容 */}
+              {announcementTab === 'business' && (
+                <div className="space-y-3 relative z-10">
+                  {[
+                    { title: '关于"中韩芯片"（513310）基金交易风险提示公告', date: '2026-02-27', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260227_YZQ4.pdf' },
+                    { title: '关于"豫能控股"（001896）交易风险提示公告', date: '2026-02-27', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260227_YZQ5.pdf' },
+                    { title: '关于"南方原油"（501018）基金交易风险提示公告', date: '2026-02-25', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260225_YZQ6.pdf' },
+                    { title: '关于"*ST熊猫"（600599）交易风险提示公告', date: '2026-02-24', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260224_YZQ7.pdf' },
+                    { title: '关于"*ST岩石"（600696）、"*ST精伦"（600355）交易风险提示公告', date: '2026-02-12', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260212_YZQ8.pdf' },
+                    { title: '关于"天普股份"（605255）交易风险提示公告', date: '2026-02-06', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260206_YZQ9.pdf' }
+                  ].map((item, i) => (
+                    <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between py-3 px-3 border-b border-white/10 hover:bg-white/5 transition-all duration-300 rounded group">
+                      <span className="text-white/90 group-hover:text-yellow-300 transition-colors text-sm font-medium flex-1">{item.title}</span>
+                      <span className="text-white/60 text-xs ml-4 flex-shrink-0">{item.date}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {/* 公司公告内容 */}
+              {announcementTab === 'company' && (
+                <div className="space-y-3 relative z-10">
+                  {[
+                    { title: '中国银河：关于行使21银河Y1发行人赎回选择权的第三次提示性公告', date: '2026-02-25', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260225_YZQ4.pdf' },
+                    { title: '中国银河：2026年第一次临时股东大会决议公告', date: '2026-02-13', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260213_YZQ4.pdf' },
+                    { title: '北京市金杜律师事务所关于中国银河证券股份有限公司2026年第一次临时股东大会的法律意见书', date: '2026-02-13', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260213_YZQ5.pdf' },
+                    { title: '海外监管公告', date: '2026-02-24', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260224_YZQ6.pdf' },
+                    { title: '海外监管公告', date: '2026-02-12', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260212_YZQ7.pdf' },
+                    { title: '海外监管公告', date: '2026-02-12', url: 'https://cdn.chinastock.com.cn/omc/investRelation/sh/601881_20260212_YZQ8.pdf' }
+                  ].map((item, i) => (
+                    <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between py-3 px-3 border-b border-white/10 hover:bg-white/5 transition-all duration-300 rounded group">
+                      <span className="text-white/90 group-hover:text-yellow-300 transition-colors text-sm font-medium flex-1">{item.title}</span>
+                      <span className="text-white/60 text-xs ml-4 flex-shrink-0">{item.date}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {/* 媒体关注内容 */}
+              {announcementTab === 'media' && (
+                <div className="space-y-3 relative z-10">
+                  {[
+                    { title: '中国银河证券助力海南打造全球供应链超级接口', date: '2026-01-20', url: 'https://www.chinastock.com.cn/newsite/cgs/attentionDetail.html?docId=7866031' },
+                    { title: '中国银河证券：聚力海南自贸港 共绘全球供应链关键枢纽新蓝图', date: '2026-01-16', url: 'https://www.chinastock.com.cn/newsite/cgs/attentionDetail.html?docId=7866032' },
+                    { title: '券商集约化运营并无统一模板，银河证券北京互联网分公司解答四个关注', date: '2025-12-22', url: 'https://www.chinastock.com.cn/newsite/cgs/attentionDetail.html?docId=7866033' },
+                    { title: '中国银河证券刘冰：从规模增长转向价值深耕 做好社会财富的专业管理者', date: '2025-12-22', url: 'https://www.chinastock.com.cn/newsite/cgs/attentionDetail.html?docId=7866034' },
+                    { title: '中资券商掘金东南亚 深度拆解银河证券打法', date: '2025-12-01', url: 'https://www.chinastock.com.cn/newsite/cgs/attentionDetail.html?docId=7866035' },
+                    { title: '中国银河证券党委书记、董事长王晟：深耕文化建设十五载 构建特色金融发展', date: '2025-11-18', url: 'https://www.chinastock.com.cn/newsite/cgs/attentionDetail.html?docId=7866036' }
+                  ].map((item, i) => (
+                    <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between py-3 px-3 border-b border-white/10 hover:bg-white/5 transition-all duration-300 rounded group">
+                      <span className="text-white/90 group-hover:text-yellow-300 transition-colors text-sm font-medium flex-1">{item.title}</span>
+                      <span className="text-white/60 text-xs ml-4 flex-shrink-0">{item.date}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. 银河观点板块 (Refined to match image) */}
-      <section className="py-16 md:py-24 bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 md:px-12 flex flex-col lg:flex-row gap-0">
-          {/* 左侧标题区 */}
-          <div className="lg:w-1/4 bg-[#2B3B52] p-12 flex flex-col justify-between text-white relative">
-            <div>
-              <h2 className="text-3xl font-black mb-4">银河观点</h2>
-              <div className="w-12 h-1 bg-[#E30613] mb-8"></div>
-            </div>
-            <div className="space-y-8">
-              <button className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/10 transition-all">
-                <ICONS.ArrowLeft size={20} />
-              </button>
-              <a href="https://www.chinastock.com.cn/newsite/insights.html" target="_blank" rel="noopener noreferrer" className="inline-block px-6 py-2 border border-white rounded-full text-sm font-bold hover:bg-white hover:text-[#2B3B52] transition-all">
-                更多观点
-              </a>
-            </div>
+      {/* 4. 银河观点板块 */}
+      <section className="py-16 md:py-24 relative overflow-hidden">
+        {/* 底图 */}
+        <div className="absolute inset-0">
+          <img 
+            src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/213213.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vMjEzMjEzLnBuZyIsImlhdCI6MTc3MjM5NDE0NiwiZXhwIjoxODAzOTMwMTQ2fQ.1_TkYlWYIio6rE4Xr6a1JzTm-5KTCt31EQZegoAGF50"
+            alt="背景"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-white/60" />
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 md:px-12 relative z-10">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">银河观点</h2>
+            <div className="w-16 h-1 bg-[#E30613] mx-auto"></div>
           </div>
           
-          {/* 右侧内容区 (Carousel) */}
-          <div className="lg:w-3/4 bg-slate-50 p-8 md:p-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                {
-                  tag: '银河证券',
-                  date: '2026-02-25',
-                  title: '银河证券:节后A股市场震荡上行概率较大',
-                  desc: '春节后，在政策预期、流动性加持与产业趋势催化下，市场震荡上行概率较大，同时需密切关注海外不确定性对于市场情绪的短期扰动。两会前后，A股市场或将以政策催化为核心驱动力，资金围绕政策导向的产业主线与主题机会博弈。',
-                  img: 'https://www.chinastock.com.cn/newsite/images/insights_1.jpg',
-                  url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866412'
-                },
-                {
-                  tag: '银河证券',
-                  date: '2026-02-25',
-                  title: '【中国银河宏观】美联储迎来供给侧改革者',
-                  desc: 'Trump提名Warsh出任新一任美联储主席：美东时间1月30日，特朗普正式提名Kevin Warsh出任美联储主席，标志着自2018年Jerome Powell上任以来延续近八年的"鲍威尔时代"即将落幕。',
-                  img: 'https://www.chinastock.com.cn/newsite/images/insights_2.jpg',
-                  url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866447'
-                },
-                {
-                  tag: '银河证券',
-                  date: '2026-02-25',
-                  title: '【中国银河策略】2025年业绩预告有哪些线索值得关注？',
-                  desc: '截至1月31日，2956家A股上市公司已披露2025年年报业绩预告，披露率为54%。其中，1092家预喜，预喜率为37%，全部A股与上市板预喜率呈现不同特征，为市场提供了业绩线索。',
-                  img: 'https://www.chinastock.com.cn/newsite/images/insights_3.jpg',
-                  url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866017'
-                },
-                {
-                  tag: '银河证券',
-                  date: '2026-02-25',
-                  title: '【中国银河宏观】人民币升值逻辑再审视',
-                  desc: '市场的焦点：人民币破7之后。2025年年末，在岸和离岸人民币汇率均升破7.0这一市场关键心理点位，这一点位也是前低（2024年9月30日为7.0156），市场单边的升值预期随之进一步扩散。',
-                  img: 'https://www.chinastock.com.cn/newsite/images/insights_4.jpg',
-                  url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7865920'
-                }
-              ].map((item, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  {
+                    tag: '银河证券',
+                    date: '2026-02-26',
+                    title: '【中国银河宏观】经济增长目标会调整吗？—2026两会前瞻',
+                    desc: '核心观点：2026年两会召开在即，政府工作报告和“十五五”规划纲要即将公布。',
+                    img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_CGS_research_5@2x.dc6d9350.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfQ0dTX3Jlc2VhcmNoXzVAMnguZGM2ZDkzNTAucG5nIiwiaWF0IjoxNzcyMzkzMjUwLCJleHAiOjE4MDM5MjkyNTB9.frHnyJRmKC9bXfeDyaUmYQTw_QW7De4aJzas36rEcUo',
+                    url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866890'
+                  },
+                  {
+                    tag: '银河证券',
+                    date: '2026-02-23',
+                    title: '【中国银河宏观】春节海内外几大关注点',
+                    desc: '核心观点：春节期间，海内外发生了五件大事值得关注。',
+                    img: 'https://www.chinastock.com.cn/newsite/images/img_home_CGS_research_2@2x.93bd3473.png',
+                    url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866812'
+                  },
+                  {
+                    tag: '银河证券',
+                    date: '2026-02-23',
+                    title: '【中国银河策略】节后市场如何演绎？',
+                    desc: '春节假期重要事件回顾：全球视角贸易政策不确定性再起。',
+                    img: 'https://www.chinastock.com.cn/newsite/images/img_home_CGS_research_3@2x.6b975cfd.png',
+                    url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866811'
+                  },
+                  {
+                    tag: '银河证券',
+                    date: '2026-02-13',
+                    title: '【中国银河宏观】原油，金属下一站？',
+                    desc: '贵金属和工业金属的价格表现出显著的上涨趋势。',
+                    img: 'https://www.chinastock.com.cn/newsite/images/img_home_CGS_research_4@2x.bf6eba20.png',
+                    url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866802'
+                  }
+                ].map((item, i) => (
                 <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow group block">
                   <div className="h-40 overflow-hidden bg-slate-100">
                     <img 
@@ -422,9 +458,8 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                     <p className="text-xs text-slate-500 leading-relaxed line-clamp-4">{item.desc}</p>
                   </div>
                 </a>
-              ))}
-            </div>
-          </div>
+                ))}
+              </div>
         </div>
       </section>
 

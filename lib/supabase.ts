@@ -33,16 +33,54 @@ if (!supabaseAnonKey) {
   throw new Error('⚠️ VITE_PUBLIC_SUPABASE_ANON_KEY 环境变量未配置，请检查 .env 文件');
 }
 
-// 5. 初始化 Supabase 客户端（移除自定义 fetch 超时，恢复原生逻辑）
+// 5. 初始化 Supabase 客户端（禁用自动初始化，添加手动初始化支持）
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: import.meta.env.DEV ? false : true, // 开发环境不持久化会话
     autoRefreshToken: true,
     detectSessionInUrl: false, // 开发环境关闭URL解析，避免会话混乱
+    initialize: false, // 禁用自动初始化，避免未登录时触发会话检测
   },
   // 移除自定义 fetch，使用 Supabase 原生请求逻辑（核心修复）
   // global: { ... }  注释掉，恢复默认
 });
+
+// 6. 手动初始化认证会话
+export const manualInitAuth = async (): Promise<void> => {
+  try {
+    await supabase.auth.initialize();
+    if (import.meta.env.DEV) {
+      console.log('🔐 手动初始化认证会话完成');
+    }
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error('手动初始化认证会话失败:', error);
+    }
+    throw error;
+  }
+};
+
+// 7. 带手动初始化的登录函数
+export const loginWithPassword = async (email: string, password: string) => {
+  try {
+    // 先手动初始化认证
+    await manualInitAuth();
+    
+    // 执行登录
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
 
 // 6. Profile 类型定义（TS 友好）
 export interface Profile {

@@ -58,23 +58,18 @@ export const BANNER_MOCK: Banner[] = [
 ];
 
 export const HOLIDAYS_2026: MarketHoliday[] = [
-  { date: '2025-01-01', name: '元旦', markets: ['CN', 'HK', 'US'] },
+  { date: '2025-01-01', name: '元旦', markets: ['CN', 'HK'] },
   { date: '2025-01-29', name: '春节', markets: ['CN', 'HK'] },
   { date: '2025-10-01', name: '国庆节', markets: ['CN', 'HK'] },
 ];
 
 export const MOCK_CALENDAR: CalendarEvent[] = [
-  { id: 'c1', date: '2026-03-20', title: '美联储利率决议', type: '宏观', time: '02:00', markets: ['US'] },
-  { id: 'c2', date: '2026-03-25', title: '英伟达财报发布', type: '财报', time: '16:00', markets: ['US'] },
+
   { id: 'c3', date: '2026-03-28', title: '银河证券年度策略会', type: '活动', time: '09:00', markets: ['CN'] },
 ];
 
 // 已移除模拟股票数据，使用真实行情数据源
 export const MOCK_STOCKS: Stock[] = [];
-
-export const MOCK_IPO_STOCKS: Stock[] = [
-  { symbol: '780123', name: '银河量子', price: 18.50, change: 0, changePercent: 0, market: 'CN', sparkline: [], logoUrl: 'https://img.icons8.com/color/48/000000/cpu.png' },
-];
 
 
 
@@ -150,6 +145,12 @@ export const ICONS = {
   ),
   ArrowLeft: (props: any) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+  ),
+  ArrowUp: (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+  ),
+  ArrowDown: (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
   ),
   Phone: (props: any) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.28-2.28a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>

@@ -1,26 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getLimitUpData, isLimitUp, type LimitUpData, type StockType } from '../services/limitUpService';
+import { getLimitUpStockBySymbol, type LimitUpStock } from '../services/limitUpStockService';
 import { ICONS } from '../constants';
 
 interface LimitUpPanelProps {
   symbol: string;
-  stockType?: StockType;
   onUseLimitUpPrice?: (price: number) => void;
-  refreshInterval?: number; // 刷新间隔，单位毫秒，默认10秒
+  refreshInterval?: number;
 }
 
 const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
   symbol,
-  stockType = 'NORMAL',
   onUseLimitUpPrice,
-  refreshInterval = 10000 // 默认10秒
+  refreshInterval = 10000
 }) => {
-  const [data, setData] = useState<LimitUpData | null>(null);
+  const [data, setData] = useState<LimitUpStock | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // 加载涨停数据
   const loadLimitUpData = useCallback(async () => {
     if (!symbol) {
       setError('股票代码不能为空');
@@ -31,7 +28,7 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const limitUpData = await getLimitUpData(symbol, stockType);
+      const limitUpData = await getLimitUpStockBySymbol(symbol);
       setData(limitUpData);
     } catch (err: any) {
       console.error('加载涨停数据失败:', err);
@@ -40,9 +37,8 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [symbol, stockType]);
+  }, [symbol]);
 
-  // 初始加载和自动刷新
   useEffect(() => {
     if (!symbol) return;
 
@@ -58,62 +54,77 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
         clearInterval(intervalId);
       }
     };
-  }, [symbol, stockType, autoRefresh, refreshInterval, loadLimitUpData]);
+  }, [symbol, autoRefresh, refreshInterval, loadLimitUpData]);
 
   // 手动刷新
   const handleRefresh = () => {
     loadLimitUpData();
   };
 
-  // 使用涨停价买入
-  const handleUseLimitUpPrice = () => {
-    if (!data || !onUseLimitUpPrice) return;
+  const handleUseLimitUpPrice = async () => {
+    if (!data || !data.is_limit_up) return;
     
-    const limitUpPrice = data.limitUpPrice;
-    if (limitUpPrice > 0) {
-      onUseLimitUpPrice(limitUpPrice);
+    try {
+      const quantity = 100;
+      
+      const { supabase } = await import('../lib/supabase');
+      const { data: result, error } = await supabase.functions.invoke('create-trade-order', {
+        body: { 
+          market_type: data.market === 'SH' ? 'A_SHARE' : 'A_SHARE',
+          trade_type: 'LIMIT_UP',
+          stock_code: data.symbol,
+          stock_name: data.name,
+          price: data.limit_up_price,
+          quantity
+        }
+      });
+      
+      if (error || result?.error) {
+        alert(`涨停打板失败: ${error?.message || result?.error}`);
+      } else {
+        alert('涨停打板指令已提交');
+      }
+    } catch (err: any) {
+      alert(`操作失败: ${err.message}`);
     }
   };
 
-  // 获取涨停状态
   const getLimitUpStatus = () => {
     if (!data) return '未知';
     
-    if (isLimitUp(data)) {
+    if (data.is_limit_up) {
       return '已涨停';
-    } else if (data.currentPrice >= data.limitUpPrice * 0.99) {
+    } else if (data.current_price >= data.limit_up_price * 0.99) {
       return '接近涨停';
-    } else if (data.currentPrice >= data.limitUpPrice * 0.95) {
+    } else if (data.current_price >= data.limit_up_price * 0.95) {
       return '强势上涨';
     } else {
       return '未涨停';
     }
   };
 
-  // 获取状态颜色
   const getStatusColor = () => {
     if (!data) return 'text-gray-500';
     
-    if (isLimitUp(data)) {
+    if (data.is_limit_up) {
       return 'text-red-500';
-    } else if (data.currentPrice >= data.limitUpPrice * 0.99) {
+    } else if (data.current_price >= data.limit_up_price * 0.99) {
       return 'text-orange-500';
-    } else if (data.currentPrice >= data.limitUpPrice * 0.95) {
+    } else if (data.current_price >= data.limit_up_price * 0.95) {
       return 'text-yellow-500';
     } else {
       return 'text-gray-500';
     }
   };
 
-  // 获取状态背景色
   const getStatusBgColor = () => {
     if (!data) return 'bg-gray-500/10';
     
-    if (isLimitUp(data)) {
+    if (data.is_limit_up) {
       return 'bg-red-500/10';
-    } else if (data.currentPrice >= data.limitUpPrice * 0.99) {
+    } else if (data.current_price >= data.limit_up_price * 0.99) {
       return 'bg-orange-500/10';
-    } else if (data.currentPrice >= data.limitUpPrice * 0.95) {
+    } else if (data.current_price >= data.limit_up_price * 0.95) {
       return 'bg-yellow-500/10';
     } else {
       return 'bg-gray-500/10';
@@ -164,7 +175,7 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
     );
   }
 
-  const isAtLimitUp = isLimitUp(data);
+  const isAtLimitUp = data?.is_limit_up || false;
   const statusText = getLimitUpStatus();
   const statusColor = getStatusColor();
   const statusBgColor = getStatusBgColor();
@@ -203,7 +214,7 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
           </div>
           <div className="text-right">
             <p className="text-sm font-bold uppercase tracking-widest">当前价格</p>
-            <p className="text-2xl font-black font-mono mt-1">¥{data.currentPrice.toFixed(2)}</p>
+            <p className="text-2xl font-black font-mono mt-1">¥{data.current_price.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -212,16 +223,16 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-[var(--color-bg)] p-4 rounded-xl">
           <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-widest mb-1">涨停价</p>
-          <p className="text-xl font-black font-mono text-red-500">¥{data.limitUpPrice.toFixed(2)}</p>
+          <p className="text-xl font-black font-mono text-red-500">¥{data.limit_up_price.toFixed(2)}</p>
         </div>
         <div className="bg-[var(--color-bg)] p-4 rounded-xl">
           <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-widest mb-1">跌停价</p>
-          <p className="text-xl font-black font-mono text-green-500">¥{data.limitDownPrice.toFixed(2)}</p>
+          <p className="text-xl font-black font-mono text-green-500">¥{data.limit_down_price.toFixed(2)}</p>
         </div>
         <div className="bg-[var(--color-bg)] p-4 rounded-xl">
           <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-widest mb-1">买一封单</p>
           <p className="text-xl font-black font-mono">
-            {data.buyOneVolume > 0 ? `${(data.buyOneVolume / 10000).toFixed(1)}万手` : '--'}
+            {data.buy_one_volume > 0 ? `${(data.buy_one_volume / 10000).toFixed(1)}万手` : '--'}
           </p>
         </div>
         <div className="bg-[var(--color-bg)] p-4 rounded-xl">
@@ -234,7 +245,7 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
       <div className="space-y-3 mb-6">
         <div className="flex justify-between items-center">
           <span className="text-sm text-[var(--color-text-muted)]">前收盘价</span>
-          <span className="font-mono font-bold">¥{data.preClose.toFixed(2)}</span>
+          <span className="font-mono font-bold">¥{data.pre_close.toFixed(2)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-[var(--color-text-muted)]">涨跌额</span>
@@ -244,8 +255,8 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-[var(--color-text-muted)]">涨跌幅</span>
-          <span className={`font-mono font-bold ${data.changePercent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-            {data.changePercent >= 0 ? '+' : ''}{data.changePercent.toFixed(2)}%
+          <span className={`font-mono font-bold ${data.change_percent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+            {data.change_percent >= 0 ? '+' : ''}{data.change_percent.toFixed(2)}%
           </span>
         </div>
         <div className="flex justify-between items-center">
@@ -270,7 +281,7 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
           
           {isAtLimitUp && (
             <div className="text-xs text-[var(--color-text-muted)] text-center">
-              <p>涨停价: ¥{data.limitUpPrice.toFixed(2)} • 封单: {(data.buyOneVolume / 10000).toFixed(1)}万手</p>
+              <p>涨停价: ¥{data.limit_up_price.toFixed(2)} • 封单: {(data.buy_one_volume / 10000).toFixed(1)}万手</p>
               <p className="mt-1">点击按钮将使用涨停价填充交易面板</p>
             </div>
           )}
@@ -281,7 +292,7 @@ const LimitUpPanel: React.FC<LimitUpPanelProps> = ({
       <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
         <div className="flex justify-between items-center text-xs text-[var(--color-text-muted)]">
           <span>数据更新时间</span>
-          <span className="font-mono">{new Date(data.timestamp).toLocaleTimeString()}</span>
+          <span className="font-mono">{new Date(data.update_time).toLocaleTimeString()}</span>
         </div>
         <div className="flex justify-between items-center text-xs text-[var(--color-text-muted)] mt-1">
           <span>自动刷新</span>

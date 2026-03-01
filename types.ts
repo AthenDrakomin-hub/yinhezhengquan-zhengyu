@@ -6,7 +6,7 @@ export interface Stock {
   price: number;
   change: number;
   changePercent: number;
-  market: 'CN' | 'HK' | 'US' | 'BOND' | 'FUND';
+  market: 'CN' | 'HK' | 'BOND' | 'FUND';
   sparkline: number[];
   logoUrl?: string;
 }

@@ -24,41 +24,22 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react(), tailwindcss()],
       build: {
-        chunkSizeWarningLimit: 600, // 将警告限制调整为600kb
+        chunkSizeWarningLimit: 2000,
         rollupOptions: {
           output: {
               manualChunks(id) {
-                // 将 React 及其生态系统打包到一起
-                const reactEcosystem = [
-                  'react',
-                  'react-dom',
-                  'react-router',
-                  'react-router-dom',
-                  'react-hook-form',
-                  'scheduler',
-                  'prop-types',
-                  'object-assign',
-                  'loose-envify'
-                ];
-                for (const pkg of reactEcosystem) {
-                  if (id.includes(`node_modules/${pkg}/`)) {
-                    return 'react-vendor';
-                  }
+                if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/scheduler')) {
+                  return 'react-vendor';
                 }
-                
-                // 图表库单独拆分
-                if (id.includes('node_modules/recharts')) {
+                if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) {
                   return 'chart-vendor';
                 }
-                // UI 动画与图标库合并
                 if (id.includes('node_modules/framer-motion') || id.includes('node_modules/lucide-react')) {
                   return 'ui-vendor';
                 }
-                // Supabase 客户端单独拆分
-                if (id.includes('node_modules/@supabase/supabase-js')) {
+                if (id.includes('node_modules/@supabase')) {
                   return 'supabase-vendor';
                 }
-                // 其余 node_modules 归入 vendor
                 if (id.includes('node_modules')) {
                   return 'vendor';
                 }

@@ -282,23 +282,56 @@ const FaceRecognitionStep: React.FC<{
   const handleFaceVerify = async () => {
     setLoading(true);
     try {
-      // 人脸识别过程
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      // 人脸验证结果
+      // 加载人脸识别模型
+      const { initializeFaceRecognition } = await import('../utils/face');
+      const faceRecognition = await initializeFaceRecognition();
+
+      // 初始化摄像头
+      const video = document.createElement('video');
+      video.autoplay = true;
+      await faceRecognition.initializeCamera(video);
+
+      // 执行活体检测
+      const livenessScore = await faceRecognition.performLivenessDetection(video, {
+        requireBlink: true,
+        requireHeadMovement: true,
+        timeout: 5000,
+        minConfidence: 0.5
+      });
+
+      // 捕获人脸图像
+      const canvas = faceRecognition.captureFromCamera(video);
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9);
+      });
+      const file = new File([blob], 'face.jpg', { type: 'image/jpeg' });
+
+      // 检测人脸
+      const detections = await faceRecognition.detectFaces(file);
+
+      if (detections.length === 0 || !detections[0].detected) {
+        throw new Error('未检测到人脸');
+      }
+
       const mockResult: FaceVerificationResult = {
-        verified: true,
-        confidence: 0.95,
+        verified: livenessScore > 0.7,
+        confidence: detections[0].confidence,
         similarity: 0.92,
-        isLive: true,
-        livenessScore: 0.88,
-        message: '人脸验证成功',
+        isLive: livenessScore > 0.7,
+        livenessScore,
+        message: livenessScore > 0.7 ? '人脸验证成功' : '活体检测未通过',
         timestamp: new Date().toISOString(),
       };
+
       await onVerify(mockResult);
       setValue('faceVerified', true);
       setVerified(true);
+
+      // 清理资源
+      faceRecognition.cleanup();
     } catch (error) {
       console.error('人脸识别失败:', error);
+      alert(`人脸识别失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
       setLoading(false);
     }

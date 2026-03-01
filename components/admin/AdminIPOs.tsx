@@ -1,41 +1,88 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ICONS } from '@/constants';
-import { getIPOs, createIPO, updateIPO, deleteIPO } from '@/services/contentService';
-import { Stock } from '@/types';
+import { createClient } from '@supabase/supabase-js';
 
-// 扩展Stock类型以包含IPO特有字段
-interface IPO extends Stock {
-  listing_date?: string;
-  status?: string;
+interface IPO {
+  id?: string;
+  symbol: string;
+  name: string;
+  market: 'SH' | 'SZ' | 'BJ' | 'HK';
+  status: 'UPCOMING' | 'LISTED' | 'CANCELLED';
+  ipo_price: number;
+  issue_date: string;
+  listing_date: string;
+  subscription_code: string;
+  issue_volume: number;
+  online_issue_volume: number;
+  pe_ratio: number;
+  change?: number;
+  changePercent?: number;
 }
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY as string;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const AdminIPOs: React.FC = () => {
   const [ipos, setIpos] = useState<IPO[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedIPO, setSelectedIPO] = useState<IPO | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [formData, setFormData] = useState({
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [showEditForm, setShowEditForm] = useState<boolean>(false);
+  
+  const [formData, setFormData] = useState<IPO>({
     symbol: '',
     name: '',
-    price: 0,
-    change: 0,
-    changePercent: 0,
-    market: 'CN' as 'CN' | 'HK' | 'US' | 'BOND' | 'FUND',
-    listing_date: '',
+    market: 'SH',
     status: 'UPCOMING',
+    ipo_price: 0,
+    issue_date: '',
+    listing_date: '',
+    subscription_code: '',
+    issue_volume: 0,
+    online_issue_volume: 0,
+    pe_ratio: 0,
   });
-  const [submitting, setSubmitting] = useState(false);
+  
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const fetchIPOs = async () => {
     setLoading(true);
     try {
-      const data = await getIPOs();
-      setIpos(data || []);
+      const { data, error } = await supabase
+        .from('ipos')
+        .select('*')
+        .order('listing_date', { ascending: false });
+
+      if (error) throw error;
+      
+      const formatData: IPO[] = (data || []).map((item: any) => ({
+        id: item.id || '',
+        symbol: item.symbol || '',
+        name: item.name || '',
+        market: item.market || 'SH',
+        status: item.status || 'UPCOMING',
+        ipo_price: item.ipo_price || 0,
+        issue_date: item.issue_date ? new Date(item.issue_date).toISOString().split('T')[0] : '',
+        listing_date: item.listing_date ? new Date(item.listing_date).toISOString().split('T')[0] : '',
+        subscription_code: item.subscription_code || '',
+        issue_volume: item.issue_volume || 0,
+        online_issue_volume: item.online_issue_volume || 0,
+        pe_ratio: item.pe_ratio || 0,
+        change: item.change || 0,
+        changePercent: item.changePercent || 0,
+      }));
+
+      setIpos(formatData);
     } catch (err) {
-      console.error('获取新股信息失败:', err);
-      alert('获取新股信息失败');
+      console.error('Failed to fetch IPOs:', err);
+      alert('Failed to fetch IPOs: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -45,78 +92,103 @@ const AdminIPOs: React.FC = () => {
     fetchIPOs();
   }, []);
 
-  const handleCreateIPO = async (e: React.FormEvent) => {
+  const handleCreateIPO = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.symbol || !formData.name || !formData.listing_date) {
-      alert('请填写代码、名称和上市日期');
+      alert('Please fill in symbol, name and listing date');
       return;
     }
     setSubmitting(true);
     try {
-      await createIPO(formData);
-      alert('新股创建成功！');
+      const { error } = await supabase
+        .from('ipos')
+        .insert({
+          ...formData,
+          issue_date: formData.issue_date ? new Date(formData.issue_date).toISOString() : null,
+          listing_date: formData.listing_date ? new Date(formData.listing_date).toISOString() : null,
+        });
+
+      if (error) throw error;
+      alert('IPO created successfully');
       setIsCreateModalOpen(false);
       fetchIPOs();
     } catch (err: any) {
-      alert(err.message || '创建失败');
+      alert(err.message || 'Failed to create');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleUpdateIPO = async (e: React.FormEvent) => {
+  const handleUpdateIPO = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedIPO) return;
+    if (!selectedIPO?.id) return;
     if (!formData.symbol || !formData.name || !formData.listing_date) {
-      alert('请填写代码、名称和上市日期');
+      alert('Please fill in symbol, name and listing date');
       return;
     }
     setSubmitting(true);
     try {
-      await updateIPO(selectedIPO.id || '', formData);
-      alert('新股更新成功！');
+      const { error } = await supabase
+        .from('ipos')
+        .update({
+          ...formData,
+          issue_date: formData.issue_date ? new Date(formData.issue_date).toISOString() : null,
+          listing_date: formData.listing_date ? new Date(formData.listing_date).toISOString() : null,
+        })
+        .eq('id', selectedIPO.id);
+
+      if (error) throw error;
+      alert('IPO updated successfully');
       setShowEditForm(false);
       fetchIPOs();
     } catch (err: any) {
-      alert(err.message || '更新失败');
+      alert(err.message || 'Failed to update');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteIPO = async (id: string) => {
-    if (!window.confirm('确定要删除该新股吗？此操作不可逆。')) return;
+    if (!id || !window.confirm('Are you sure to delete this IPO?')) return;
     try {
-      await deleteIPO(id);
-      alert('新股已删除');
+      const { error } = await supabase
+        .from('ipos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      alert('IPO deleted');
       fetchIPOs();
     } catch (err: any) {
-      alert(err.message || '删除失败');
+      alert(err.message || 'Failed to delete');
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest">新股列表</h3>
+        <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest">IPO List</h3>
         <div className="flex gap-4">
           <button className="industrial-button-secondary" onClick={fetchIPOs}>
-            <ICONS.Market size={16} className={loading ? 'animate-spin' : ''} /> 刷新
+            <ICONS.Market size={16} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
           <button className="industrial-button-primary" onClick={() => {
             setFormData({
               symbol: '',
               name: '',
-              price: 0,
-              change: 0,
-              changePercent: 0,
-              market: 'CN',
-              listing_date: '',
+              market: 'SH',
               status: 'UPCOMING',
+              ipo_price: 0,
+              issue_date: '',
+              listing_date: '',
+              subscription_code: '',
+              issue_volume: 0,
+              online_issue_volume: 0,
+              pe_ratio: 0,
             });
             setIsCreateModalOpen(true);
           }}>
-            <ICONS.Plus size={16} /> 新建新股
+            <ICONS.Plus size={16} /> Create IPO
           </button>
         </div>
       </div>
@@ -126,38 +198,44 @@ const AdminIPOs: React.FC = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-industrial-50 border-b border-industrial-200">
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">代码</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">名称</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">价格</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">涨跌</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">市场</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">状态</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest text-right">操作</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">Symbol</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">Name</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">Price</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">Market</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">Issue Date</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">Listing Date</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-industrial-100">
               {loading ? (
-                <tr><td colSpan={7} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">加载中...</td></tr>
+                <tr><td colSpan={8} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">Loading...</td></tr>
               ) : ipos.length === 0 ? (
-                <tr><td colSpan={7} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">暂无新股</td></tr>
+                <tr><td colSpan={8} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">No IPOs</td></tr>
               ) : ipos.map((ipo) => (
-                <tr key={ipo.symbol} className="hover:bg-industrial-50 transition-colors">
+                <tr key={ipo.id || ipo.symbol} className="hover:bg-industrial-50 transition-colors">
                   <td className="px-6 py-4 text-xs font-bold text-industrial-700">{ipo.symbol}</td>
                   <td className="px-6 py-4 text-xs font-bold text-industrial-700">{ipo.name}</td>
-                  <td className="px-6 py-4 text-xs font-bold text-industrial-700">{ipo.price.toFixed(2)}</td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-bold ${ipo.change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {ipo.change >= 0 ? '+' : ''}{ipo.change.toFixed(2)} ({ipo.changePercent >= 0 ? '+' : ''}{ipo.changePercent.toFixed(2)}%)
-                    </span>
-                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-industrial-700">{ipo.ipo_price.toFixed(2)}</td>
                   <td className="px-6 py-4">
                     <span className="text-[9px] font-black px-2 py-0.5 rounded bg-industrial-100 text-industrial-600">
                       {ipo.market}
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-xs font-bold text-industrial-700">
+                    {ipo.issue_date ? new Date(ipo.issue_date).toLocaleDateString() : '-'}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-industrial-700">
+                    {ipo.listing_date ? new Date(ipo.listing_date).toLocaleDateString() : 'TBD'}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded bg-industrial-100 text-industrial-600">
-                      {formData.status || 'UPCOMING'}
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded ${
+                      ipo.status === 'UPCOMING' ? 'bg-yellow-100 text-yellow-600' :
+                      ipo.status === 'LISTED' ? 'bg-green-100 text-green-600' :
+                      'bg-red-100 text-red-600'
+                    }`}>
+                      {ipo.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -165,27 +243,18 @@ const AdminIPOs: React.FC = () => {
                       <button 
                         onClick={() => {
                           setSelectedIPO(ipo);
-                          setFormData({
-                            symbol: ipo.symbol,
-                            name: ipo.name,
-                            price: ipo.price,
-                            change: ipo.change,
-                            changePercent: ipo.changePercent,
-                            market: ipo.market,
-                            listing_date: ipo.listing_date || '',
-                            status: ipo.status || 'UPCOMING',
-                          });
+                          setFormData(ipo);
                           setShowEditForm(true);
                         }}
                         className="text-[10px] font-black text-blue-600 uppercase hover:underline"
                       >
-                        编辑
+                        Edit
                       </button>
                       <button 
                         onClick={() => handleDeleteIPO(ipo.id || '')}
                         className="text-[10px] font-black text-accent-red uppercase hover:underline"
                       >
-                        删除
+                        Delete
                       </button>
                     </div>
                   </td>
@@ -196,7 +265,6 @@ const AdminIPOs: React.FC = () => {
         </div>
       </div>
 
-      {/* 创建模态框 */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-industrial-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <motion.div 
@@ -205,7 +273,7 @@ const AdminIPOs: React.FC = () => {
             className="industrial-card w-full max-w-lg p-8 bg-white"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">新建新股</h3>
+              <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">Create IPO</h3>
               <button onClick={() => setIsCreateModalOpen(false)} className="text-industrial-400 hover:text-industrial-800">
                 <ICONS.Plus className="rotate-45" size={24} />
               </button>
@@ -214,127 +282,78 @@ const AdminIPOs: React.FC = () => {
             <form onSubmit={handleCreateIPO} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">代码</label>
-                  <input required type="text" value={formData.symbol} onChange={e => setFormData({...formData, symbol: e.target.value})} className="industrial-input" />
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">Symbol</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.symbol} 
+                    onChange={e => setFormData({...formData, symbol: e.target.value})} 
+                    className="industrial-input" 
+                  />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">名称</label>
-                  <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="industrial-input" />
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">Name</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.name} 
+                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                    className="industrial-input" 
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">价格</label>
-                  <input required type="number" step="0.01" value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value) || 0})} className="industrial-input" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">涨跌</label>
-                  <input type="number" step="0.01" value={formData.change} onChange={e => setFormData({...formData, change: parseFloat(e.target.value) || 0})} className="industrial-input" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">涨跌幅%</label>
-                  <input type="number" step="0.01" value={formData.changePercent} onChange={e => setFormData({...formData, changePercent: parseFloat(e.target.value) || 0})} className="industrial-input" />
-                </div>
-              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">市场</label>
-                  <select value={formData.market} onChange={e => setFormData({...formData, market: e.target.value as any})} className="industrial-input">
-                    <option value="CN">CN</option>
-                    <option value="HK">HK</option>
-                    <option value="US">US</option>
-                    <option value="BOND">BOND</option>
-                    <option value="FUND">FUND</option>
-
-                  </select>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">IPO Price</label>
+                  <input 
+                    required 
+                    type="number" 
+                    step="0.01" 
+                    value={formData.ipo_price} 
+                    onChange={e => setFormData({...formData, ipo_price: parseFloat(e.target.value) || 0})} 
+                    className="industrial-input" 
+                  />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">上市日期</label>
-                  <input required type="date" value={formData.listing_date} onChange={e => setFormData({...formData, listing_date: e.target.value})} className="industrial-input" />
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">Market</label>
+                  <select 
+                    value={formData.market} 
+                    onChange={e => setFormData({...formData, market: e.target.value as IPO['market']})} 
+                    className="industrial-input"
+                  >
+                    <option value="SH">SH</option>
+                    <option value="SZ">SZ</option>
+                    <option value="BJ">BJ</option>
+                    <option value="HK">HK</option>
+                  </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">状态</label>
-                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="industrial-input">
-                  <option value="UPCOMING">即将上市</option>
-                  <option value="LISTED">已上市</option>
-                  <option value="CANCELLED">已取消</option>
-                </select>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">Issue Date</label>
+                  <input 
+                    type="date" 
+                    value={formData.issue_date} 
+                    onChange={e => setFormData({...formData, issue_date: e.target.value})} 
+                    className="industrial-input" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">Listing Date</label>
+                  <input 
+                    required 
+                    type="date" 
+                    value={formData.listing_date} 
+                    onChange={e => setFormData({...formData, listing_date: e.target.value})} 
+                    className="industrial-input" 
+                  />
+                </div>
               </div>
 
               <button disabled={submitting} type="submit" className="w-full mt-4 industrial-button-primary">
-                {submitting ? '创建中...' : '确认创建'}
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* 编辑表单 */}
-      {showEditForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-industrial-900 p-6 rounded-2xl border border-industrial-700 w-full max-w-md max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-black text-white">编辑新股</h3>
-              <button onClick={() => setShowEditForm(false)} className="text-industrial-400 hover:text-white">
-                ✕
-              </button>
-            </div>
-            <form onSubmit={handleUpdateIPO}>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">代码</label>
-                  <input required value={formData.symbol} onChange={e => setFormData({...formData, symbol: e.target.value})} className="industrial-input" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">名称</label>
-                  <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="industrial-input" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">价格</label>
-                  <input type="number" step="0.01" required value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value) || 0})} className="industrial-input" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">涨跌</label>
-                  <input type="number" step="0.01" value={formData.change} onChange={e => setFormData({...formData, change: parseFloat(e.target.value) || 0})} className="industrial-input" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">涨跌幅%</label>
-                  <input type="number" step="0.01" value={formData.changePercent} onChange={e => setFormData({...formData, changePercent: parseFloat(e.target.value) || 0})} className="industrial-input" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">市场</label>
-                  <select value={formData.market} onChange={e => setFormData({...formData, market: e.target.value as any})} className="industrial-input">
-                    <option value="CN">CN</option>
-                    <option value="HK">HK</option>
-                    <option value="US">US</option>
-                    <option value="BOND">BOND</option>
-                    <option value="FUND">FUND</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">上市日期</label>
-                  <input required type="date" value={formData.listing_date} onChange={e => setFormData({...formData, listing_date: e.target.value})} className="industrial-input" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">状态</label>
-                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="industrial-input">
-                  <option value="UPCOMING">即将上市</option>
-                  <option value="LISTED">已上市</option>
-                  <option value="CANCELLED">已取消</option>
-                </select>
-              </div>
-
-              <button disabled={submitting} type="submit" className="w-full mt-4 industrial-button-primary">
-                {submitting ? '保存中...' : '确认修改'}
+                {submitting ? 'Creating...' : 'Create'}
               </button>
             </form>
           </motion.div>

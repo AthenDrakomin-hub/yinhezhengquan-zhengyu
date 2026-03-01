@@ -49,8 +49,8 @@ const AdminMatchIntervention: React.FC = () => {
 
   const handleIntervene = async (orderId: string, type: string, params?: any) => {
     setProcessing(orderId);
-    const { error } = await supabase.functions.invoke('admin-intervene-trade', {
-      body: { operation_type: type, target_order_id: orderId, params }
+    const { error } = await supabase.functions.invoke('admin-operations', {
+      body: { operation: 'intervene_trade', operation_type: type, target_order_id: orderId, params }
     });
 
     if (error) {

@@ -63,8 +63,8 @@ class FaceRecognition {
     try {
       console.log('开始加载人脸识别模型...');
 
-      // 设置模型路径（从 CDN 加载）
-      const modelPath = '/models';
+      // 设置模型路径（从 Supabase Storage CDN 加载）
+      const modelPath = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/ai-models`;
       
       // 加载所有必要模型
       await Promise.all([

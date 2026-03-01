@@ -77,7 +77,7 @@ const InvestmentCalendarView: React.FC<InvestmentCalendarViewProps> = ({ onBack 
       <div className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
         {/* Market Status Overview */}
         <div className="grid grid-cols-3 gap-3">
-          {['CN', 'HK', 'US'].map(m => (
+          {['CN', 'HK'].map(m => (
             <div key={m} className="glass-card p-4 text-center space-y-1">
                <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{m} 市场</p>
                <p className="text-xs font-black text-[#00D4AA]">交易中</p>

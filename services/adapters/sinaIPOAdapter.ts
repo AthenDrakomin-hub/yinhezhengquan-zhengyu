@@ -30,31 +30,22 @@ export interface IPOData {
   lockupPeriod?: number;             // 锁定期(月)
 }
 
-// 从Supabase数据库获取的IPO数据格式
+// 从Supabase数据库获取的IPO数据格式（匹配正确的表结构）
 interface SupabaseIPOItem {
   id: string;
   symbol: string;                    // 股票代码
   name: string;                      // 股票名称
-  price: number;                     // 发行价
-  market: string;                    // 市场类型
-  status: string;                    // 状态
+  ipo_price: number;                 // 发行价
+  market: string;                    // 市场类型 (SH/SZ)
+  status: string;                    // 状态 (LISTED/UPCOMING/ONGOING)
   listing_date?: string;             // 上市日期
   subscription_code?: string;        // 申购代码
-  issue_volume?: number;             // 发行总量(万股)
-  online_issue_volume?: number;      // 上网发行量(万股)
+  issue_volume?: number;             // 发行总量
+  online_issue_volume?: number;      // 上网发行量
   pe_ratio?: number;                 // 市盈率
   issue_date?: string;               // 发行日期
-  online_issue_date?: string;        // 上网发行日期
-  lottery_date?: string;             // 配号日期
-  refund_date?: string;              // 退款日期
-  listing_date_plan?: string;        // 计划上市日期
-  issue_method?: string;             // 发行方式
-  underwriter?: string;              // 主承销商
-  min_subscription_unit?: number;    // 最小申购单位
-  max_subscription_quantity?: number;// 个人申购上限(股)
-  lockup_period?: number;            // 锁定期(月)
-  created_at: string;
-  updated_at: string;
+  update_time?: string;              // 更新时间
+  created_at: string;                // 创建时间
 }
 
 /**
@@ -79,69 +70,18 @@ function mapSinaStatusToIPOStatus(sinaStatus: string): IPOStatus {
 /**
  * 映射Supabase数据库状态到系统内部状态
  */
-function mapSupabaseStatusToIPOStatus(dbStatus: string, onlineIssueDate?: string, listingDate?: string): IPOStatus {
+function mapSupabaseStatusToIPOStatus(dbStatus: string): IPOStatus {
   if (!dbStatus) return 'UPCOMING';
   
   const status = dbStatus.trim().toUpperCase();
-  if (status === 'LISTED') {
-    return 'LISTED';
-  } else if (status === 'UPCOMING') {
-    // 检查是否在申购期内
-    return isWithinSubscriptionPeriod(onlineIssueDate, listingDate) ? 'ONGOING' : 'UPCOMING';
-  } else if (status === 'CANCELLED') {
-    return 'UPCOMING'; // 已取消的IPO也视为待上市
-  }
+  if (status === 'LISTED') return 'LISTED';
+  if (status === 'ONGOING') return 'ONGOING';
+  if (status === 'UPCOMING') return 'UPCOMING';
   
-  // 默认状态
   return 'UPCOMING';
 }
 
-/**
- * 检查当前是否在申购期内
- * @param onlineIssueDate 上网发行日期
- * @param listingDate 上市日期
- */
-function isWithinSubscriptionPeriod(onlineIssueDate?: string, listingDate?: string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  // 如果提供了上网发行日期，则检查是否在申购期间
-  if (onlineIssueDate) {
-    try {
-      const startDate = new Date(onlineIssueDate);
-      startDate.setHours(0, 0, 0, 0);
-      
-      // 假设申购期为发行日期前后几天
-      const periodStart = new Date(startDate);
-      periodStart.setDate(periodStart.getDate() - 1); // 申购可能提前1天开始
-      
-      const periodEnd = new Date(startDate);
-      periodEnd.setDate(periodEnd.getDate() + 3); // 申购持续几天
-      
-      return today >= periodStart && today <= periodEnd;
-    } catch (e) {
-      console.warn('解析上网发行日期失败:', onlineIssueDate, e);
-    }
-  }
-  
-  // 如果提供了上市日期，检查是否临近上市
-  if (listingDate) {
-    try {
-      const listing = new Date(listingDate);
-      listing.setHours(0, 0, 0, 0);
-      
-      // 如果上市日期在未来几天内，可能还在申购期
-      const futureDate = new Date();
-      futureDate.setDate(today.getDate() + 5);
-      
-      return today <= listing && listing <= futureDate;
-    } catch (e) {
-      console.warn('解析上市日期失败:', listingDate, e);
-    }
-  }
-  
-  return false;
-}
+
 
 /**
  * 从Supabase数据库获取IPO数据
@@ -174,23 +114,15 @@ export async function fetchSinaIPOData(page: number = 1, num: number = 40): Prom
           symbol: item.symbol,
           name: item.name,
           listingDate: item.listing_date || '',
-          issuePrice: Number(item.price) || 0,
-          status: mapSupabaseStatusToIPOStatus(item.status, item.online_issue_date, item.listing_date),
-          market: item.market,
-          subscriptionCode: item.subscription_code || item.symbol, // 如果没有订阅代码，使用股票代码
+          issuePrice: Number(item.ipo_price) || 0,
+          status: mapSupabaseStatusToIPOStatus(item.status),
+          market: item.market, // SH 或 SZ
+          subscriptionCode: item.subscription_code || item.symbol,
           issueVolume: item.issue_volume ? Number(item.issue_volume) : undefined,
           onlineIssueVolume: item.online_issue_volume ? Number(item.online_issue_volume) : undefined,
           peRatio: item.pe_ratio ? Number(item.pe_ratio) : undefined,
           issueDate: item.issue_date || undefined,
-          onlineIssueDate: item.online_issue_date || undefined,
-          lotteryDate: item.lottery_date || undefined,
-          refundDate: item.refund_date || undefined,
-          listingDatePlan: item.listing_date_plan || undefined,
-          issueMethod: item.issue_method || undefined,
-          underwriter: item.underwriter || undefined,
-          minSubscriptionUnit: item.min_subscription_unit ? Number(item.min_subscription_unit) : 500,
-          maxSubscriptionQuantity: item.max_subscription_quantity ? Number(item.max_subscription_quantity) : undefined,
-          lockupPeriod: item.lockup_period ? Number(item.lockup_period) : undefined,
+          minSubscriptionUnit: 500,
         };
 
         ipoList.push(ipoData);

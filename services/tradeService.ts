@@ -170,23 +170,22 @@ export const tradeService = {
           console.warn('无法获取大宗交易数据，跳过验证');
         }
       } else if (type === TradeType.LIMIT_UP) {
-        // 涨停打板验证（假设为买入操作）
-        const { getLimitUpData, isLimitUp } = await import('./limitUpService');
-        const limitUpData = await getLimitUpData(symbol);
+        // 涨停打板验证
+        const { getLimitUpStockBySymbol } = await import('./limitUpStockService');
+        const limitUpData = await getLimitUpStockBySymbol(symbol);
         
-        // 验证是否处于涨停状态
-        if (!isLimitUp(limitUpData)) {
-          throw new Error(`股票 ${symbol} 未处于涨停状态，当前价格 ${limitUpData.currentPrice}`);
-        }
-        
-        // 验证价格是否为涨停价（允许±0.01元误差）
-        if (Math.abs(price - limitUpData.limitUpPrice) > 0.01) {
-          throw new Error(`涨停打板买入价格 ${price} 与涨停价 ${limitUpData.limitUpPrice} 不符`);
-        }
-        
-        // 可选：验证封单量是否足够
-        if (limitUpData.buyOneVolume < quantity * 100) { // 假设每手100股
-          console.warn(`封单量 ${limitUpData.buyOneVolume} 可能不足，当前委托量 ${quantity}`);
+        if (limitUpData) {
+          // 验证是否处于涨停状态
+          if (!limitUpData.is_limit_up) {
+            throw new Error(`股票 ${symbol} 未处于涨停状态，当前价格 ${limitUpData.current_price}`);
+          }
+          
+          // 验证价格是否为涨停价
+          if (Math.abs(price - limitUpData.limit_up_price) > 0.01) {
+            throw new Error(`涨停打板买入价格 ${price} 与涨停价 ${limitUpData.limit_up_price} 不符`);
+          }
+        } else {
+          console.warn('无法获取涨停数据，跳过验证');
         }
       } else {
         // 普通买卖：验证价格合理性

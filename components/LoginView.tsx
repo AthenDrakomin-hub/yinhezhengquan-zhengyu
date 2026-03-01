@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, loginWithPassword } from '../lib/supabase';
 import { ICONS } from '../constants';
 
 interface LoginViewProps {
@@ -26,9 +26,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [isMounted, setIsMounted] = useState(true);
   // 2FA相关状态
   const [twoFactorStep, setTwoFactorStep] = useState<1 | 2>(1);
   const [totpCode, setTotpCode] = useState('');
+
+  // 组件挂载状态
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // 倒计时逻辑
   useEffect(() => {
@@ -41,8 +48,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
 
   //环境检查
   const isPlaceholder = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
-  const isDevelopment = import.meta.env.DEV === true || import.meta.env.MODE === 'development';
-  const isProduction = !isDevelopment;
 
   // 忘记密码功能
   const handleForgotPassword = async () => {
@@ -135,13 +140,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
   //执行登录
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isMounted) return;
     setLoading(true);
-    
-    // 添加视觉反馈
-    const loginButton = e.currentTarget.querySelector('button[type="submit"]');
-    if (loginButton) {
-      loginButton.textContent = '正在登录中...';
-    }
   
     try {
       console.log('登录方式:', loginMethod, '环境:', isPlaceholder ? '演示模式' : '生产模式');
@@ -160,8 +160,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
         if (isPlaceholder) {
           if (otp.length === 6) {
             setTimeout(() => {
-              onLoginSuccess({ email: `${phone}@zhengyu.com`, username: `User_${phone.slice(-4)}` });
-              setLoading(false);
+              if (isMounted) {
+                onLoginSuccess({ email: `${phone}@zhengyu.com`, username: `User_${phone.slice(-4)}` });
+                setLoading(false);
+              }
             }, 1000);
           } else {
             throw new Error('请输入 6 位验证码');
@@ -177,6 +179,55 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             type: 'sms',
           });
           if (error) throw error;
+          
+          // 检查用户状态
+          let { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('status, role, username')
+            .eq('id', data.user.id)
+            .single();
+          
+          // 如果 profile 不存在（PGRST116），自动创建
+          if (profileError?.code === 'PGRST116') {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                email: data.user.email,
+                username: `User_${phone.slice(-4)}`,
+                risk_level: 'C3-稳健型',
+                balance: 1000000.00,
+                total_equity: 1000000.00
+              });
+            
+            if (insertError) {
+              console.error('创建用户资料失败:', insertError);
+              throw new Error('初始化账户失败，请联系管理员');
+            }
+            
+            // 重新查询
+            const retry = await supabase
+              .from('profiles')
+              .select('status, role, username')
+              .eq('id', data.user.id)
+              .single();
+            profile = retry.data;
+            profileError = retry.error;
+          }
+          
+          if (profileError) {
+            throw new Error('获取用户信息失败，请稍后重试');
+          }
+          
+          if (profile?.status === 'PENDING') {
+            await supabase.auth.signOut();
+            throw new Error('您的账户正在审核中，请等待管理员审批后再登录');
+          }
+          if (profile?.status === 'BANNED') {
+            await supabase.auth.signOut();
+            throw new Error('您的账户已被禁用，如有疑问请联系管理员（客服热线：95551）');
+          }
+          
           onLoginSuccess(data.user);
           setLoading(false);
         }
@@ -198,13 +249,64 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
         if (isPlaceholder) {
           console.log('演示模式登录');
           setTimeout(() => {
-            onLoginSuccess({ email, username: email.split('@')[0] });
-            setLoading(false);
+            if (isMounted) {
+              onLoginSuccess({ email, username: email.split('@')[0] });
+              setLoading(false);
+            }
           }, 1000);
         } else {
           console.log('真实模式登录');
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          const { data, error } = await loginWithPassword(email, password);
           if (error) throw error;
+          
+          // 检查用户状态
+          let { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('status, role, username')
+            .eq('id', data.user.id)
+            .single();
+          
+          // 如果 profile 不存在（PGRST116），自动创建
+          if (profileError?.code === 'PGRST116') {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                email: data.user.email,
+                username: email.split('@')[0],
+                risk_level: 'C3-稳健型',
+                balance: 1000000.00,
+                total_equity: 1000000.00
+              });
+            
+            if (insertError) {
+              console.error('创建用户资料失败:', insertError);
+              throw new Error('初始化账户失败，请联系管理员');
+            }
+            
+            // 重新查询
+            const retry = await supabase
+              .from('profiles')
+              .select('status, role, username')
+              .eq('id', data.user.id)
+              .single();
+            profile = retry.data;
+            profileError = retry.error;
+          }
+          
+          if (profileError) {
+            throw new Error('获取用户信息失败，请稍后重试');
+          }
+          
+          if (profile?.status === 'PENDING') {
+            await supabase.auth.signOut();
+            throw new Error('您的账户正在审核中，请等待管理员审批后再登录');
+          }
+          if (profile?.status === 'BANNED') {
+            await supabase.auth.signOut();
+            throw new Error('您的账户已被禁用，如有疑问请联系管理员（客服热线：95551）');
+          }
+          
           onLoginSuccess(data.user);
           setLoading(false);
         }
@@ -228,13 +330,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           if (isPlaceholder) {
             console.log('2FA演示模式第一步');
             setTimeout(() => {
-              setTwoFactorStep(2);
-              setLoading(false);
-              alert('身份验证成功，请输入您的 TOTP 验证码');
+              if (isMounted) {
+                setTwoFactorStep(2);
+                setLoading(false);
+                alert('身份验证成功，请输入您的 TOTP 验证码');
+              }
             }, 1000);
           } else {
             // 真实环境：验证邮箱密码
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await loginWithPassword(email, password);
             if (error) {
               // 检查是否是2FA需要的错误
               if (error.message.includes('2FA') || error.message.includes('two-factor')) {
@@ -260,8 +364,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           if (isPlaceholder) {
             console.log('2FA演示模式第二步');
             setTimeout(() => {
-              onLoginSuccess({ email, username: email.split('@')[0], twoFactorEnabled: true });
-              setLoading(false);
+              if (isMounted) {
+                onLoginSuccess({ email, username: email.split('@')[0], twoFactorEnabled: true });
+                setLoading(false);
+              }
             }, 1000);
           } else {
             // 真实环境：验证TOTP验证码
@@ -278,18 +384,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
         }
       }
     } catch (error: any) {
-      // 添加错误反馈和按钮重置
       console.error('登录失败:', error);
-      alert(error.message || '登录失败，请检查输入信息');
-      setLoading(false);
-            
-      // 重置按钮文本
-      const loginButton = e.currentTarget.querySelector('button[type="submit"]');
-      if (loginButton) {
-        const buttonText = loginMethod === '2fa' ? 
-          (twoFactorStep === 1 ? '验证身份并继续' : '完成双因素验证') : 
-          '确认登录';
-        loginButton.textContent = buttonText;
+      if (isMounted) {
+        alert(error.message || '登录失败，请检查输入信息');
+        setLoading(false);
       }
     }
   };
@@ -365,7 +463,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                     placeholder="请输入手机号"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                    className="w-full h-14 bg-white/5 pl-14 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400"
+                    className="w-full h-14 bg-white/5 pl-14 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                 </div>
@@ -378,7 +476,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                     placeholder="请输入验证码"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full h-14 bg-white/5 pl-12 pr-32 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400"
+                    className="w-full h-14 bg-white/5 pl-12 pr-32 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                   <button
@@ -402,7 +500,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                     placeholder="请输入登录邮箱"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400"
+                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                 </div>
@@ -415,7 +513,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                     placeholder="请输入登录密码"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400"
+                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                     required
                   />
                 </div>
@@ -434,7 +532,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                         placeholder="证券账户 /邮箱"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400"
+                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                         required
                       />
                     </div>
@@ -447,7 +545,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                         placeholder="交易密码"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400"
+                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
                         required
                       />
                     </div>
@@ -466,7 +564,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
                         placeholder="6 位 TOTP 验证码"
                         value={totpCode}
                         onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400 text-center tracking-widest text-lg"
+                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400 text-center tracking-widest text-lg"
                         required
                         autoFocus
                       />
@@ -531,31 +629,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             </div>
           </form>
 
-          <div className="mt-4 space-y-2">
+          <div className="mt-4">
             <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
               登录即代表您同意《银河证券·证裕用户隐私协议》<br/>
               <span className="text-[#00D4AA]/60">本平台用于银河证裕交易单元快速交易通道</span>
             </p>
-            {/*测试功能：仅在开发环境中显示 */}
-            {isDevelopment && (
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const adminUser = {
-                      id: 'admin-test-001',
-                      email: 'admin@zhengyu.com',
-                      username: '管理员测试账号',
-                      role: 'admin'
-                    };
-                    onLoginSuccess(adminUser);
-                  }}
-                  className="w-full py-2 text-[10px] font-black text-orange-400 border border-orange-400/30 rounded-lg hover:bg-orange-400/10 transition-all"
-                >
-                 测试管理员登录
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
