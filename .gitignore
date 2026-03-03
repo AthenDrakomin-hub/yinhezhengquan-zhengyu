@@ -50,3 +50,38 @@ database/archive/
 
 # ==================== 本地开发文件 ====================
 *.local
+
+# ==================== 测试输出和临时文件 ====================
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+__tests__/__snapshots__/
+jest.config.js
+jest.config.ts
+vitest.config.js
+vitest.config.ts
+cypress/videos/
+cypress/screenshots/
+
+# ==================== 构建缓存和临时文件 ====================
+.cache/
+.temp/
+tmp/
+temp/
+
+# ==================== 操作系统临时文件 ====================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ==================== 包管理器锁文件（可选，根据团队规范） ====================
+# package-lock.json  # 通常应该提交
+# yarn.lock         # 通常应该提交
+# pnpm-lock.yaml    # 通常应该提交
+
+# ==================== Vercel 相关 ====================
+.vercel
+.env*.local

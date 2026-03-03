@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { TradeType } from '../types';
+import { TradeType } from '../lib/types';
 import { getRealtimeStock } from './marketService';
 
 // 交易服务缓存

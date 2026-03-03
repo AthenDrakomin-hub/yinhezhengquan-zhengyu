@@ -5,8 +5,8 @@
  * 覆盖A股、港股实时行情、批量查询、日K线数据
  */
 
-import { Stock } from '../types';
-import { TradeType } from '../types';
+import { Stock } from '../lib/types';
+import { TradeType } from '../lib/types';
 
 // ==================== 环境变量配置 ====================
 // 是否使用真实行情数据（通过环境变量控制，默认使用模拟数据）

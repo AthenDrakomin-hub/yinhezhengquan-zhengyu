@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS public.transaction_idempotency (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
-CREATE INDEX idx_transaction_expires ON public.transaction_idempotency(expires_at);
-CREATE INDEX idx_transaction_user ON public.transaction_idempotency(user_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_expires ON public.transaction_idempotency(expires_at);
+CREATE INDEX IF NOT EXISTS idx_transaction_user ON public.transaction_idempotency(user_id);
 
 -- 自动清理过期记录
 CREATE OR REPLACE FUNCTION cleanup_expired_transactions()
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS public.fund_transfers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_fund_transfers_user ON public.fund_transfers(user_id, created_at DESC);
-CREATE INDEX idx_fund_transfers_trade ON public.fund_transfers(related_trade_id);
+CREATE INDEX IF NOT EXISTS idx_fund_transfers_user ON public.fund_transfers(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_fund_transfers_trade ON public.fund_transfers(related_trade_id);
 
 -- RLS策略
 ALTER TABLE public.fund_transfers ENABLE ROW LEVEL SECURITY;
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS public.settlement_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_settlement_date ON public.settlement_logs(settlement_date DESC);
+CREATE INDEX IF NOT EXISTS idx_settlement_date ON public.settlement_logs(settlement_date DESC);
 
 -- RLS策略
 ALTER TABLE public.settlement_logs ENABLE ROW LEVEL SECURITY;
@@ -96,7 +96,13 @@ CREATE POLICY "管理员可以查看清算日志" ON public.settlement_logs
   );
 
 -- 4. 资产对账函数
-CREATE OR REPLACE FUNCTION reconcile_user_assets(p_user_id UUID)
+-- 4. 资产对账函数
+
+-- 先删除可能存在的旧函数
+DROP FUNCTION IF EXISTS reconcile_user_assets(UUID);
+
+-- 创建新函数
+CREATE FUNCTION reconcile_user_assets(p_user_id UUID)
 RETURNS TABLE(
   user_id UUID,
   cash DECIMAL,
@@ -122,8 +128,6 @@ BEGIN
   GROUP BY a.user_id, a.available_balance, a.frozen_balance, a.total_asset;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 5. 计算总资产函数
 CREATE OR REPLACE FUNCTION calculate_total_asset(p_user_id UUID)
 RETURNS DECIMAL AS $$
 DECLARE
@@ -144,7 +148,12 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 6. 每日清算主函数
-CREATE OR REPLACE FUNCTION daily_settlement()
+
+-- 先删除可能存在的旧函数
+DROP FUNCTION IF EXISTS daily_settlement();
+
+-- 创建新函数
+CREATE FUNCTION daily_settlement()
 RETURNS JSONB AS $$
 DECLARE
   v_settlement_date DATE := CURRENT_DATE;

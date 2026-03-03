@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ICONS } from '@/constants';
+import { ICONS } from '@/lib/constants';
 import { getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/services/contentService';
-import { CalendarEvent } from '@/types';
+import { CalendarEvent } from '@/lib/types';
 
 const AdminCalendar: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);

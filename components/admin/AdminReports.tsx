@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ICONS } from '@/constants';
+import { ICONS } from '@/lib/constants';
 import { getReports, createReport, updateReport, deleteReport } from '@/services/contentService';
-import { ResearchReport } from '@/types';
+import { ResearchReport } from '@/lib/types';
 
 const AdminReports: React.FC = () => {
   const [reports, setReports] = useState<ResearchReport[]>([]);

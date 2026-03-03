@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ICONS } from '@/constants';
+import { ICONS } from '@/lib/constants';
 import { getBanners, createBanner, updateBanner, deleteBanner } from '@/services/contentService';
-import { Banner } from '@/types';
+import { Banner } from '@/lib/types';
 
 const AdminBanners: React.FC = () => {
   const [banners, setBanners] = useState<Banner[]>([]);

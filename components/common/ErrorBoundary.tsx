@@ -1,7 +1,7 @@
 "use strict";
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { ICONS } from '../../constants';
+import { ICONS } from '@/lib/constants';
 
 interface ErrorBoundaryProps {
   children: ReactNode;

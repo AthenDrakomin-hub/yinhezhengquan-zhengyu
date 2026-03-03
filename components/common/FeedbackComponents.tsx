@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { ICONS } from '../../constants';
+import { ICONS } from '@/lib/constants';
 
 interface PermissionDeniedProps {
   requiredRole: string;

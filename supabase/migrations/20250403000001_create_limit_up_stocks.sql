@@ -32,10 +32,10 @@ CREATE TABLE IF NOT EXISTS public.limit_up_stocks (
 );
 
 -- 2) 创建索引
-CREATE INDEX idx_limit_up_symbol ON public.limit_up_stocks(symbol);
-CREATE INDEX idx_limit_up_status ON public.limit_up_stocks(is_limit_up, status);
-CREATE INDEX idx_limit_up_trade_date ON public.limit_up_stocks(trade_date DESC);
-CREATE INDEX idx_limit_up_market ON public.limit_up_stocks(market);
+CREATE INDEX IF NOT EXISTS idx_limit_up_symbol ON public.limit_up_stocks(symbol);
+CREATE INDEX IF NOT EXISTS idx_limit_up_status ON public.limit_up_stocks(is_limit_up, status);
+CREATE INDEX IF NOT EXISTS idx_limit_up_trade_date ON public.limit_up_stocks(trade_date DESC);
+CREATE INDEX IF NOT EXISTS idx_limit_up_market ON public.limit_up_stocks(market);
 
 -- 3) 启用 RLS
 ALTER TABLE public.limit_up_stocks ENABLE ROW LEVEL SECURITY;

@@ -246,5 +246,63 @@ export const adminService = {
       console.error('搜索订单失败:', error);
       return [];
     }
+  },
+
+  // IP白名单验证
+  async verifyIPWhitelist(): Promise<{ 
+    ok: boolean; 
+    ip_allowed: boolean; 
+    client_ip?: string; 
+    message?: string;
+    error?: string;
+  }> {
+    try {
+      // 获取项目引用（从Supabase URL中提取）
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const projectRef = supabaseUrl?.split('//')[1]?.split('.')[0];
+      if (!projectRef) {
+        throw new Error('无法从Supabase URL中提取项目引用');
+      }
+
+      const edgeFunctionUrl = `https://${projectRef}.functions.supabase.co/admin-verify`;
+      
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        // 如果返回403，说明IP不在白名单内
+        if (response.status === 403) {
+          const data = await response.json();
+          return { 
+            ok: true, 
+            ip_allowed: false, 
+            client_ip: data.client_ip,
+            message: data.message || 'IP不在白名单内'
+          };
+        }
+        throw new Error(`Edge Function返回错误: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { 
+        ok: true, 
+        ip_allowed: data.ip_allowed, 
+        client_ip: data.client_ip,
+        message: data.message
+      };
+    } catch (error: any) {
+      console.error('IP白名单验证失败:', error);
+      // 如果验证失败，出于安全考虑，默认不允许访问
+      return { 
+        ok: false, 
+        ip_allowed: false, 
+        error: error.message || 'IP验证失败',
+        message: '无法验证IP白名单，访问被拒绝'
+      };
+    }
   }
 };

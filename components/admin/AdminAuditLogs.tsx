@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminService } from '../../services/adminService';
-import { ICONS } from '../../constants';
+import { ICONS } from '../../lib/constants';
 
 const AdminAuditLogs: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);

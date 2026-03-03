@@ -1,0 +1,9 @@
+supabase functions deploy create-trade-order --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy cancel-trade-order --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy approve-trade-order --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy match-trade-order --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy get-market-data --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy fetch-stock-f10 --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy fetch-galaxy-news --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy admin-operations --project-ref rfnrosyfeivcbkimjlwo
+supabase functions deploy nexus-sync --project-ref rfnrosyfeivcbkimjlwo

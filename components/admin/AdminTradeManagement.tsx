@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ICONS } from '@/constants';
+import { ICONS } from '@/lib/constants';
 import { tradeService } from '@/services/tradeService';
 
 const AdminTradeManagement: React.FC = () => {

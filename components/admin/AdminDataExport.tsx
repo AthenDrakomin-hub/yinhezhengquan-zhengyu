@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { adminService } from '../../services/adminService';
-import { ICONS } from '../../constants';
+import { ICONS } from '../../lib/constants';
 
 const AdminDataExport: React.FC = () => {
   const [searchType, setSearchType] = useState<'users' | 'orders'>('users');

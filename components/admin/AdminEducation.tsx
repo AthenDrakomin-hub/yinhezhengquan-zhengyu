@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ICONS } from '@/constants';
+import { ICONS } from '@/lib/constants';
 import { getEducationTopics, createEducationTopic, updateEducationTopic, deleteEducationTopic } from '@/services/contentService';
-import { EducationTopic } from '@/types';
+import { EducationTopic } from '@/lib/types';
 
 const AdminEducation: React.FC = () => {
   const [topics, setTopics] = useState<EducationTopic[]>([]);

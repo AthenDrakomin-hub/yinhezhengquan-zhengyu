@@ -45,7 +45,7 @@ class SessionMonitor {
       }
 
       // 检查过期时间
-      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      const expiresAt = session?.expires_at ? session.expires_at * 1000 : 0;
       const now = Date.now();
       const remaining = expiresAt - now;
 
@@ -111,7 +111,7 @@ export function useSessionMonitor() {
     sessionMonitor.onExpire(() => {
       alert('登录已过期，请重新登录');
       supabase.auth.signOut();
-      navigate('/login', { replace: true });
+      navigate('/auth/login', { replace: true });
     });
 
     // 会话即将过期警告
@@ -122,7 +122,7 @@ export function useSessionMonitor() {
         if (shouldRefresh) {
           sessionMonitor.refreshSession().catch(() => {
             alert('刷新会话失败，请重新登录');
-            navigate('/login', { replace: true });
+            navigate('/auth/login', { replace: true });
           });
         }
       }

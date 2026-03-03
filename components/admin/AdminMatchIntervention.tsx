@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ICONS } from '@/constants';
+import { ICONS } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 
 const AdminMatchIntervention: React.FC = () => {

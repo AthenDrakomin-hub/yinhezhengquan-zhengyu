@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { ICONS } from '../../constants';
+import { ICONS } from '@/lib/constants';
+import { useAdmin } from '../../contexts/AdminContext';
 
 interface AdminLayoutProps {
   // 不再需要 children prop，使用 Outlet
@@ -9,6 +10,7 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { adminLevel } = useAdmin();
   
   // Supabase 连接状态状态
   const [connectionStatus, setConnectionStatus] = useState<string>('检查中...');
@@ -31,7 +33,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
           const response = await fetch(`${supabaseUrl}/health`, {
             method: 'GET',
             headers: {
-              'apikey': import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY || '',
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
             },
           });
 
@@ -53,20 +55,25 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
   }, []);
 
   const menuItems = [
-    { id: 'dashboard', label: '总览', icon: ICONS.Home, path: '/admin/dashboard' },
-    { id: 'rules', label: '交易规则管理', icon: ICONS.Shield, path: '/admin/rules' },
-    { id: 'match', label: '撮合干预面板', icon: ICONS.Zap, path: '/admin/match' },
-    { id: 'trades', label: '交易管理', icon: ICONS.Trade, path: '/admin/trades' },
-    { id: 'users', label: '用户管理', icon: ICONS.Shield, path: '/admin/users' },
-    { id: 'tickets', label: '工单管理', icon: ICONS.MessageCircle, path: '/admin/tickets' },
-    { id: 'audit-logs', label: '审计日志', icon: ICONS.FileText, path: '/admin/audit-logs' },
-    { id: 'data-export', label: '数据导出', icon: ICONS.Download, path: '/admin/data-export' },
-    { id: 'reports', label: '研报管理', icon: ICONS.Book, path: '/admin/reports' },
-    { id: 'education', label: '投教内容', icon: ICONS.Globe, path: '/admin/education' },
-    { id: 'calendar', label: '日历事件', icon: ICONS.Calendar, path: '/admin/calendar' },
-    { id: 'ipos', label: '新股管理', icon: ICONS.Chart, path: '/admin/ipos' },
-    { id: 'banners', label: '横幅管理', icon: ICONS.Camera, path: '/admin/banners' },
+    { id: 'dashboard', label: '总览', icon: ICONS.Home, path: '/admin/dashboard', minLevel: 'admin' },
+    { id: 'rules', label: '交易规则管理', icon: ICONS.Shield, path: '/admin/rules', minLevel: 'super_admin' },
+    { id: 'match', label: '撮合干预面板', icon: ICONS.Zap, path: '/admin/match', minLevel: 'super_admin' },
+    { id: 'trades', label: '交易管理', icon: ICONS.Trade, path: '/admin/trades', minLevel: 'admin' },
+    { id: 'users', label: '用户管理', icon: ICONS.Shield, path: '/admin/users', minLevel: 'admin' },
+    { id: 'tickets', label: '工单管理', icon: ICONS.MessageCircle, path: '/admin/tickets', minLevel: 'admin' },
+    { id: 'audit-logs', label: '审计日志', icon: ICONS.FileText, path: '/admin/audit-logs', minLevel: 'super_admin' },
+    { id: 'data-export', label: '数据导出', icon: ICONS.Download, path: '/admin/data-export', minLevel: 'super_admin' },
+    { id: 'reports', label: '研报管理', icon: ICONS.Book, path: '/admin/reports', minLevel: 'admin' },
+    { id: 'education', label: '投教内容', icon: ICONS.Globe, path: '/admin/education', minLevel: 'admin' },
+    { id: 'calendar', label: '日历事件', icon: ICONS.Calendar, path: '/admin/calendar', minLevel: 'admin' },
+    { id: 'ipos', label: '新股管理', icon: ICONS.Chart, path: '/admin/ipos', minLevel: 'admin' },
+    { id: 'banners', label: '横幅管理', icon: ICONS.Camera, path: '/admin/banners', minLevel: 'admin' },
   ];
+
+  const visibleMenuItems = menuItems.filter(item => {
+    if (item.minLevel === 'super_admin') return adminLevel === 'super_admin';
+    return true;
+  });
 
   return (
     <div className="flex h-screen bg-industrial-50 text-industrial-900 font-sans">
@@ -81,7 +88,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
         </div>
         
         <nav className="flex-1 p-4 space-y-1">
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <button
@@ -131,8 +138,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-xs font-black text-industrial-800">管理员 (Admin)</p>
-              <p className="text-[10px] text-industrial-400 font-bold uppercase">Super User</p>
+              <p className="text-xs font-black text-industrial-800">
+                {adminLevel === 'super_admin' ? '超级管理员' : '管理员'}
+              </p>
+              <p className="text-[10px] text-industrial-400 font-bold uppercase">
+                {adminLevel === 'super_admin' ? 'Super Admin' : 'Admin'}
+              </p>
             </div>
             <div className="w-10 h-10 bg-industrial-100 rounded-full border border-industrial-200 flex items-center justify-center text-industrial-400">
               <ICONS.User size={20} />

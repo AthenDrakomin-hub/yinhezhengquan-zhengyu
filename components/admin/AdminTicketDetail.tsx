@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ICONS } from '@/constants';
+import { ICONS } from '@/lib/constants';
 import { chatService } from '@/services/chatService';
-import { Message, SupportTicket } from '@/types';
+import { Message, SupportTicket } from '@/lib/types';
 import { useAuth } from '@/services/authService';
 
 const AdminTicketDetail: React.FC = () => {

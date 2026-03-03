@@ -5,6 +5,8 @@
 -- 功能: 修复 RLS 策略漏洞、统一权限检查、添加状态验证
 -- ==========================================================
 
+BEGIN;
+
 -- 1. 修复 profiles 表的 RLS 策略
 -- 问题: 允许匿名用户查询所有数据
 -- 修复: 限制只能查询自己的数据或管理员查询
@@ -215,6 +217,7 @@ CREATE POLICY "管理员可以更新持仓" ON public.positions
 -- 添加状态检查
 
 DROP POLICY IF EXISTS "用户可以管理自己的条件单" ON public.conditional_orders;
+DROP POLICY IF EXISTS "用户可以查看自己的条件单" ON public.conditional_orders;
 CREATE POLICY "用户可以查看自己的条件单" ON public.conditional_orders
   FOR SELECT USING (
     auth.uid() = user_id
@@ -225,6 +228,7 @@ CREATE POLICY "用户可以查看自己的条件单" ON public.conditional_order
     )
   );
 
+DROP POLICY IF EXISTS "用户可以创建条件单" ON public.conditional_orders;
 CREATE POLICY "用户可以创建条件单" ON public.conditional_orders
   FOR INSERT WITH CHECK (
     auth.uid() = user_id
@@ -235,6 +239,7 @@ CREATE POLICY "用户可以创建条件单" ON public.conditional_orders
     )
   );
 
+DROP POLICY IF EXISTS "用户可以更新自己的条件单" ON public.conditional_orders;
 CREATE POLICY "用户可以更新自己的条件单" ON public.conditional_orders
   FOR UPDATE USING (
     auth.uid() = user_id
@@ -245,6 +250,7 @@ CREATE POLICY "用户可以更新自己的条件单" ON public.conditional_order
     )
   );
 
+DROP POLICY IF EXISTS "用户可以删除自己的条件单" ON public.conditional_orders;
 CREATE POLICY "用户可以删除自己的条件单" ON public.conditional_orders
   FOR DELETE USING (
     auth.uid() = user_id
@@ -256,6 +262,7 @@ CREATE POLICY "用户可以删除自己的条件单" ON public.conditional_order
   );
 
 -- 管理员可以查看所有条件单
+DROP POLICY IF EXISTS "管理员可以查看所有条件单" ON public.conditional_orders;
 CREATE POLICY "管理员可以查看所有条件单" ON public.conditional_orders
   FOR SELECT USING (
     EXISTS (
@@ -291,3 +298,5 @@ AND tablename IN ('profiles', 'assets', 'trades', 'positions', 'conditional_orde
 -- 测试5: BANNED 用户无法查询数据
 -- UPDATE public.profiles SET status = 'BANNED' WHERE id = auth.uid();
 -- SELECT * FROM public.assets; -- 应返回空结果
+
+COMMIT;

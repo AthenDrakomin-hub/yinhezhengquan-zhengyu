@@ -30,10 +30,10 @@ CREATE TABLE public.ipos (
 );
 
 -- 4) 创建索引
-CREATE INDEX idx_ipos_symbol ON public.ipos(symbol);
-CREATE INDEX idx_ipos_market ON public.ipos(market);
-CREATE INDEX idx_ipos_status ON public.ipos(status);
-CREATE INDEX idx_ipos_listing_date ON public.ipos(listing_date);
+CREATE INDEX IF NOT EXISTS idx_ipos_symbol ON public.ipos(symbol);
+CREATE INDEX IF NOT EXISTS idx_ipos_market ON public.ipos(market);
+CREATE INDEX IF NOT EXISTS idx_ipos_status ON public.ipos(status);
+CREATE INDEX IF NOT EXISTS idx_ipos_listing_date ON public.ipos(listing_date);
 
 -- 5) 启用 RLS
 ALTER TABLE public.ipos ENABLE ROW LEVEL SECURITY;

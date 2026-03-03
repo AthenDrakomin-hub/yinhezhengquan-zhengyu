@@ -162,6 +162,47 @@ export { frontendMarketService } from './frontendMarketService';
 const { getRealtimeStock } = frontendMarketService;
 export { getRealtimeStock };
 
+/**
+ * 获取股票行情
+ */
+export const getStockQuote = async (symbol: string) => {
+  try {
+    // 默认使用 CN 市场，可以根据股票代码规则自动识别
+    const market = symbol.startsWith('00') || symbol.startsWith('60') || symbol.startsWith('30') ? 'CN' : 'HK';
+    const stock = await frontendMarketService.getRealtimeStock(symbol, market);
+    return { price: stock.price || 0, symbol };
+  } catch (error) {
+    console.error('获取股票行情失败:', error);
+    return { price: 0, symbol };
+  }
+};
+
+/**
+ * 获取市场概览
+ */
+export const getMarketOverview = async () => {
+  try {
+    const cnStocks = await getMarketList('CN');
+    const hkStocks = await getMarketList('HK');
+    
+    const allStocks = [...cnStocks, ...hkStocks];
+    const totalVolume = allStocks.reduce((sum, stock) => sum + (stock.price * 100 || 0), 0); // 使用价格乘以虚拟成交量计算
+    
+    return {
+      indices: [
+        { name: '上证指数', value: 3000, change: 0.5 },
+        { name: '深证成指', value: 10000, change: 0.3 },
+        { name: '创业板指', value: 2000, change: 0.8 }
+      ],
+      volume: totalVolume,
+      stocks: allStocks.slice(0, 10)
+    };
+  } catch (error) {
+    console.error('获取市场概览失败:', error);
+    return { indices: [], volume: 0, stocks: [] };
+  }
+};
+
 // Default stock symbols for market list
 const DEFAULT_STOCK_SYMBOLS = {
   CN: ['600519', '000858', '601318', '000001', '300750', '600036', '601166', '600887', '600276', '600900'],

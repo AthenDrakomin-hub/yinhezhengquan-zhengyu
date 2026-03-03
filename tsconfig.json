@@ -28,8 +28,38 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
+  "include": [
+    "index.tsx",
+    "OptimizedApp.tsx",
+    "contexts/**/*",
+    "routes/**/*",
+    "lib/**/*",
+    "services/**/*",
+    "utils/**/*",
+    "hooks/**/*",
+    "components/shared/**/*",
+    "components/core/**/*",
+    "components/auth/**/*",
+    "components/views/**/*",
+    "components/client/analysis/**/*",
+    "components/client/compliance/**/*",
+    "components/client/trading/**/*",
+    "components/client/profile/**/*",
+    "components/client/reports/**/*",
+    "components/client/settings/**/*",
+    "components/client/calendar/**/*",
+    "components/client/orders/**/*",
+    "components/client/ChatView.tsx"
+  ],
   "exclude": [
     "node_modules",
-    "supabase/functions"
+    "supabase/functions",
+    "docs/archive",
+    "AdminApp.tsx",
+    "ClientApp.tsx",
+    "components/admin",
+    "components/client/auth",
+    "components/client/common",
+    "components/common"
   ]
 }

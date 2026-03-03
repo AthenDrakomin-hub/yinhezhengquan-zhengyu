@@ -1,7 +1,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import App from './OptimizedApp';
 import './index.css';
 import PerformanceMonitor from './utils/performance';
 
@@ -40,14 +40,28 @@ setTimeout(() => {
   performanceMonitor.init(sendToAnalytics);
 }, 1000);
 
+console.log('🚀 开始加载银河证券应用...');
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
+  console.error('❌ 找不到root元素');
   throw new Error("Could not find root element to mount to");
 }
 
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+console.log('✅ 找到root元素，开始创建React根...');
+
+try {
+  const root = ReactDOM.createRoot(rootElement);
+  console.log('✅ React根创建成功，开始渲染应用...');
+  
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+  
+  console.log('✅ 应用渲染完成');
+} catch (error) {
+  console.error('❌ React应用渲染失败:', error);
+  throw error;
+}

@@ -43,7 +43,7 @@ export const authService = {
     if (!password) {
       // 演示模式或快捷登录逻辑
       console.warn('正在使用演示模式登录');
-      return { user: { email, username: '演示用户' }, role: 'user' };
+      return { user: { email, username: '演示用户' }, role: 'user', admin_level: 'user' };
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -54,7 +54,11 @@ export const authService = {
     if (error) throw error;
 
     const profile = await getCurrentProfile();
-    return { user: data.user, role: profile?.role || 'user' };
+    return { 
+      user: data.user, 
+      role: profile?.role || 'user',
+      admin_level: profile?.admin_level || 'user'
+    };
   },
 
   /**
@@ -117,7 +121,11 @@ export const authService = {
     if (!session) return null;
 
     const profile = await getCurrentProfile();
-    return { session, role: profile?.role || 'user' };
+    return { 
+      session, 
+      role: profile?.role || 'user',
+      admin_level: profile?.admin_level || 'user'
+    };
   },
 
   /**

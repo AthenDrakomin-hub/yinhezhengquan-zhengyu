@@ -11,9 +11,9 @@
   <meta property="og:site_name" content="银河证券证裕交易单元" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://www.zhengyutouzi.com" />
-  <meta property="og:image" content="https://www.zhengyutouzi.com/og-preview.png" />
+  <meta property="og:image" content="https://www.zhengyutouzi.com/og-preview.ico" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 移除CDN Tailwind脚本，使用本地Tailwind构建 -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -101,21 +101,8 @@
       animation: marquee 20s linear infinite;
     }
   </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-router": "https://esm.sh/react-router@^7.1.5",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.1.5",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0",
-    "recharts": "https://esm.sh/recharts@^2.12.7",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+  <!-- 移除importmap配置，Vite将从node_modules加载模块 -->
+  <link rel="stylesheet" href="/index.css">
 </head>
 <body>
   <div id="root"></div>

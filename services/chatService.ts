@@ -1,5 +1,5 @@
 import { supabase, isDemoMode } from '../lib/supabase';
-import { SupportTicket, Message } from '../types';
+import { SupportTicket, Message } from '../lib/types';
 
 // 已移除模拟消息数据，使用真实数据库
 const MOCK_MESSAGES: Message[] = [];

@@ -1,0 +1,643 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { ICONS } from '../../lib/constants';
+import { AuthError } from '@supabase/supabase-js';
+
+interface LoginViewProps {
+  onLoginSuccess: (userData?: any) => void;
+  onBackToHome: () => void;
+}
+
+const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) => {
+  const navigate = useNavigate();
+  
+  // 常量定义
+  const BG_URL = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070";
+  const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
+  
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email' | '2fa'>('phone');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const mountedRef = useRef(true);
+  // 2FA相关状态
+  const [twoFactorStep, setTwoFactorStep] = useState<1 | 2>(1);
+  const [totpCode, setTotpCode] = useState('');
+
+  // 组件挂载状态
+  useEffect(() => {
+    mountedRef.current = true;
+    console.log('LoginView Mounted');
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // 倒计时逻辑
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  //环境检查
+  const isPlaceholder = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
+
+  // 忘记密码功能
+  const handleForgotPassword = async () => {
+    // 获取当前邮箱输入框的值
+    let targetEmail = email;
+    
+    // 如果邮箱为空，提示用户输入
+    if (!targetEmail || targetEmail.trim() === '') {
+      const input = prompt('请输入您的邮箱地址以重置密码：');
+      if (input !== null) targetEmail = input;
+      if (!targetEmail || targetEmail.trim() === '') {
+        alert('请输入有效的邮箱地址');
+        return;
+      }
+    }
+
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(targetEmail)) {
+      alert('请输入有效的邮箱地址格式（例如：user@example.com）');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    
+    try {
+      if (isPlaceholder) {
+        // 演示环境
+        setTimeout(() => {
+          alert(`演示环境：重置密码邮件已发送到 ${targetEmail}\n在真实环境中，您将收到包含重置链接的邮件。`);
+          setForgotPasswordLoading(false);
+        }, 1000);
+      } else {
+        // 真实环境：调用 Supabase 重置密码 API
+        const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        alert(`重置密码邮件已发送到 ${targetEmail}，请检查您的邮箱并按照说明重置密码。`);
+        setForgotPasswordLoading(false);
+      }
+    } catch (error: any) {
+      console.error('重置密码失败:', error);
+      alert(`重置密码失败：${(error as Error)?.message || '请稍后重试或联系管理员'}`);
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  // 发送验证码
+  const handleSendOtp = async () => {
+    if (!phone || phone.length < 11) return alert('请输入正确的 11 位手机号');
+    setLoading(true);
+    
+    try {
+      if (isPlaceholder) {
+        console.warn('演示环境：发送验证码到', phone);
+        setTimeout(() => {
+          setOtpSent(true);
+          setCountdown(60);
+          setLoading(false);
+          alert('验证码已发送（演示环境：请输入任意 6 位数字）');
+        }, 1000);
+      } else {
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: `+86${phone}`,
+        });
+        if (error) throw error;
+        setOtpSent(true);
+        setCountdown(60);
+        setLoading(false);
+      }
+    } catch (error: any) {
+      // 添加错误反馈
+      console.error('发送验证码失败:', error);
+      alert((error as Error)?.message || '发送失败，请检查手机号格式或后台配置');
+      setLoading(false);
+      
+      //按钮状态
+      const sendButton = document.querySelector('button[type="button"][onClick*="handleSendOtp"]');
+      if (sendButton) {
+        (sendButton as HTMLButtonElement).disabled = false;
+      }
+    }
+  };
+
+  // 执行登录
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mountedRef.current) return;
+    setLoading(true);
+
+    try {
+      console.log('登录方式:', loginMethod, '环境:', isPlaceholder ? '演示模式' : '生产模式');
+
+      if (loginMethod === 'phone') {
+        //验证手机号格式
+        if (!phone || phone.length !== 11) {
+          throw new Error('请输入正确的11位手机号');
+        }
+          
+        //检查是否已发送验证码
+        if (!otpSent) {
+          throw new Error('请先获取验证码');
+        }
+          
+        if (isPlaceholder) {
+          if (otp.length === 6) {
+            setTimeout(() => {
+              if (mountedRef.current) {
+                onLoginSuccess({ email: `${phone}@zhengyu.com`, username: `User_${phone.slice(-4)}` });
+                setLoading(false);
+              }
+            }, 1000);
+          } else {
+            throw new Error('请输入 6 位验证码');
+          }
+        } else {
+          if (!otp || otp.length !== 6) {
+            throw new Error('请输入 6 位验证码');
+          }
+            
+          // 1. 验证 OTP
+          const { data: authData, error: authError } = await supabase.auth.verifyOtp({
+            phone: `+86${phone}`,
+            token: otp,
+            type: 'sms',
+          });
+          
+          console.log('[Login] 手机验证码认证结果:', {
+            hasError: !!authError,
+            hasUser: !!authData?.user,
+            hasSession: !!authData?.session,
+          });
+          
+          if (authError) throw authError;
+          
+          if (!authData?.session || !authData?.user) {
+            throw new Error('认证响应不完整');
+          }
+          
+          // 2. 查询 profiles 表（触发器已自动创建，无需兜底）
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('status, role, username')
+            .eq('id', authData.user.id)
+            .single();
+          
+          if (profileError) {
+            console.error('[Login] Profile 不存在，这可能是历史数据问题:', profileError);
+            throw new Error('用户资料不存在，请联系管理员');
+          }
+          
+          // 3. 检查账户状态
+          if (profile?.status === 'PENDING') {
+            await supabase.auth.signOut();
+            throw new Error('您的账户正在审核中，请等待管理员审批后再登录');
+          }
+          if (profile?.status === 'BANNED') {
+            await supabase.auth.signOut();
+            throw new Error('您的账户已被禁用，如有疑问请联系管理员（客服热线：95551）');
+          }
+          
+          onLoginSuccess(authData.user);
+          setLoading(false);
+        }
+      } else if (loginMethod === 'email') {
+        if (!email || !password) throw new Error('请输入邮箱和密码');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) throw new Error('邮箱格式不正确');
+
+        if (isPlaceholder) {
+          console.log('演示模式登录');
+          setTimeout(() => {
+            if (mountedRef.current) {
+              onLoginSuccess({ email, username: email.split('@')[0] });
+              setLoading(false);
+            }
+          }, 1000);
+          return;
+        }
+
+        console.log('[Login] 真实模式登录开始');
+        
+        // 🔥 关键修复：先清除旧会话，防止脏数据覆盖
+        await supabase.auth.signOut(); 
+
+        console.log('[Login] 正在调用 supabase.auth.signInWithPassword...');
+
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        // 增加详细日志用于调试
+        console.log('[Login] API Response:', { hasSession: !!authData?.session, error: authError });
+
+        if (authError) throw authError;
+        
+        if (!authData?.user) throw new Error('无用户信息');
+
+        // 后续 profile 查询等保持不变...
+        // ----- 步骤2: 查询 profiles 表 -----
+        console.log('[Login] 正在查询 profiles 表，用户ID:', authData.user.id);
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('status, role, username')
+          .eq('id', authData.user.id)
+          .single();
+
+        console.log('[Login] Profiles 查询结果:', {
+          hasProfile: !!profile,
+          profileError: profileError ? { message: profileError.message, details: profileError.details } : null,
+          profileStatus: profile?.status,
+          profileRole: profile?.role,
+        });
+
+        if (profileError) {
+          console.error('[Login] Profile 不存在或查询失败:', profileError);
+          throw new Error('用户资料不存在，请联系管理员（错误码: PF001）');
+        }
+
+        // ----- 步骤3: 检查账户状态 -----
+        if (profile?.status === 'PENDING') {
+          console.warn('[Login] 账户正在审核中');
+          await supabase.auth.signOut();
+          throw new Error('您的账户正在审核中，请等待管理员审批后再登录');
+        }
+        if (profile?.status === 'BANNED') {
+          console.warn('[Login] 账户已被禁用');
+          await supabase.auth.signOut();
+          throw new Error('您的账户已被禁用，如有疑问请联系管理员（客服热线：95551）');
+        }
+
+        console.log('[Login] 登录成功，准备回调');
+
+        // ----- 步骤4: 登录成功，通知父组件并跳转 -----
+        if (mountedRef.current) {
+          console.log('[Login] 调用父组件onLoginSuccess回调');
+          onLoginSuccess(authData.user);
+          console.log('[Login] 父组件回调执行完毕，直接导航到/client/dashboard');
+          // 登录成功后强制跳转，绕过可能的 React Router 状态冲突
+          window.location.href = '/client/dashboard'; 
+        }
+      } else if (loginMethod === '2fa') {
+        // 双因素登录
+        if (twoFactorStep === 1) {
+          // 第一步：验证邮箱和密码
+          if (!email) {
+            throw new Error('请输入邮箱地址');
+          }
+          if (!password) {
+            throw new Error('请输入密码');
+          }
+          
+          //验证邮箱格式
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(email)) {
+            throw new Error('请输入有效的邮箱地址');
+          }
+          
+          if (isPlaceholder) {
+            console.log('2FA演示模式第一步');
+            setTimeout(() => {
+              if (mountedRef.current) {
+                setTwoFactorStep(2);
+                setLoading(false);
+                alert('身份验证成功，请输入您的 TOTP 验证码');
+              }
+            }, 1000);
+          } else {
+            // 真实环境：验证邮箱密码
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            
+            console.log('[Login-2FA] 认证结果:', {
+              hasError: !!authError,
+              hasSession: !!authData?.session,
+            });
+            
+            if (authError) {
+              // 检查是否是 2FA 需要的错误
+              if ((authError as Error)?.message?.includes('2FA') || (authError as Error)?.message?.includes('two-factor')) {
+                // 需要 2FA验证，进入第二步
+                setTwoFactorStep(2);
+                setLoading(false);
+                alert('身份验证成功，请输入您的 TOTP 验证码');
+              } else {
+                throw authError;
+              }
+            } else {
+              // 如果没有启用 2FA，直接登录成功
+              if (authData?.user) {
+                onLoginSuccess(authData.user);
+              }
+              setLoading(false);
+            }
+          }
+        } else {
+          // 第二步：验证 TOTP 验证码
+          const { data: authData, error: authError } = await supabase.auth.verifyOtp({
+            email,
+            token: totpCode,
+            type: 'totp' as any,
+          });
+          
+          console.log('[Login-2FA-Step2] 认证结果:', {
+            hasError: !!authError,
+            hasUser: !!authData?.user,
+          });
+          
+          if (authError) throw authError;
+          
+          if (authData?.user) {
+            onLoginSuccess(authData.user);
+          }
+          setLoading(false);
+        }
+      }
+    } catch (error: any) {
+      console.error('[Login] 登录过程中捕获到错误:', error);
+      if (mountedRef.current) {
+        alert(error?.message || '登录失败，请稍后重试');
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  };
+
+  return (
+    <div 
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-center p-4 sm:p-8 animate-slide-up relative"
+      style={{ backgroundImage: `url('${BG_URL}')` }}
+    >
+      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] z-0" />
+
+      {/* 返回官网 */}
+      <button 
+        onClick={onBackToHome}
+        className="absolute top-4 left-4 sm:top-8 sm:left-8 z-20 flex items-center gap-2 px-3 py-2 sm:px-4 bg-white/5 border border-white/10 rounded-xl text-[9px] sm:text-[10px] font-black text-white uppercase tracking-widest hover:bg-white/10 transition-all active:scale-95"
+      >
+        <ICONS.ArrowRight className="rotate-180" size={12} />
+        <span className="hidden sm:inline">返回官网首页</span>
+        <span className="sm:hidden">返回</span>
+      </button>
+
+      <div className="w-full max-w-md text-center relative z-10">
+        <div className="glass-card p-6 sm:p-8 bg-slate-900/60 border-white/10 backdrop-blur-2xl shadow-2xl rounded-[24px] sm:rounded-[32px]">
+          {/* Logo 合并到UI框架内部 */}
+          <div className="flex flex-col items-center mb-6 sm:mb-8">
+            <div className="w-full max-w-[240px] sm:max-w-[280px] aspect-[2.5/1] bg-white rounded-[20px] sm:rounded-[24px] flex items-center justify-center p-3 sm:p-4 shadow-xl border border-white/30 transition-transform hover:scale-105 duration-500">
+              <img src={LOGO_URL} alt="中国银河证券 证裕交易单元" className="w-full h-full object-contain" />
+            </div>
+            <p className="mt-3 sm:mt-4 text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">NEXUS 交易单元认证中心</p>
+          </div>
+
+          <div className="flex border-b border-white/5 mb-6 sm:mb-8">
+            <button 
+              onClick={() => {
+                setLoginMethod('phone');
+                setTwoFactorStep(1);
+              }}
+              className={`flex-1 pb-3 sm:pb-4 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all relative ${loginMethod === 'phone' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
+            >
+              <span className="hidden sm:inline">验证码登录</span>
+              <span className="sm:hidden">验证码</span>
+              {loginMethod === 'phone' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00D4AA] shadow-[0_0_10px_#00D4AA]" />}
+            </button>
+            <button 
+              onClick={() => {
+                setLoginMethod('email');
+                setTwoFactorStep(1);
+              }}
+              className={`flex-1 pb-3 sm:pb-4 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all relative ${loginMethod === 'email' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
+            >
+              <span className="hidden sm:inline">账号密码登录</span>
+              <span className="sm:hidden">密码</span>
+              {loginMethod === 'email' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00D4AA] shadow-[0_0_10px_#00D4AA]" />}
+            </button>
+            <button 
+              onClick={() => {
+                setLoginMethod('2fa');
+                setTwoFactorStep(1);
+              }}
+              className={`flex-1 pb-3 sm:pb-4 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all relative ${loginMethod === '2fa' ? 'text-[#00D4AA]' : 'text-slate-500'}`}
+            >
+              <span className="hidden sm:inline">双因素登录</span>
+              <span className="sm:hidden">2FA</span>
+              {loginMethod === '2fa' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00D4AA] shadow-[0_0_10px_#00D4AA]" />}
+            </button>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
+            {loginMethod === 'phone' ? (
+              <div className="space-y-3 sm:space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <span className="text-[10px] sm:text-[11px] font-black">+86</span>
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder="请输入手机号"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-12 sm:pl-14 pr-4 sm:pr-6 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    required
+                  />
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <ICONS.Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="请输入验证码"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-10 sm:pl-12 pr-24 sm:pr-32 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={countdown > 0 || loading || phone.length < 11}
+                    className="absolute right-2 top-2 bottom-2 px-3 sm:px-4 bg-[#00D4AA]/10 text-[#00D4AA] rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest disabled:opacity-30 active:scale-95 transition-all"
+                  >
+                    {countdown > 0 ? `${countdown}S` : '获取验证码'}
+                  </button>
+                </div>
+              </div>
+            ) : loginMethod === 'email' ? (
+              <div className="space-y-3 sm:space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <ICONS.User size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  </div>
+                  <input
+                    type="email"
+                    placeholder="请输入登录邮箱"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-10 sm:pl-12 pr-4 sm:pr-6 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    required
+                  />
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 sm:left-4 flex items-center text-slate-400 pointer-events-none">
+                    <ICONS.Shield size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="请输入登录密码"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-12 sm:h-14 bg-white/5 pl-10 sm:pl-12 pr-4 sm:pr-6 rounded-xl sm:rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                    required
+                  />
+                </div>
+              </div>
+            ) : (
+              //双因素登录表单
+              <div className="space-y-4">
+                {twoFactorStep === 1 ? (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 pointer-events-none">
+                        <ICONS.User size={18} />
+                      </div>
+                      <input
+                        type="email"
+                        placeholder="证券账户 /邮箱"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                        required
+                      />
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 pointer-events-none">
+                        <ICONS.Shield size={18} />
+                      </div>
+                      <input
+                        type="password"
+                        placeholder="交易密码"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400"
+                        required
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center mb-4">
+                      <p className="text-xs text-slate-400 font-medium">请输入您的身份验证器应用中的 6 位验证码</p>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-4 flex items-center text-slate-400 pointer-events-none">
+                        <ICONS.Key size={18} />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="6 位 TOTP 验证码"
+                        value={totpCode}
+                        onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-2xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-[#00D4AA] placeholder:text-slate-400 text-center tracking-widest text-lg"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setTwoFactorStep(1)}
+                        className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-[#00D4AA]"
+                      >
+                        返回上一步
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full h-14 sm:h-16 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base tracking-[0.15em] sm:tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:gap-3 group ${loading ? 'bg-amber-500 text-white cursor-not-allowed' : 'bg-[#00D4AA] text-[#0A1628] hover:bg-[#00C49A]'}`}
+            >
+              {loading ? (
+                <>
+                  <ICONS.Refresh className="animate-spin" size={18} />
+                  <span className="text-xs sm:text-base">正在进行安全验证...</span>
+                </>
+              ) : (
+                <>
+                  {loginMethod === '2fa' ? 
+                    (twoFactorStep === 1 ? '验证身份并继续' : '完成双因素验证') : 
+                    '确认登录'
+                  }
+                  <ICONS.ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+            
+            <div className="flex items-center justify-between pt-3 sm:pt-4 text-xs sm:text-sm">
+              <button 
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-[#00D4AA]/70 hover:text-[#00D4AA] font-medium transition-colors underline"
+              >
+                忘记密码？
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  // 跳转到项目内的快速开户页面
+                  navigate('/auth/quick-open');
+                }}
+                className="text-[#00D4AA]/70 hover:text-[#00D4AA] font-medium transition-colors underline"
+              >
+                申请开通单元
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-3 sm:mt-4">
+            <p className="text-[8px] sm:text-[9px] text-slate-500 font-medium leading-relaxed">
+              登录即代表您同意《银河证券·证裕用户隐私协议》<br/>
+              <span className="text-[#00D4AA]/60">本平台用于银河证裕交易单元快速交易通道</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-3 sm:pt-4 opacity-50">
+          <p className="text-[7px] sm:text-[8px] font-black text-slate-500 leading-loose uppercase tracking-[0.15em] sm:tracking-[0.2em]">
+            中国银河证券 · 证裕交易系统 2.0 <br/>
+            数字资产安全审计中心 
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default React.memo(LoginView);

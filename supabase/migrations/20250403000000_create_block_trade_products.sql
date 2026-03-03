@@ -23,10 +23,10 @@ CREATE TABLE IF NOT EXISTS public.block_trade_products (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2) 创建索引
-CREATE INDEX idx_block_products_symbol ON public.block_trade_products(symbol);
-CREATE INDEX idx_block_products_status ON public.block_trade_products(status);
-CREATE INDEX idx_block_products_type ON public.block_trade_products(product_type);
+-- 2) 创建索引（使用 IF NOT EXISTS 避免重复创建）
+CREATE INDEX IF NOT EXISTS idx_block_products_symbol ON public.block_trade_products(symbol);
+CREATE INDEX IF NOT EXISTS idx_block_products_status ON public.block_trade_products(status);
+CREATE INDEX IF NOT EXISTS idx_block_products_type ON public.block_trade_products(product_type);
 
 -- 3) 启用 RLS
 ALTER TABLE public.block_trade_products ENABLE ROW LEVEL SECURITY;

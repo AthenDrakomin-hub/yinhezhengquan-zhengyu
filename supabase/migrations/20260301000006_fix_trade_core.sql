@@ -141,55 +141,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. 创建每日清算函数
-CREATE OR REPLACE FUNCTION public.daily_settlement()
-RETURNS TABLE(processed_users INT, unlocked_positions INT) AS $$
-DECLARE
-  v_processed_users INT := 0;
-  v_unlocked_positions INT := 0;
-  v_user RECORD;
-  v_total_asset NUMERIC;
-BEGIN
-  -- 解锁T+1持仓
-  UPDATE public.positions SET
-    available_quantity = quantity,
-    locked_quantity = 0,
-    updated_at = NOW()
-  WHERE lock_until <= CURRENT_DATE;
-  
-  GET DIAGNOSTICS v_unlocked_positions = ROW_COUNT;
-  
-  -- 更新每个用户的总资产
-  FOR v_user IN SELECT DISTINCT user_id FROM public.assets
-  LOOP
-    -- 计算总资产 = 可用余额 + 冻结余额 + 持仓市值
-    SELECT 
-      COALESCE(a.available_balance, 0) + 
-      COALESCE(a.frozen_balance, 0) + 
-      COALESCE(SUM(p.market_value), 0)
-    INTO v_total_asset
-    FROM public.assets a
-    LEFT JOIN public.positions p ON p.user_id = a.user_id
-    WHERE a.user_id = v_user.user_id
-    GROUP BY a.available_balance, a.frozen_balance;
-    
-    -- 更新总资产
-    UPDATE public.assets SET
-      total_asset = v_total_asset,
-      today_profit_loss = 0, -- 重置当日盈亏
-      updated_at = NOW()
-    WHERE user_id = v_user.user_id;
-    
-    v_processed_users := v_processed_users + 1;
-    
-    -- 记录清算日志
-    INSERT INTO public.settlement_logs (settlement_date, user_id, settlement_type, details)
-    VALUES (CURRENT_DATE, v_user.user_id, 'DAILY', jsonb_build_object('total_asset', v_total_asset));
-  END LOOP;
-  
-  RETURN QUERY SELECT v_processed_users, v_unlocked_positions;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- 6. 创建每日清算函数（已在前面的迁移中定义，这里跳过）
+-- 注意：daily_settlement()函数已在20260301000001_add_settlement_system.sql中定义
+-- 返回类型为JSONB，这里不再重复定义
 
 -- 7. 创建撤单函数
 CREATE OR REPLACE FUNCTION public.cancel_trade_order(p_trade_id UUID, p_user_id UUID, p_reason TEXT)
@@ -243,55 +197,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 8. 创建对账函数
-CREATE OR REPLACE FUNCTION public.reconcile_user_assets(p_user_id UUID)
-RETURNS JSONB AS $$
-DECLARE
-  v_calculated_total NUMERIC;
-  v_recorded_total NUMERIC;
-  v_diff NUMERIC;
-BEGIN
-  -- 计算实际总资产
-  SELECT 
-    COALESCE(a.available_balance, 0) + 
-    COALESCE(a.frozen_balance, 0) + 
-    COALESCE(SUM(p.market_value), 0)
-  INTO v_calculated_total
-  FROM public.assets a
-  LEFT JOIN public.positions p ON p.user_id = a.user_id
-  WHERE a.user_id = p_user_id
-  GROUP BY a.available_balance, a.frozen_balance;
-  
-  -- 获取记录的总资产
-  SELECT total_asset INTO v_recorded_total 
-  FROM public.assets WHERE user_id = p_user_id;
-  
-  v_diff := v_calculated_total - COALESCE(v_recorded_total, 0);
-  
-  -- 如果有差异，记录日志
-  IF ABS(v_diff) > 0.01 THEN
-    INSERT INTO public.settlement_logs (settlement_date, user_id, settlement_type, details, status)
-    VALUES (
-      CURRENT_DATE, 
-      p_user_id, 
-      'RECONCILE', 
-      jsonb_build_object(
-        'calculated', v_calculated_total,
-        'recorded', v_recorded_total,
-        'diff', v_diff
-      ),
-      'WARNING'
-    );
-  END IF;
-  
-  RETURN jsonb_build_object(
-    'calculated_total', v_calculated_total,
-    'recorded_total', v_recorded_total,
-    'diff', v_diff,
-    'is_balanced', ABS(v_diff) <= 0.01
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- 8. 创建对账函数（已在前面的迁移中定义，这里跳过）
+-- 注意：reconcile_user_assets()函数已在20260301000001_add_settlement_system.sql中定义
+-- 返回类型为TABLE(...)，这里不再重复定义
 
 -- 9. 创建定时清理过期幂等性记录的函数
 CREATE OR REPLACE FUNCTION public.cleanup_expired_idempotency()

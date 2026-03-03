@@ -4,6 +4,8 @@
 -- 功能: 账户管理、虚拟持仓、实时交易、条件单策略、资产快照
 -- ==========================================================
 
+BEGIN;
+
 -- 1. 用户扩展资料表 (与 Auth.Users 关联)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
@@ -88,3 +90,5 @@ DO $$ BEGIN
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
+
+COMMIT;

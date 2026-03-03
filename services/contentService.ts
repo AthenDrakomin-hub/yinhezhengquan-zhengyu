@@ -5,7 +5,7 @@ import {
   MOCK_TICKETS,
   MOCK_CALENDAR,
   BANNER_MOCK,
-} from '@/constants';
+} from '@/lib/constants';
 import type {
   ResearchReport,
   EducationTopic,
@@ -13,7 +13,7 @@ import type {
   CalendarEvent,
   Stock,
   Banner,
-} from '@/types';
+} from '@/lib/types';
 
 /**
  * 内容服务 - 从 Supabase 数据库获取内容，失败时返回空数组

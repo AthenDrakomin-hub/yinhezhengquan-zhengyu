@@ -211,6 +211,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ALTER TABLE public.admin_operation_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trade_rules_history ENABLE ROW LEVEL SECURITY;
 
+-- 删除可能已存在的策略
+DROP POLICY IF EXISTS "管理员查看操作日志" ON public.admin_operation_logs;
+DROP POLICY IF EXISTS "管理员查看规则历史" ON public.trade_rules_history;
+
+-- 创建新策略
 CREATE POLICY "管理员查看操作日志" ON public.admin_operation_logs
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin' AND status = 'ACTIVE')
