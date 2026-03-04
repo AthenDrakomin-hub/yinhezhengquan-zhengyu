@@ -248,7 +248,7 @@ export const adminService = {
     }
   },
 
-  // IP白名单验证
+  // IP地址检测服务
   async verifyIPWhitelist(): Promise<{ 
     ok: boolean; 
     ip_allowed: boolean; 
@@ -274,14 +274,14 @@ export const adminService = {
       });
 
       if (!response.ok) {
-        // 如果返回403，说明IP不在白名单内
+        // 如果返回403，说明IP检测失败或不允许访问
         if (response.status === 403) {
           const data = await response.json();
           return { 
             ok: true, 
             ip_allowed: false, 
             client_ip: data.client_ip,
-            message: data.message || 'IP不在白名单内'
+            message: data.message || 'IP地址无法访问管理后台'
           };
         }
         throw new Error(`Edge Function返回错误: ${response.status}`);
@@ -295,13 +295,13 @@ export const adminService = {
         message: data.message
       };
     } catch (error: any) {
-      console.error('IP白名单验证失败:', error);
-      // 如果验证失败，出于安全考虑，默认不允许访问
+      console.error('IP地址检测失败:', error);
+      // 如果检测失败，出于安全考虑，默认不允许访问
       return { 
         ok: false, 
         ip_allowed: false, 
-        error: error.message || 'IP验证失败',
-        message: '无法验证IP白名单，访问被拒绝'
+        error: error.message || 'IP检测失败',
+        message: '无法检测IP地址，访问被拒绝'
       };
     }
   }

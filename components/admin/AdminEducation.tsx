@@ -15,6 +15,7 @@ const AdminEducation: React.FC = () => {
     category: '',
     image: '',
     duration: '',
+    content: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -99,6 +100,7 @@ const AdminEducation: React.FC = () => {
               category: '',
               image: '',
               duration: '',
+              content: '',
             });
             setIsCreateModalOpen(true);
           }}>
@@ -154,6 +156,7 @@ const AdminEducation: React.FC = () => {
                             category: topic.category,
                             image: topic.image,
                             duration: topic.duration,
+                            content: topic.content || '',
                           });
                           setIsEditModalOpen(true);
                         }}
@@ -210,6 +213,15 @@ const AdminEducation: React.FC = () => {
                 <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">图片URL</label>
                 <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="industrial-input" placeholder="可选，输入图片链接" />
               </div>
+              <div>
+                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">课程内容</label>
+                <textarea 
+                  value={formData.content} 
+                  onChange={e => setFormData({...formData, content: e.target.value})}
+                  className="industrial-input min-h-[120px]"
+                  placeholder="输入课程详细内容..."
+                />
+              </div>
 
               <button disabled={submitting} type="submit" className="w-full mt-4 industrial-button-primary">
                 {submitting ? '创建中...' : '确认创建'}
@@ -252,6 +264,15 @@ const AdminEducation: React.FC = () => {
               <div>
                 <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">图片URL</label>
                 <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="industrial-input" placeholder="可选，输入图片链接" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">课程内容</label>
+                <textarea 
+                  value={formData.content} 
+                  onChange={e => setFormData({...formData, content: e.target.value})}
+                  className="industrial-input min-h-[120px]"
+                  placeholder="输入课程详细内容..."
+                />
               </div>
 
               <button disabled={submitting} type="submit" className="w-full mt-4 industrial-button-primary">

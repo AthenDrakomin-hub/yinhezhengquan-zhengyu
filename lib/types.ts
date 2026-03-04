@@ -155,6 +155,9 @@ export interface EducationTopic {
   category: string;
   image: string;
   duration: string;
+  content: string;
+  order?: number;
+  is_published?: boolean;
 }
 
 export interface MarketHoliday {

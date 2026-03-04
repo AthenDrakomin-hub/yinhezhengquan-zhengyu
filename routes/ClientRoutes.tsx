@@ -99,14 +99,21 @@ const ClientRoutes: React.FC = () => {
             <Route path="dashboard" element={
               <Dashboard 
                 transactions={mockAccount.transactions} 
-                onOpenBanner={() => {}} 
-                onOpenCalendar={() => {}} 
-                onOpenReports={() => {}} 
-                onOpenEducation={() => {}} 
-                onOpenCompliance={() => {}} 
+                onOpenBanner={(banner) => console.log('打开横幅:', banner.title)} 
+                onOpenCalendar={() => navigate('/client/calendar')} 
+                onOpenReports={() => navigate('/client/reports')} 
+                onOpenEducation={() => {
+                  alert('投教中心功能正在开发中，敬请期待！');
+                  console.log('投教中心功能正在开发中');
+                }} // 暂时显示提示信息，投教中心路由待创建
+                onOpenCompliance={() => navigate('/client/compliance')}
               />
             } />
-            <Route path="market" element={<MarketView onSelectStock={() => {}} />} />
+            <Route path="market" element={<MarketView onSelectStock={(symbol) => {
+              console.log('选择股票:', symbol);
+              // 可以导航到交易页面或显示股票详情
+              // navigate(`/client/trade?symbol=${symbol}`);
+            }} />} />
             <Route path="trade" element={
               <TradePanel 
                 account={mockAccount} 

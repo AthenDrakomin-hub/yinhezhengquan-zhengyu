@@ -86,6 +86,9 @@ export const getEducationTopics = async (): Promise<EducationTopic[]> => {
       category: topic.category,
       image: topic.image || '',
       duration: topic.duration || '',
+      content: topic.content || '', // 补全字段
+      order: topic.order ?? 0,      // 补全字段
+      is_published: topic.is_published // 补全字段
     }));
   } catch (error) {
     console.error('获取投教内容失败:', error);
@@ -299,6 +302,7 @@ export const createEducationTopic = async (topic: Omit<EducationTopic, 'id'>) =>
     category: topic.category,
     image: topic.image || '',
     duration: topic.duration || '',
+    content: topic.content || '',
     order: 0,
     is_published: true,
   });
@@ -314,6 +318,7 @@ export const updateEducationTopic = async (id: string, topic: Partial<EducationT
       category: topic.category,
       image: topic.image,
       duration: topic.duration,
+      content: topic.content,
     })
     .eq('id', id);
 

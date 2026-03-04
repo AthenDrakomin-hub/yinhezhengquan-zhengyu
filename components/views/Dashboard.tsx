@@ -120,7 +120,15 @@ const Dashboard: React.FC<DashboardProps> = ({
           ].map((feat) => (
             <div 
               key={feat.id} 
-              onClick={feat.action}
+              onClick={() => {
+                console.log(`点击功能卡片: ${feat.label} (${feat.id})`);
+                console.log('action函数:', feat.action);
+                if (feat.action) {
+                  feat.action();
+                } else {
+                  console.error(`功能卡片 ${feat.label} 的action函数未定义`);
+                }
+              }}
               className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-all"
             >
               <div className={`w-16 h-16 rounded-3xl flex items-center justify-center border border-[var(--color-border)] shadow-lg group-hover:scale-110 transition-transform ${feat.color}`}>

@@ -140,23 +140,30 @@ export const isAdminUser = async (): Promise<boolean> => {
 // 10. 使用Edge Function验证管理员权限
 export const verifyAdminWithEdgeFunction = async (accessToken: string): Promise<{ ok: boolean; admin: boolean; error?: string; status?: number }> => {
   try {
-    // 替换成你的函数域名（从 Supabase 后台复制）
-    const functionUrl = 'https://rfnrosyfeivcbkimjlwo.functions.supabase.co/admin-verify';
+    // 从环境变量读取Edge Function URL，避免硬编码
+    const functionUrl = import.meta.env.VITE_SUPABASE_FUNCTION_URL || 
+                       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-verify`;
     
+    if (!functionUrl) {
+      throw new Error('Edge Function URL未配置，请设置VITE_SUPABASE_FUNCTION_URL环境变量');
+    }
+
     const response = await fetch(functionUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${accessToken}`, // 必须带 Bearer 前缀
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      // 开发环境允许跨域
       mode: 'cors'
     });
 
+    if (!response.ok) {
+      throw new Error(`Edge Function调用失败: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
     
-    // 把响应状态也返回，方便调试
     return {
       ...data,
       status: response.status
@@ -166,7 +173,7 @@ export const verifyAdminWithEdgeFunction = async (accessToken: string): Promise<
     return {
       ok: false,
       admin: false,
-      error: 'function_call_failed',
+      error: error.message || 'function_call_failed',
       status: 500
     };
   }

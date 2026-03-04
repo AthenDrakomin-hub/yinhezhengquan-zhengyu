@@ -41,6 +41,7 @@
     "components/core/**/*",
     "components/auth/**/*",
     "components/views/**/*",
+    "components/admin/**/*",
     "components/client/analysis/**/*",
     "components/client/compliance/**/*",
     "components/client/trading/**/*",
@@ -57,7 +58,6 @@
     "docs/archive",
     "AdminApp.tsx",
     "ClientApp.tsx",
-    "components/admin",
     "components/client/auth",
     "components/client/common",
     "components/common"
