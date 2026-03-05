@@ -3,6 +3,14 @@
     {
       "source": "/api/stock/:path*",
       "destination": "https://hq.sinajs.cn/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ]
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "vite"
 }

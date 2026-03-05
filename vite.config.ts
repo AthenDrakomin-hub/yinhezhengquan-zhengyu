@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
+      base: '/',
       server: {
         port: 3000,
         host: '0.0.0.0',
@@ -20,6 +21,14 @@ export default defineConfig(({ mode }) => {
       plugins: [react(), tailwindcss()],
       build: {
         chunkSizeWarningLimit: 2000,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+              'ui-vendor': ['@supabase/supabase-js', 'recharts', 'framer-motion'],
+            }
+          }
+        }
       },
       define: {},
       resolve: {
