@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSession(session);
 
       if (!session?.user) {
+        console.log('[Auth] 无用户，设置 loading=false');
         setProfile(null);
         setLoading(false);
       }
@@ -55,14 +56,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      console.log('[Auth] state change:', event, nextSession?.user?.id || null);
+      console.log('[Auth] state change:', event, nextSession?.user?.id || null, '当前 loading:', loading);
 
       setSession(nextSession);
 
       if (!nextSession?.user) {
+        console.log('[Auth] 用户登出，设置 loading=false');
         setProfile(null);
         setLoading(false);
       } else {
+        console.log('[Auth] 用户登录，设置 loading=true');
         setLoading(true);
       }
     });

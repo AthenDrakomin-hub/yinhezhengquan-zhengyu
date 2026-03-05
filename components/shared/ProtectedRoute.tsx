@@ -95,8 +95,26 @@ export function ProtectedRoute({
   }
 
   // 检查角色权限
-  if (allowedRoles && (!profile || !allowedRoles.includes(profile.role as any))) {
-    return <Navigate to={unauthorizedPath} replace />;
+  if (allowedRoles) {
+    // 检查用户是否有允许的角色
+    let hasAllowedRole = false;
+    
+    // 首先检查 admin_level
+    if (profile?.admin_level && allowedRoles.includes(profile.admin_level as any)) {
+      hasAllowedRole = true;
+    }
+    // 如果没有匹配的 admin_level，检查 role
+    else if (profile?.role && allowedRoles.includes(profile.role as any)) {
+      hasAllowedRole = true;
+    }
+    // 特殊处理：super_admin 应该可以通过所有管理员检查
+    else if (isSuperAdmin && allowedRoles.includes('admin' as any)) {
+      hasAllowedRole = true;
+    }
+    
+    if (!hasAllowedRole) {
+      return <Navigate to={unauthorizedPath} replace />;
+    }
   }
 
   // 通过所有检查，渲染子组件
