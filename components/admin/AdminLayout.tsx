@@ -21,31 +21,20 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
     if (import.meta.env.DEV) {
       const checkConnection = async () => {
         try {
-          // 简化的连接检查
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          if (!supabaseUrl) {
-            setConnectionStatus('未配置');
-            setIsConnectionOk(false);
-            return;
-          }
-
-          // 检查 Supabase 基础连接
-          const response = await fetch(`${supabaseUrl}/health`, {
-            method: 'GET',
-            headers: {
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-            },
-          });
-
-          if (response.ok) {
+          // 使用真正的 SDK 进行轻量级查询，而不是 fetch
+          // 导入 supabase 客户端
+          const { supabase } = await import('../../lib/supabase');
+          const { error } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).limit(1);
+          
+          if (!error) {
             setConnectionStatus('正常');
             setIsConnectionOk(true);
           } else {
-            setConnectionStatus('异常');
+            setConnectionStatus('响应异常');
             setIsConnectionOk(false);
           }
         } catch (error) {
-          setConnectionStatus('异常');
+          setConnectionStatus('网络错误');
           setIsConnectionOk(false);
         }
       };
@@ -74,6 +63,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
     if (item.minLevel === 'super_admin') return adminLevel === 'super_admin';
     return true;
   });
+
+  // 检查权限拦截，防止 adminLevel undefined 时显示问题
+  if (!adminLevel && !import.meta.env.DEV) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-industrial-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-industrial-600 font-bold">正在验证权限...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-industrial-50 text-industrial-900 font-sans">

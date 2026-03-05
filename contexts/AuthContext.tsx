@@ -37,49 +37,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
-      // 1. 获取 Session
+    let alive = true;
+
+    const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!alive) return;
+
+      console.log('[Auth] init session:', session?.user?.id || null);
       setSession(session);
 
-      // 2. 如果有 Session，必须等 Profile 拿到才算加载完成
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, email, username, real_name, phone, role, status, admin_level, risk_level')
-          .eq('id', session.user.id)
-          .single();
-        
-        setProfile(profile);
+      if (!session?.user) {
+        setProfile(null);
+        setLoading(false);
       }
-      
-      // 3. 全部搞定才设为 false
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      console.log('[Auth] state change:', event, nextSession?.user?.id || null);
+
+      setSession(nextSession);
+
+      if (!nextSession?.user) {
+        setProfile(null);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+    });
+
+    return () => {
+      alive = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadProfile = async () => {
+      if (!session?.user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, username, real_name, phone, role, status, admin_level, risk_level')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (!alive) return;
+
+      console.log('[Auth] profile loaded:', {
+        userId: session.user.id,
+        hasProfile: !!data,
+        error,
+      });
+
+      setProfile(error ? null : data);
       setLoading(false);
     };
 
-    initAuth();
+    loadProfile();
 
-    // 监听登录事件
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        if (session?.user) {
-          // 这里也要 await，防止状态不一致
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, email, username, real_name, phone, role, status, admin_level, risk_level')
-            .eq('id', session.user.id)
-            .single();
-          setProfile(profile);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [session?.user?.id]);
 
   const fetchProfile = async (userId: string) => {
     try {

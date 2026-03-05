@@ -1,23 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
-
-// 创建使用service_role key的admin客户端（仅用于需要admin权限的操作）
-const createAdminClient = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.warn('缺少Supabase admin配置，部分功能可能无法使用');
-    return null;
-  }
-  
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-};
 
 export const userService = {
   /**
@@ -49,23 +30,6 @@ export const userService = {
       }
     }
 
-    // 尝试获取用户邮箱信息
-    const userEmails = new Map<string, string>();
-    try {
-      const adminClient = createAdminClient();
-      if (adminClient && userIds.length > 0) {
-        // 使用admin客户端查询auth.users表获取邮箱
-        const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers();
-        if (!authError && authUsers) {
-          authUsers.users.forEach((user: any) => {
-            userEmails.set(user.id, user.email || '');
-          });
-        }
-      }
-    } catch (err) {
-      console.warn('获取用户邮箱信息失败:', err);
-    }
-
     // 将资产数据与用户数据合并
     const assetsMap = new Map(assetsData.map(asset => [asset.user_id, asset]));
     
@@ -76,7 +40,7 @@ export const userService = {
         username: profile.username || '未设置',
         phone: profile.phone || '',
         id_card: profile.id_card || '',
-        email: userEmails.get(profile.id) || '', // 添加邮箱字段
+        email: profile.email || '', // 从profiles表获取邮箱
         role: profile.role || 'USER',
         risk_level: profile.risk_level || '稳健型',
         status: profile.status || 'ACTIVE',
@@ -186,46 +150,10 @@ export const userService = {
 
   /**
    * 重置用户密码
+   * 注意：此功能需要Edge Function实现，前端无法直接调用Supabase admin API
    */
   async resetPassword(userId: string) {
-    try {
-      const adminClient = createAdminClient();
-      if (!adminClient) {
-        throw new Error('管理员客户端初始化失败，请检查环境变量配置');
-      }
-      
-      // 使用Supabase admin API重置密码为123456
-      const { data, error } = await adminClient.auth.admin.updateUserById(
-        userId,
-        { password: '123456' }
-      );
-      
-      if (error) {
-        console.error('重置密码失败:', error);
-        throw new Error(`重置密码失败: ${error.message}`);
-      }
-      
-      // 记录操作日志
-      const adminId = (await supabase.auth.getUser()).data.user?.id || 'system';
-      await supabase.from('admin_operation_logs').insert({
-        admin_id: adminId,
-        target_user_id: userId,
-        operate_type: 'PASSWORD_RESET',
-        operate_content: {
-          action: 'reset_password',
-          new_password: '123456'
-        }
-      }).then(result => {
-        if (result.error) {
-          console.warn('记录操作日志失败:', result.error);
-        }
-      });
-      
-      return { success: true, message: '密码已重置为123456' };
-    } catch (err: any) {
-      console.error('重置密码异常:', err);
-      throw new Error(err.message || '重置密码失败', { cause: err });
-    }
+    throw new Error('重置密码功能需要Edge Function实现，请联系管理员');
   },
 
   /**

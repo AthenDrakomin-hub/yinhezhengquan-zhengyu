@@ -234,67 +234,53 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
         }
 
         console.log('[Login] 真实模式登录开始');
-        
-        // 🔥 关键修复：先清除旧会话，防止脏数据覆盖
-        await supabase.auth.signOut(); 
-
-        console.log('[Login] 正在调用 supabase.auth.signInWithPassword...');
 
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        // 增加详细日志用于调试
-        console.log('[Login] API Response:', { hasSession: !!authData?.session, error: authError });
+        console.log('[Login] signIn result:', {
+          hasUser: !!authData?.user,
+          hasSession: !!authData?.session,
+          userId: authData?.user?.id || null,
+          error: authError,
+        });
 
         if (authError) throw authError;
-        
-        if (!authData?.user) throw new Error('无用户信息');
+        if (!authData?.user || !authData?.session) {
+          throw new Error('登录成功但未建立会话');
+        }
 
-        // 后续 profile 查询等保持不变...
-        // ----- 步骤2: 查询 profiles 表 -----
-        console.log('[Login] 正在查询 profiles 表，用户ID:', authData.user.id);
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('status, role, username')
           .eq('id', authData.user.id)
           .single();
 
-        console.log('[Login] Profiles 查询结果:', {
-          hasProfile: !!profile,
-          profileError: profileError ? { message: profileError.message, details: profileError.details } : null,
-          profileStatus: profile?.status,
-          profileRole: profile?.role,
-        });
-
         if (profileError) {
-          console.error('[Login] Profile 不存在或查询失败:', profileError);
-          throw new Error('用户资料不存在，请联系管理员（错误码: PF001）');
+          throw new Error(`用户资料不存在: ${profileError.message}`);
         }
 
-        // ----- 步骤3: 检查账户状态 -----
         if (profile?.status === 'PENDING') {
-          console.warn('[Login] 账户正在审核中');
           await supabase.auth.signOut();
           throw new Error('您的账户正在审核中，请等待管理员审批后再登录');
         }
+
         if (profile?.status === 'BANNED') {
-          console.warn('[Login] 账户已被禁用');
           await supabase.auth.signOut();
-          throw new Error('您的账户已被禁用，如有疑问请联系管理员（客服热线：95551）');
+          throw new Error('您的账户已被禁用，如有疑问请联系管理员');
         }
 
-        console.log('[Login] 登录成功，准备回调');
-
-        // ----- 步骤4: 登录成功，通知父组件并跳转 -----
-        if (mountedRef.current) {
-          console.log('[Login] 调用父组件onLoginSuccess回调');
+        console.log('[Login] before onLoginSuccess');
+        try {
           onLoginSuccess(authData.user);
-          console.log('[Login] 父组件回调执行完毕，直接导航到/client/dashboard');
-          // 登录成功后强制跳转，绕过可能的 React Router 状态冲突
-          window.location.href = '/client/dashboard'; 
+        } catch (e) {
+          console.error('[Login] onLoginSuccess error:', e);
         }
+        console.log('[Login] after onLoginSuccess');
+
+        window.location.assign('/client/dashboard');
       } else if (loginMethod === '2fa') {
         // 双因素登录
         if (twoFactorStep === 1) {

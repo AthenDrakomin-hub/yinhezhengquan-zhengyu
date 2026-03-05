@@ -62,54 +62,101 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
     // 如果需要 checkIP 保持最新，应该在 useAdminGuard 内部用 useCallback 包裹 checkIP
   }, []); 
 
-  // 登录处理逻辑
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    if (!ipAllowed) return; // 再次确认IP权限
+      // 登录处理逻辑
+      const handleLogin = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+        e.preventDefault();
+        if (!ipAllowed) return; // 再次确认IP权限
 
-    setLoading(true);
+        setLoading(true);
 
-    try {
-      // 强制刷新 Session 状态
-      await supabase.auth.signOut();
-      await new Promise(r => setTimeout(r, 100)); 
+        try {
+          console.log('[AdminLogin] 发起登录...', { email });
 
-      console.log('[AdminLogin] 发起登录...', { email });
-      
-      const { data, error } = await loginWithPassword(email.trim(), password.trim());
-      
-      if (error) throw error;
-      if (!data?.user) throw new Error('登录失败，无法获取用户信息');
+          const { data, error } = await loginWithPassword(email.trim(), password.trim());
 
-      // 权限二次校验
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_admin') // ✅ 改为查询我们刚建的 is_admin 字段
-        .eq('id', data.user.id)
-        .single();
-      
-      if (profileError) {
-        console.error("查询权限失败:", profileError);
-        throw new Error('无法验证管理员权限');
-      }
-      
-      // ✅ 直接判断 is_admin 是否为 true
-      const isAdmin = profileData?.is_admin === true; 
-      
-      if (!isAdmin) {
-        await supabase.auth.signOut();
-        throw new Error('此账户无管理员权限');
-      }
+          console.log('[AdminLogin] loginWithPassword 返回:', { data, error });
 
-      console.log('[AdminLogin] 验证通过，同步状态...');
-      onLoginSuccess(data.user);
-      
-    } catch (error: any) {
-      console.error('[AdminLogin] 登录异常:', error.message);
-      alert(error.message || '登录失败');
-      setLoading(false);
-    }
-  };
+          if (error) throw error;
+          if (!data?.user) throw new Error('登录失败，无法获取用户信息');
+
+          console.log('[AdminLogin] 登录成功，用户ID:', data.user.id);
+
+          // 添加详细的profiles查询调试
+          console.log('[AdminLogin] 开始查询profiles表，用户ID:', data.user.id);
+          console.log('[AdminLogin] 查询SQL等效: SELECT is_admin, admin_level FROM profiles WHERE id = $1', data.user.id);
+          
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_admin, admin_level, email, username, role, status')
+            .eq('id', data.user.id)
+            .single();
+
+          console.log('[AdminLogin] profiles查询完成:', { 
+            hasProfileData: !!profileData, 
+            hasProfileError: !!profileError,
+            profileError: profileError ? {
+              code: profileError.code,
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint
+            } : null
+          });
+
+          if (profileError) {
+            console.error('[AdminLogin] 查询profiles表失败:', profileError);
+            console.error('[AdminLogin] 错误详情:', {
+              code: profileError.code,
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint
+            });
+            throw new Error(`查询用户资料失败: ${profileError.message}`);
+          }
+
+          console.log('[AdminLogin] profiles查询结果:', profileData);
+          console.log('[AdminLogin] is_admin字段值:', profileData?.is_admin);
+          console.log('[AdminLogin] admin_level字段值:', profileData?.admin_level);
+          console.log('[AdminLogin] role字段值:', profileData?.role);
+          console.log('[AdminLogin] status字段值:', profileData?.status);
+
+          if (!profileData) {
+            console.error('[AdminLogin] profileData为null或undefined');
+            throw new Error('用户资料不存在');
+          }
+
+          if (profileData.is_admin !== true) {
+            console.warn('[AdminLogin] 用户不是管理员，详细检查:');
+            console.warn('[AdminLogin] - is_admin:', profileData.is_admin);
+            console.warn('[AdminLogin] - admin_level:', profileData.admin_level);
+            console.warn('[AdminLogin] - role:', profileData.role);
+            console.warn('[AdminLogin] - 建议检查数据库is_admin字段是否已设置为true');
+            
+            // 尝试自动修复：如果admin_level是管理员但is_admin不是true
+            if (profileData.admin_level === 'admin' || profileData.admin_level === 'super_admin' || profileData.role === 'admin') {
+              console.warn('[AdminLogin] 检测到用户可能是管理员但is_admin字段未设置，建议执行数据库修复脚本');
+            }
+            
+            await supabase.auth.signOut();
+            throw new Error('您不是管理员，无法访问管理后台。请确认您的管理员权限。');
+          }
+
+          console.log('[AdminLogin] 验证通过，同步状态...');
+          
+          // 传递 adminLevel 给父组件
+          onLoginSuccess({
+            ...data.user,
+            adminLevel: profileData.admin_level || 'admin',
+          });
+
+          console.log('[AdminLogin] onLoginSuccess 已调用，准备跳转');
+          window.location.assign('/admin/dashboard');
+        } catch (error: any) {
+          console.error('[AdminLogin] 登录异常:', error);
+          alert(error.message || '登录失败');
+        } finally {
+          setLoading(false);
+        }
+      };
 
   // --- 视图渲染部分 ---
 

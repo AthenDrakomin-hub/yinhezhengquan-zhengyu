@@ -1,7 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
-import AdminLoginView from './components/AdminLoginView';
+import AdminLoginView from "./components/admin/AdminLoginView";
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { AdminProvider } from './contexts/AdminContext';
 
@@ -36,16 +36,19 @@ const AdminApp: React.FC = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // 验证是否为管理员并获取层级
+        // 验证是否为管理员并获取层级 - 检查 admin_level 字段
         supabase
           .from('profiles')
-          .select('role, admin_level')
+          .select('admin_level')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => {
-            if (data?.role === 'admin') {
+            const adminLevel = data?.admin_level;
+            const isAdmin = adminLevel === 'admin' || adminLevel === 'super_admin';
+            
+            if (isAdmin) {
               setSession(session);
-              setAdminLevel(data.admin_level);
+              setAdminLevel(adminLevel);
             } else {
               supabase.auth.signOut();
             }
@@ -60,13 +63,16 @@ const AdminApp: React.FC = () => {
       if (session) {
         supabase
           .from('profiles')
-          .select('role, admin_level')
+          .select('admin_level')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => {
-            if (data?.role === 'admin') {
+            const adminLevel = data?.admin_level;
+            const isAdmin = adminLevel === 'admin' || adminLevel === 'super_admin';
+            
+            if (isAdmin) {
               setSession(session);
-              setAdminLevel(data.admin_level);
+              setAdminLevel(adminLevel);
             } else {
               setSession(null);
               setAdminLevel(null);
@@ -83,7 +89,9 @@ const AdminApp: React.FC = () => {
   }, []);
 
   const handleLoginSuccess = (userData: any) => {
-    navigate('/dashboard');
+    // 登录成功后跳转到管理后台仪表板
+    console.log('[AdminApp] 管理员登录成功，跳转到管理后台', userData);
+    navigate('/admin/dashboard');
   };
 
   if (loading) {
@@ -100,7 +108,7 @@ const AdminApp: React.FC = () => {
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
           <Route path="/" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<AdminUserManagement />} />
             <Route path="trades" element={<AdminTradeManagement />} />
@@ -115,7 +123,7 @@ const AdminApp: React.FC = () => {
             <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
             <Route path="audit-logs" element={<AdminAuditLogs />} />
             <Route path="data-export" element={<AdminDataExport />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Route>
         </Routes>
       </Suspense>
