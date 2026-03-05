@@ -15,8 +15,15 @@ const AuthRoutes: React.FC = () => {
     navigate('/auth/login');
   };
 
-  const handleLoginSuccess = () => {
-    navigate('/client/dashboard');
+  const handleLoginSuccess = (userData: any) => {
+    // 根据用户角色进行不同的导航
+    if (userData?.role === 'admin') {
+      // 管理员用户导航到管理端
+      navigate('/admin/dashboard');
+    } else {
+      // 普通用户导航到客户端仪表板
+      navigate('/client/dashboard');
+    }
   };
 
   return (

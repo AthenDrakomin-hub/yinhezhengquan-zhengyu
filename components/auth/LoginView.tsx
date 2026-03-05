@@ -157,17 +157,22 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           throw new Error('请先获取验证码');
         }
           
-        if (isPlaceholder) {
-          if (otp.length === 6) {
-            setTimeout(() => {
-              if (mountedRef.current) {
-                onLoginSuccess({ email: `${phone}@zhengyu.com`, username: `User_${phone.slice(-4)}` });
-                setLoading(false);
-              }
-            }, 1000);
-          } else {
-            throw new Error('请输入 6 位验证码');
-          }
+          if (isPlaceholder) {
+            if (otp.length === 6) {
+              setTimeout(() => {
+                if (mountedRef.current) {
+                  // 演示模式：传递默认角色信息
+                  onLoginSuccess({ 
+                    email: `${phone}@zhengyu.com`, 
+                    username: `User_${phone.slice(-4)}`,
+                    role: 'user' // 默认角色
+                  });
+                  setLoading(false);
+                }
+              }, 1000);
+            } else {
+              throw new Error('请输入 6 位验证码');
+            }
         } else {
           if (!otp || otp.length !== 6) {
             throw new Error('请输入 6 位验证码');
@@ -214,7 +219,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             throw new Error('您的账户已被禁用，如有疑问请联系管理员（客服热线：95551）');
           }
           
-          onLoginSuccess(authData.user);
+          // 传递包含角色信息的用户数据
+          onLoginSuccess({
+            ...authData.user,
+            role: profile?.role,
+            username: profile?.username
+          });
           setLoading(false);
         }
       } else if (loginMethod === 'email') {
@@ -226,7 +236,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           console.log('演示模式登录');
           setTimeout(() => {
             if (mountedRef.current) {
-              onLoginSuccess({ email, username: email.split('@')[0] });
+              // 演示模式：传递默认角色信息
+              onLoginSuccess({ 
+                email, 
+                username: email.split('@')[0],
+                role: 'user' // 默认角色
+              });
               setLoading(false);
             }
           }, 1000);
@@ -274,13 +289,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
 
         console.log('[Login] before onLoginSuccess');
         try {
-          onLoginSuccess(authData.user);
+          // 传递包含角色信息的用户数据
+          onLoginSuccess({
+            ...authData.user,
+            role: profile?.role,
+            username: profile?.username
+          });
         } catch (e) {
           console.error('[Login] onLoginSuccess error:', e);
         }
         console.log('[Login] after onLoginSuccess');
-
-        window.location.assign('/client/dashboard');
       } else if (loginMethod === '2fa') {
         // 双因素登录
         if (twoFactorStep === 1) {
@@ -332,7 +350,33 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             } else {
               // 如果没有启用 2FA，直接登录成功
               if (authData?.user) {
-                onLoginSuccess(authData.user);
+                // 查询profiles表获取角色信息
+                const { data: profile, error: profileError } = await supabase
+                  .from('profiles')
+                  .select('status, role, username')
+                  .eq('id', authData.user.id)
+                  .single();
+
+                if (profileError) {
+                  throw new Error(`用户资料不存在: ${profileError.message}`);
+                }
+
+                if (profile?.status === 'PENDING') {
+                  await supabase.auth.signOut();
+                  throw new Error('您的账户正在审核中，请等待管理员审批后再登录');
+                }
+
+                if (profile?.status === 'BANNED') {
+                  await supabase.auth.signOut();
+                  throw new Error('您的账户已被禁用，如有疑问请联系管理员');
+                }
+
+                // 传递包含角色信息的用户数据
+                onLoginSuccess({
+                  ...authData.user,
+                  role: profile?.role,
+                  username: profile?.username
+                });
               }
               setLoading(false);
             }
@@ -353,7 +397,33 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           if (authError) throw authError;
           
           if (authData?.user) {
-            onLoginSuccess(authData.user);
+            // 查询profiles表获取角色信息
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('status, role, username')
+              .eq('id', authData.user.id)
+              .single();
+
+            if (profileError) {
+              throw new Error(`用户资料不存在: ${profileError.message}`);
+            }
+
+            if (profile?.status === 'PENDING') {
+              await supabase.auth.signOut();
+              throw new Error('您的账户正在审核中，请等待管理员审批后再登录');
+            }
+
+            if (profile?.status === 'BANNED') {
+              await supabase.auth.signOut();
+              throw new Error('您的账户已被禁用，如有疑问请联系管理员');
+            }
+
+            // 传递包含角色信息的用户数据
+            onLoginSuccess({
+              ...authData.user,
+              role: profile?.role,
+              username: profile?.username
+            });
           }
           setLoading(false);
         }
