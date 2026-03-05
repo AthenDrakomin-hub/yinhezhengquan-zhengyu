@@ -224,7 +224,7 @@ export const userService = {
       return { success: true, message: '密码已重置为123456' };
     } catch (err: any) {
       console.error('重置密码异常:', err);
-      throw new Error(err.message || '重置密码失败');
+      throw new Error(err.message || '重置密码失败', { cause: err });
     }
   },
 

@@ -80,7 +80,7 @@ class FaceRecognition {
       console.log('人脸识别模型加载完成');
     } catch (error) {
       console.error('加载人脸识别模型失败:', error);
-      throw new Error(`模型加载失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(`模型加载失败: ${error instanceof Error ? error.message : '未知错误'}`, { cause: error });
     }
   }
 

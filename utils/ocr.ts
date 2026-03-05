@@ -54,7 +54,7 @@ class IdCardOcr {
       console.log('OCR Worker 初始化成功');
     } catch (error) {
       console.error('OCR Worker 初始化失败:', error);
-      throw new Error(`OCR初始化失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(`OCR初始化失败: ${error instanceof Error ? error.message : '未知错误'}`, { cause: error });
     }
   }
 
@@ -83,7 +83,7 @@ class IdCardOcr {
       return result;
     } catch (error) {
       console.error('身份证正面识别失败:', error);
-      throw new Error(`身份证识别失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(`身份证识别失败: ${error instanceof Error ? error.message : '未知错误'}`, { cause: error });
     }
   }
 
@@ -112,7 +112,7 @@ class IdCardOcr {
       return result;
     } catch (error) {
       console.error('身份证反面识别失败:', error);
-      throw new Error(`身份证反面识别失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(`身份证反面识别失败: ${error instanceof Error ? error.message : '未知错误'}`, { cause: error });
     }
   }
 

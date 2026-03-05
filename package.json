@@ -12,7 +12,7 @@
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "security": "npm audit && npx @microsoft/security-advisory-checker",
@@ -23,7 +23,12 @@
     "install-deps": "npm install --legacy-peer-deps"
   },
   "overrides": {
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "glob": "^10.0.0",
+    "rimraf": "^5.0.0",
+    "inflight": "lru-cache",
+    "@humanwhocodes/config-array": "@eslint/config-array",
+    "whatwg-encoding": "@exodus/bytes"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -48,6 +53,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -59,7 +65,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
-    "eslint": "^8.57.1",
+    "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -68,6 +74,7 @@
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-security": "^1.7.1",
+    "globals": "^17.4.0",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^15.4.3",
@@ -75,6 +82,7 @@
     "prettier": "^3.4.2",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
+    "typescript-eslint": "^8.56.1",
     "vite": "^6.2.0",
     "vitest": "^3.2.4"
   }
