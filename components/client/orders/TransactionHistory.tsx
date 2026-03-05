@@ -39,10 +39,16 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     
     try {
       setCancelling(tradeId);
-      const { cancelService } = await import('../../../services/cancelService');
-      const result = await cancelService.cancelOrder(tradeId, '用户主动撤单');
+      // 使用 tradeService.cancelTradeOrder 调用 Edge Function
+      const result = await tradeService.cancelTradeOrder(tradeId);
       
-      alert(`撤单成功，退款金额：¥${result.refundAmount.toFixed(2)}`);
+      // 根据 Edge Function 返回的数据显示消息
+      if (result && result.success) {
+        const refundMsg = result.refundAmount ? `，退款金额：¥${result.refundAmount.toFixed(2)}` : '';
+        alert(`撤单成功${refundMsg}`);
+      } else {
+        alert('撤单成功');
+      }
       loadTransactions();
     } catch (err: any) {
       alert(`撤单失败: ${err.message}`);

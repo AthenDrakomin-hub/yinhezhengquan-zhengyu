@@ -287,5 +287,136 @@ export const tradeService = {
 
     if (error) throw error;
     return data;
+  },
+
+  /**
+   * 审批通过交易订单
+   * @param tradeId 交易订单ID
+   * @param remark 审批备注（可选）
+   */
+  async approveTrade(tradeId: string, remark?: string) {
+    const { data, error } = await supabase.functions.invoke('approve-trade-order', {
+      body: {
+        trade_id: tradeId,
+        action: 'APPROVED',
+        remark: remark || '审批通过'
+      }
+    });
+
+    if (error) {
+      console.error('审批交易失败:', error);
+      throw new Error(error.message || '审批失败');
+    }
+
+    if (data && data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
+
+  /**
+   * 拒绝交易订单
+   * @param tradeId 交易订单ID
+   * @param remark 审批备注（可选）
+   */
+  async rejectTrade(tradeId: string, remark?: string) {
+    const { data, error } = await supabase.functions.invoke('approve-trade-order', {
+      body: {
+        trade_id: tradeId,
+        action: 'REJECTED',
+        remark: remark || '审批拒绝'
+      }
+    });
+
+    if (error) {
+      console.error('拒绝交易失败:', error);
+      throw new Error(error.message || '拒绝失败');
+    }
+
+    if (data && data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  },
+
+  /**
+   * 获取待审批的交易订单列表
+   */
+  async getPendingApprovals() {
+    const { data, error } = await supabase
+      .from('trades')
+      .select('*')
+      .eq('need_approval', true)
+      .eq('approval_status', 'PENDING')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('获取待审批订单失败:', error);
+      throw error;
+    }
+
+    // 计算交易金额（如果数据库中没有amount字段）
+    return data.map(item => ({
+      ...item,
+      amount: item.amount || (Number(item.price) * Number(item.quantity))
+    }));
+  },
+
+  /**
+   * 获取所有需要审批的交易订单（包括已审批的）
+   * @param limit 限制数量，默认50
+   */
+  async getApprovalHistory(limit: number = 50) {
+    const { data, error } = await supabase
+      .from('trades')
+      .select('*')
+      .eq('need_approval', true)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('获取审批历史失败:', error);
+      throw error;
+    }
+
+    // 计算交易金额（如果数据库中没有amount字段）
+    return data.map(item => ({
+      ...item,
+      amount: item.amount || (Number(item.price) * Number(item.quantity))
+    }));
+  },
+
+  /**
+   * 审批交易订单
+   * @param orderId 订单ID
+   * @param action 'approved' 或 'rejected'
+   * @param remark 审批备注（可选）
+   */
+  async approveTradeOrder(
+    orderId: string,
+    action: 'approved' | 'rejected',
+    remark?: string
+  ) {
+    const { data, error } = await supabase.functions.invoke('approve-trade-order', {
+      body: { order_id: orderId, action, remark }
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  /**
+   * 取消（撤销）交易订单
+   * @param orderId 订单ID
+   */
+  async cancelTradeOrder(orderId: string) {
+    const { data, error } = await supabase.functions.invoke('cancel-trade-order', {
+      body: { order_id: orderId }
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
   }
 };

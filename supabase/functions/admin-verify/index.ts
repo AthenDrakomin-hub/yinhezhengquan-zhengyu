@@ -1,6 +1,6 @@
 // Edge Function: admin-verify
 // 部署路径：supabase/functions/admin-verify/index.ts
-// 功能：验证管理员权限（IP白名单 + JWT验证）
+// 功能：验证管理员IP白名单（登录前访问控制）
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
@@ -8,7 +8,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
 // 速率限制配置
@@ -118,24 +118,11 @@ serve(async (req) => {
       );
     }
 
-    // 3. 验证JWT令牌
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ 
-          allowed: false, 
-          error: 'missing_token',
-          message: '缺少认证令牌'
-        }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // 4. 读取IP白名单配置
+    // 3. 读取IP白名单配置
     const allowedIpsRaw = Deno.env.get("ADMIN_ALLOWED_IPS") || "";
     const allowedIps = allowedIpsRaw.split(",").map(ip => ip.trim()).filter(ip => ip.length > 0);
 
-    // 5. IP白名单验证
+    // 4. IP白名单验证
     const isAllowed = isIPAllowed(clientIP, allowedIps);
     
     if (!isAllowed) {
@@ -150,7 +137,7 @@ serve(async (req) => {
       );
     }
 
-    // 6. 返回成功响应（不包含具体IP信息）
+    // 5. 返回成功响应（不包含具体IP信息）
     return new Response(
       JSON.stringify({ 
         allowed: true,

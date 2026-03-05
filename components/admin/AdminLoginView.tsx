@@ -148,8 +148,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
             adminLevel: profileData.admin_level || 'admin',
           });
 
-          console.log('[AdminLogin] onLoginSuccess 已调用，准备跳转');
-          window.location.assign('/admin/dashboard');
+          console.log('[AdminLogin] onLoginSuccess 已调用，导航由父组件处理');
         } catch (error: any) {
           console.error('[AdminLogin] 登录异常:', error);
           alert(error.message || '登录失败');

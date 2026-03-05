@@ -94,24 +94,26 @@ vercel deploy --prod
 
 ```
 yinhezhengquan-zhengyu/
-├── components/          # React 组件
+├── components/          # React组件库
 │   ├── admin/          # 管理后台组件
-│   └── common/         # 公共组件
+│   ├── client/         # 客户端功能组件
+│   ├── auth/           # 认证相关组件
+│   ├── common/         # 公共基础组件
+│   ├── core/           # 核心布局组件
+│   ├── shared/         # 共享功能组件
+│   └── views/          # 页面视图组件
 ├── services/           # 业务服务层
-│   └── adapters/       # 数据源适配器
-├── supabase/           # Supabase 配置
-│   ├── functions/      # Edge Functions
-│   │   ├── trade/     # 交易相关
-│   │   ├── market/    # 行情相关
-│   │   ├── admin/     # 管理相关
-│   │   └── sync/      # 数据同步
-│   └── migrations/     # 数据库迁移
+├── routes/             # 路由配置
+├── contexts/           # React上下文
+├── hooks/              # 自定义Hooks
+├── lib/                # 工具库和常量
+├── utils/              # 工具函数
+├── database/           # 数据库架构和脚本
+├── supabase/           # Supabase配置
 ├── docs/               # 项目文档
-│   ├── 合规类/        # 合规文档
-│   ├── 运维类/        # 运维文档
-│   ├── 产品类/        # 产品文档
-│   └── 开发类/        # 开发文档
-└── database/           # 数据库架构
+├── scripts/            # 构建和部署脚本
+├── public/             # 静态资源
+└── config/             # 配置文件
 ```
 
 ## 核心功能
