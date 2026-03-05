@@ -50,25 +50,67 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('[Auth] 无用户，设置 loading=false');
         setProfile(null);
         setLoading(false);
+      } else {
+        // 应用启动时，如果用户已登录，需要加载profile
+        console.log('[Auth] 应用启动，加载用户profile');
+        setLoading(true);
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, email, username, real_name, phone, role, status, admin_level, risk_level')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        console.log('[Auth] init profile loaded:', {
+          userId: session.user.id,
+          hasProfile: !!profile,
+        });
+        
+        setProfile(profile);
+        setLoading(false);
       }
     };
 
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      console.log('[Auth] state change:', event, nextSession?.user?.id || null, '当前 loading:', loading);
-
-      setSession(nextSession);
-
-      if (!nextSession?.user) {
-        console.log('[Auth] 用户登出，设置 loading=false');
-        setProfile(null);
-        setLoading(false);
-      } else {
-        console.log('[Auth] 用户登录，设置 loading=true');
-        setLoading(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[Auth] state change:', event, session?.user?.id || null);
+        
+        setSession(session);
+        
+        // 【关键修复】只有这几种事件才需要重新加载 profile
+        const shouldReloadProfile = 
+          event === 'SIGNED_IN' || 
+          event === 'TOKEN_REFRESHED' || 
+          event === 'USER_UPDATED';
+        
+        if (shouldReloadProfile && session?.user) {
+          // 先设置 loading，然后加载 profile
+          setLoading(true);
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, email, username, real_name, phone, role, status, admin_level, risk_level')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          console.log('[Auth] profile loaded:', {
+            userId: session.user.id,
+            hasProfile: !!profile,
+          });
+          
+          setProfile(profile);
+          setLoading(false); // 【必须在这里设置 false】
+        } else if (event === 'SIGNED_OUT') {
+          setProfile(null);
+          setLoading(false);
+        } else {
+          // 其他事件不要重置 loading，避免无限循环
+          setLoading(false);
+        }
       }
-    });
+    );
 
     return () => {
       alive = false;
@@ -76,36 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  useEffect(() => {
-    let alive = true;
 
-    const loadProfile = async () => {
-      if (!session?.user) return;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, username, real_name, phone, role, status, admin_level, risk_level')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (!alive) return;
-
-      console.log('[Auth] profile loaded:', {
-        userId: session.user.id,
-        hasProfile: !!data,
-        error,
-      });
-
-      setProfile(error ? null : data);
-      setLoading(false);
-    };
-
-    loadProfile();
-
-    return () => {
-      alive = false;
-    };
-  }, [session?.user?.id]);
 
   const fetchProfile = async (userId: string) => {
     try {
