@@ -76,7 +76,29 @@ export interface Profile {
   [key: string]: any; // 兼容其他自定义字段
 }
 
-// 7. 获取当前用户 Profile（保留原有健壮逻辑）
+// 7. 统一的权限校验函数
+/**
+ * 检查用户是否为管理员
+ * 逻辑统一：只要是 super_admin 或 admin 级别即视为管理员
+ * @param profile 用户资料对象
+ * @returns 是否为管理员
+ */
+export const checkIsAdmin = (profile: any): boolean => {
+  if (!profile) return false;
+  return profile.admin_level === 'super_admin' || profile.admin_level === 'admin';
+};
+
+/**
+ * 检查用户是否为超级管理员
+ * @param profile 用户资料对象
+ * @returns 是否为超级管理员
+ */
+export const checkIsSuperAdmin = (profile: any): boolean => {
+  if (!profile) return false;
+  return profile.admin_level === 'super_admin';
+};
+
+// 8. 获取当前用户 Profile（保留原有健壮逻辑）
 export const getCurrentProfile = async (): Promise<Profile | null> => {
   try {
     const authResponse = await supabase.auth.getUser();
@@ -114,8 +136,8 @@ export const getCurrentProfile = async (): Promise<Profile | null> => {
 export const isAdmin = async (): Promise<boolean> => {
   try {
     const profile = await getCurrentProfile();
-    // 检查admin_level字段，允许'super_admin'和'admin'都视为管理员
-    return profile?.admin_level === 'super_admin' || profile?.admin_level === 'admin';
+    // 使用统一的权限校验函数
+    return checkIsAdmin(profile);
   } catch (err) {
     if (import.meta.env.DEV) {
       console.error('检查管理员权限异常:', (err as Error).message);

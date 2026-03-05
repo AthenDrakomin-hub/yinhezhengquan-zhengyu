@@ -1,5 +1,150 @@
 # 开发日志 - 银河证券证裕交易单元
 
+## 2026-03-05 - 统一权限判断逻辑修复
+
+### 修复背景
+
+#### 问题识别
+系统存在权限检查逻辑不一致问题，导致管理员登录失败和潜在死循环：
+1. **权限判断标准不一致**：不同组件使用不同的字段判断管理员权限（`is_admin`、`admin_level`、`role`）
+2. **数据库字段不一致**：用户`admin_level`为管理员但`is_admin`字段未设置，导致登录被拒绝
+3. **潜在死循环**：未正确处理`loading`状态可能导致无限加载
+4. **架构重复检查**：`AdminRoutes.tsx`与父级`ProtectedRoute`存在重复权限检查
+
+#### 修复目标
+1. **统一权限判断逻辑**：所有组件使用相同的权限判断标准
+2. **解决登录失败问题**：确保管理员用户能够正常登录
+3. **修复加载状态问题**：正确处理`loading`状态，避免死循环
+4. **优化架构设计**：避免重复权限检查，简化维护
+
+### 修复内容
+
+#### 1. 添加统一权限校验函数 (`lib/supabase.ts`)
+- **`checkIsAdmin(profile)`**：检查用户是否为管理员（`admin_level`为'admin'或'super_admin'）
+- **`checkIsSuperAdmin(profile)`**：检查用户是否为超级管理员（`admin_level`为'super_admin'）
+- **逻辑统一**：所有权限检查都基于`admin_level`字段，不再依赖`is_admin`字段
+
+#### 2. 更新所有权限检查点
+- **认证上下文** (`contexts/AuthContext.tsx`)：更新`isAdmin`和`isSuperAdmin`计算逻辑
+- **路由守卫** (`components/shared/ProtectedRoute.tsx`)：简化权限检查，使用统一函数
+- **管理员登录** (`components/admin/AdminLoginView.tsx`)：**关键修复**：将`is_admin !== true`检查改为`!checkIsAdmin(profileData)`
+- **管理员上下文** (`contexts/AdminContext.tsx`)：更新权限检查逻辑
+- **管理员应用** (`AdminApp.tsx`)：更新权限检查逻辑
+- **异步函数** (`lib/supabase.ts`)：更新`isAdmin()`函数使用统一逻辑
+
+#### 3. 修复加载状态问题
+- **AdminLayout.tsx修复**：确保先检查`loading`状态，再检查`adminLevel`
+- **架构优化**：确认`AdminRoutes.tsx`只负责路由定义，权限检查由父级`ProtectedRoute`处理
+
+#### 4. 清理冗余代码
+- **移除`is_admin`字段检查**：所有权限检查改为使用`checkIsAdmin`函数
+- **避免重复检查**：`AdminRoutes.tsx`不再进行权限检查，避免与父级`ProtectedRoute`重复
+
+### 技术实现
+
+#### 统一权限校验函数
+```typescript
+/**
+ * 检查用户是否为管理员
+ * 逻辑统一：只要是 super_admin 或 admin 级别即视为管理员
+ * @param profile 用户资料对象
+ * @returns 是否为管理员
+ */
+export const checkIsAdmin = (profile: any): boolean => {
+  if (!profile) return false;
+  return profile.admin_level === 'super_admin' || profile.admin_level === 'admin';
+};
+
+/**
+ * 检查用户是否为超级管理员
+ * @param profile 用户资料对象
+ * @returns 是否为超级管理员
+ */
+export const checkIsSuperAdmin = (profile: any): boolean => {
+  if (!profile) return false;
+  return profile.admin_level === 'super_admin';
+};
+```
+
+#### 关键修复：管理员登录权限检查
+```typescript
+// 修复前：检查 is_admin 字段
+if (profileData.is_admin !== true) {
+  // 即使用户 admin_level 是管理员，如果 is_admin 不是 true，登录会被拒绝
+  throw new Error('您不是管理员，无法访问管理后台。');
+}
+
+// 修复后：使用统一权限校验函数
+if (!checkIsAdmin(profileData)) {
+  // 只要 admin_level 是 'admin' 或 'super_admin' 即视为管理员
+  throw new Error('您不是管理员，无法访问管理后台。');
+}
+```
+
+#### 加载状态修复
+```typescript
+// 修复前：直接检查 adminLevel，未检查 loading
+const { adminLevel } = useAdmin();
+if (!adminLevel) return <Navigate to="/admin/login" />;
+
+// 修复后：先检查 loading 状态
+const { adminLevel, loading } = useAdmin();
+if (loading) return <LoadingSpinner />;
+if (!adminLevel) return <Navigate to="/admin/login" />;
+```
+
+### 解决的问题
+
+#### 1. 权限检查逻辑不一致
+- **问题**：不同组件使用不同的权限判断标准
+- **解决**：所有组件使用统一的`checkIsAdmin`和`checkIsSuperAdmin`函数
+
+#### 2. 数据库字段不一致导致登录失败
+- **问题**：`AdminLoginView.tsx`检查`is_admin !== true`，即使用户的`admin_level`是管理员，如果`is_admin`字段不是`true`，登录会被拒绝
+- **解决**：使用`checkIsAdmin`函数，只要`admin_level`是'admin'或'super_admin'即视为管理员
+
+#### 3. 潜在的死循环问题
+- **问题**：未正确处理`loading`状态可能导致无限加载
+- **解决**：确保所有使用`useAdmin()`的组件先检查`loading`状态
+
+#### 4. 架构重复检查问题
+- **问题**：`AdminRoutes.tsx`与父级`ProtectedRoute`存在重复权限检查
+- **解决**：`AdminRoutes.tsx`只负责路由定义，权限检查由父级`ProtectedRoute`处理
+
+### 相关文件
+
+#### 修改文件
+1. `lib/supabase.ts` - 添加统一权限校验函数，更新`isAdmin()`函数
+2. `contexts/AuthContext.tsx` - 更新`isAdmin`和`isSuperAdmin`计算逻辑
+3. `components/shared/ProtectedRoute.tsx` - 简化权限检查逻辑
+4. `components/admin/AdminLoginView.tsx` - 关键修复：管理员权限检查
+5. `contexts/AdminContext.tsx` - 更新权限检查逻辑
+6. `AdminApp.tsx` - 更新权限检查逻辑
+7. `components/admin/AdminLayout.tsx` - 修复加载状态检查
+8. `routes/AdminRoutes.tsx` - 恢复只负责路由定义的原始设计
+
+#### 文档更新
+1. `docs/开发类/DEV_LOG.md` - 本日志记录
+
+### 经验总结
+
+#### 成功经验
+1. **统一标准**：建立统一的权限判断标准，避免逻辑不一致
+2. **渐进式修复**：逐步更新所有权限检查点，确保系统稳定
+3. **架构优化**：明确各组件职责，避免重复检查
+4. **向后兼容**：保持现有功能不变，只修复逻辑问题
+
+#### 技术收获
+1. **函数式设计**：将权限检查逻辑封装为纯函数，提高可测试性
+2. **状态管理**：正确处理异步加载状态，避免UI死循环
+3. **架构清晰**：明确组件职责，提高代码可维护性
+4. **类型安全**：TypeScript类型定义确保代码质量
+
+### 后续建议
+1. **运行数据库修复脚本**：执行`database/fix_admin_permissions_unified.sql`确保数据库字段一致性
+2. **监控登录问题**：观察管理员登录是否恢复正常
+3. **考虑移除`is_admin`字段**：如果不再需要，可以考虑从数据库中移除该字段
+
 ## 2026-03-04 - IP白名单验证功能重构
 
 ### 重构背景

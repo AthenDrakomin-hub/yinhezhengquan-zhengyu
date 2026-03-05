@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, checkIsAdmin, checkIsSuperAdmin } from '../lib/supabase';
 import { UserAccount } from '../lib/types';
 
 // Profile 类型定义
@@ -185,8 +185,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user: session?.user ?? null,
     profile,
     loading,
-    isAdmin: profile?.admin_level === 'admin' || profile?.admin_level === 'super_admin',
-    isSuperAdmin: profile?.admin_level === 'super_admin',
+    isAdmin: checkIsAdmin(profile),
+    isSuperAdmin: checkIsSuperAdmin(profile),
     signIn,
     signOut,
     updateUserProfile,

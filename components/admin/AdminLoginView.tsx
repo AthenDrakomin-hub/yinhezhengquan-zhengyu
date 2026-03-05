@@ -1,7 +1,7 @@
 // 显式导入React，解决JSX识别问题
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, loginWithPassword } from '@/lib/supabase';
+import { supabase, loginWithPassword, checkIsAdmin } from '@/lib/supabase';
 import { ICONS } from '@/lib/constants';
 import { useAdminGuard } from '@/hooks/useAdminGuard';
 
@@ -124,17 +124,13 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
             throw new Error('用户资料不存在');
           }
 
-          if (profileData.is_admin !== true) {
+          // 使用统一的权限校验函数检查是否为管理员
+          if (!checkIsAdmin(profileData)) {
             console.warn('[AdminLogin] 用户不是管理员，详细检查:');
-            console.warn('[AdminLogin] - is_admin:', profileData.is_admin);
             console.warn('[AdminLogin] - admin_level:', profileData.admin_level);
             console.warn('[AdminLogin] - role:', profileData.role);
-            console.warn('[AdminLogin] - 建议检查数据库is_admin字段是否已设置为true');
-            
-            // 尝试自动修复：如果admin_level是管理员但is_admin不是true
-            if (profileData.admin_level === 'admin' || profileData.admin_level === 'super_admin' || profileData.role === 'admin') {
-              console.warn('[AdminLogin] 检测到用户可能是管理员但is_admin字段未设置，建议执行数据库修复脚本');
-            }
+            console.warn('[AdminLogin] - is_admin:', profileData.is_admin);
+            console.warn('[AdminLogin] - 统一权限检查: checkIsAdmin返回false');
             
             await supabase.auth.signOut();
             throw new Error('您不是管理员，无法访问管理后台。请确认您的管理员权限。');

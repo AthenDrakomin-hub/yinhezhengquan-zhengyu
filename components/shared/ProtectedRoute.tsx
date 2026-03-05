@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { checkIsAdmin, checkIsSuperAdmin } from '../../lib/supabase';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;  // 新增 children 属性
@@ -44,8 +45,19 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { session, profile, loading, isAdmin, isSuperAdmin } = useAuth();
 
+  console.log('[ProtectedRoute] 状态:', {
+    loading,
+    hasSession: !!session,
+    hasProfile: !!profile,
+    profileId: profile?.id,
+    adminLevel: profile?.admin_level,
+    isAdmin,
+    isSuperAdmin
+  });
+
   // 加载中
   if (loading) {
+    console.log('[ProtectedRoute] 显示加载中状态');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D4AA]"></div>
@@ -99,16 +111,13 @@ export function ProtectedRoute({
     // 检查用户是否有允许的角色
     let hasAllowedRole = false;
     
-    // 首先检查 admin_level
-    if (profile?.admin_level && allowedRoles.includes(profile.admin_level as any)) {
+    // 统一权限检查逻辑
+    if (allowedRoles.includes('super_admin') && checkIsSuperAdmin(profile)) {
       hasAllowedRole = true;
-    }
-    // 如果没有匹配的 admin_level，检查 role
-    else if (profile?.role && allowedRoles.includes(profile.role as any)) {
+    } else if (allowedRoles.includes('admin') && checkIsAdmin(profile)) {
       hasAllowedRole = true;
-    }
-    // 特殊处理：super_admin 应该可以通过所有管理员检查
-    else if (isSuperAdmin && allowedRoles.includes('admin' as any)) {
+    } else if (allowedRoles.includes('user') && profile) {
+      // user 角色只需要有 profile（已登录用户）
       hasAllowedRole = true;
     }
     

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { supabase } from './lib/supabase';
+import { supabase, checkIsAdmin } from './lib/supabase';
 import AdminLoginView from "./components/admin/AdminLoginView";
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { AdminProvider } from './contexts/AdminContext';
@@ -36,19 +36,17 @@ const AdminApp: React.FC = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // 验证是否为管理员并获取层级 - 检查 admin_level 字段
+        // 验证是否为管理员并获取层级 - 使用统一的权限校验函数
         supabase
           .from('profiles')
-          .select('admin_level')
+          .select('admin_level, is_admin, role')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => {
-            const adminLevel = data?.admin_level;
-            const isAdmin = adminLevel === 'admin' || adminLevel === 'super_admin';
-            
-            if (isAdmin) {
+            // 使用统一的权限校验函数检查是否为管理员
+            if (checkIsAdmin(data)) {
               setSession(session);
-              setAdminLevel(adminLevel);
+              setAdminLevel(data?.admin_level);
             } else {
               supabase.auth.signOut();
             }
@@ -63,16 +61,14 @@ const AdminApp: React.FC = () => {
       if (session) {
         supabase
           .from('profiles')
-          .select('admin_level')
+          .select('admin_level, is_admin, role')
           .eq('id', session.user.id)
           .single()
           .then(({ data }) => {
-            const adminLevel = data?.admin_level;
-            const isAdmin = adminLevel === 'admin' || adminLevel === 'super_admin';
-            
-            if (isAdmin) {
+            // 使用统一的权限校验函数检查是否为管理员
+            if (checkIsAdmin(data)) {
               setSession(session);
-              setAdminLevel(adminLevel);
+              setAdminLevel(data?.admin_level);
             } else {
               setSession(null);
               setAdminLevel(null);

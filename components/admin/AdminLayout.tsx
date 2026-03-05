@@ -10,11 +10,23 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { adminLevel } = useAdmin();
+  const { adminLevel, loading } = useAdmin();
   
   // Supabase 连接状态状态
   const [connectionStatus, setConnectionStatus] = useState<string>('检查中...');
   const [isConnectionOk, setIsConnectionOk] = useState<boolean | null>(null);
+
+  // 首先检查 loading 状态，防止死锁
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-industrial-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-industrial-600 font-bold">加载中...</p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // 只在开发环境检查连接状态
@@ -65,6 +77,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
   });
 
   // 检查权限拦截，防止 adminLevel undefined 时显示问题
+  // 注意：loading 已经为 false，所以这里可以安全地检查 adminLevel
   if (!adminLevel && !import.meta.env.DEV) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-industrial-50">

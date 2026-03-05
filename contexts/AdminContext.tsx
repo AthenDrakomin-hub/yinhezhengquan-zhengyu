@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, checkIsAdmin } from '../lib/supabase';
 
 interface AdminContextType {
   adminLevel: 'super_admin' | 'admin' | null;
@@ -49,8 +49,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
       console.log('[Admin] profile loaded:', { data, error });
 
-      if (!error && data?.is_admin === true) {
-        setAdminLevel(data.admin_level || 'admin');
+      // 使用统一的权限校验函数检查是否为管理员
+      if (!error && checkIsAdmin(data)) {
+        setAdminLevel(data?.admin_level || 'admin');
       } else {
         setAdminLevel(null);
       }
