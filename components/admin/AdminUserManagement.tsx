@@ -11,6 +11,13 @@ const AdminUserManagement: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  
+  // 搜索和筛选状态
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [riskLevelFilter, setRiskLevelFilter] = useState<string>('ALL');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  
   const [formData, setFormData] = useState({
     username: '',
     phone: '',
@@ -40,6 +47,28 @@ const AdminUserManagement: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // 筛选用户列表
+  const filteredUsers = users.filter(user => {
+    // 搜索条件
+    const matchesSearch = !searchTerm || 
+      user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone?.includes(searchTerm) ||
+      user.real_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.id?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // 状态筛选
+    const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
+    
+    // 风险等级筛选
+    const matchesRiskLevel = riskLevelFilter === 'ALL' || user.risk_level === riskLevelFilter;
+    
+    // 角色筛选
+    const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
+    
+    return matchesSearch && matchesStatus && matchesRiskLevel && matchesRole;
+  });
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +195,83 @@ const AdminUserManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* 搜索和筛选区域 */}
+      <div className="industrial-card p-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* 搜索框 */}
+          <div className="md:col-span-2">
+            <div className="relative">
+              <ICONS.Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-industrial-400" />
+              <input
+                type="text"
+                placeholder="搜索用户名/手机/姓名/邮箱/ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="industrial-input pl-10 w-full"
+              />
+            </div>
+          </div>
+          
+          {/* 状态筛选 */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="industrial-input"
+          >
+            <option value="ALL">全部状态</option>
+            <option value="ACTIVE">已激活</option>
+            <option value="BANNED">已封禁</option>
+            <option value="PENDING">待审核</option>
+          </select>
+          
+          {/* 风险等级筛选 */}
+          <select
+            value={riskLevelFilter}
+            onChange={(e) => setRiskLevelFilter(e.target.value)}
+            className="industrial-input"
+          >
+            <option value="ALL">全部风险等级</option>
+            <option value="保守型">保守型</option>
+            <option value="稳健型">稳健型</option>
+            <option value="积极型">积极型</option>
+          </select>
+          
+          {/* 角色筛选 */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="industrial-input"
+          >
+            <option value="ALL">全部角色</option>
+            <option value="USER">普通用户</option>
+            <option value="OPERATOR">操作员</option>
+            <option value="ADMIN">管理员</option>
+          </select>
+        </div>
+        
+        {/* 筛选结果统计 */}
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-industrial-100">
+          <div className="flex items-center gap-4 text-xs text-industrial-400">
+            <span>共 <span className="font-black text-industrial-800">{users.length}</span> 个用户</span>
+            <span>|</span>
+            <span>筛选结果: <span className="font-black text-industrial-800">{filteredUsers.length}</span> 个</span>
+          </div>
+          {(searchTerm || statusFilter !== 'ALL' || riskLevelFilter !== 'ALL' || roleFilter !== 'ALL') && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('ALL');
+                setRiskLevelFilter('ALL');
+                setRoleFilter('ALL');
+              }}
+              className="text-xs text-blue-600 font-bold hover:underline"
+            >
+              清除筛选
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="industrial-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -185,9 +291,11 @@ const AdminUserManagement: React.FC = () => {
             <tbody className="divide-y divide-industrial-100">
               {loading ? (
                 <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">加载中...</td></tr>
-              ) : users.length === 0 ? (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">暂无用户</td></tr>
-              ) : users.map((user) => (
+              ) : filteredUsers.length === 0 ? (
+                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">
+                  {users.length === 0 ? '暂无用户' : '没有匹配的筛选结果'}
+                </td></tr>
+              ) : filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-industrial-50 transition-colors">
                   <td className="px-6 py-4 text-xs font-black text-industrial-800 truncate max-w-[120px]">{user.id}</td>
                   <td className="px-6 py-4">

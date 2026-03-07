@@ -1,274 +1,73 @@
-import { supabase, isDemoMode } from '@/lib/supabase';
-import {
-  MOCK_REPORTS,
-  MOCK_EDUCATION,
-  MOCK_TICKETS,
-  MOCK_CALENDAR,
-  BANNER_MOCK,
-} from '@/lib/constants';
+/**
+ * 内容服务 - 从 Supabase 数据库获取内容
+ */
+import { supabase } from '@/lib/supabase';
 import type {
   ResearchReport,
-  EducationTopic,
   SupportTicket,
   CalendarEvent,
-  Stock,
   Banner,
 } from '@/lib/types';
 
 /**
- * 内容服务 - 从 Supabase 数据库获取内容，失败时返回空数组
+ * 内容服务 - 从 Supabase 数据库获取内容
  */
 
 // ==================== 研报 ====================
 export const getReports = async (): Promise<ResearchReport[]> => {
-  if (isDemoMode) {
-    console.warn('演示模式：返回空研报数据');
-    return [];
-  }
-
   try {
     const { data, error } = await supabase
       .from('reports')
       .select('*')
-      .order('date', { ascending: false });
+      .eq('status', 'PUBLISHED')
+      .order('published_at', { ascending: false });
 
     if (error) throw error;
 
-    // 如果数据库为空，返回空数组
     if (!data || data.length === 0) {
-      console.warn('数据库无研报数据，返回空数组');
       return [];
     }
 
-    // 转换数据库格式到前端类型
     return data.map((report) => ({
       id: report.id,
       title: report.title,
       author: report.author,
-      date: report.date,
-      summary: report.summary,
+      date: report.published_at || report.created_at,
+      summary: report.content?.substring(0, 200) || '',
       content: report.content || '',
-      category: report.category as '个股' | '行业' | '宏观' | '策略',
-      sentiment: report.sentiment as '看多' | '中性' | '看空',
-      tags: report.tags || [],
+      category: report.report_type as '个股' | '行业' | '宏观' | '策略' || '个股',
+      sentiment: '中性' as const,
+      tags: [],
     }));
   } catch (error) {
     console.error('获取研报失败:', error);
-    console.warn('数据库查询失败，返回空数组');
     return [];
   }
 };
 
-// ==================== 投教内容 ====================
-export const getEducationTopics = async (): Promise<EducationTopic[]> => {
-  if (isDemoMode) {
-    console.warn('演示模式：返回空投教数据');
-    return [];
-  }
-
+export const getAllReports = async (): Promise<ResearchReport[]> => {
   try {
     const { data, error } = await supabase
-      .from('education_topics')
+      .from('reports')
       .select('*')
-      .eq('is_published', true)
-      .order('order', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
-
-    if (!data || data.length === 0) {
-      console.warn('数据库无投教内容，返回空数组');
-      return [];
-    }
-
-    return data.map((topic) => ({
-      id: topic.id,
-      title: topic.title,
-      category: topic.category,
-      image: topic.image || '',
-      duration: topic.duration || '',
-      content: topic.content || '', // 补全字段
-      order: topic.order ?? 0,      // 补全字段
-      is_published: topic.is_published // 补全字段
-    }));
+    return data || [];
   } catch (error) {
-    console.error('获取投教内容失败:', error);
-    console.warn('数据库查询失败，返回空数组');
+    console.error('获取所有研报失败:', error);
     return [];
   }
 };
 
-// ==================== 客服工单 ====================
-export const getSupportTickets = async (userId?: string): Promise<SupportTicket[]> => {
-  if (isDemoMode) {
-    console.warn('演示模式：使用模拟工单数据');
-    return MOCK_TICKETS;
-  }
-
-  try {
-    let query = supabase.from('support_tickets').select('*');
-
-    // 如果不是管理员，只获取自己的工单
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (profile?.role !== 'admin' && userId) {
-      query = query.eq('user_id', userId);
-    }
-
-    const { data, error } = await query.order('last_update', { ascending: false });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      console.warn('数据库无工单数据，回退到模拟数据');
-      return MOCK_TICKETS;
-    }
-
-    return data.map((ticket) => ({
-      id: ticket.id,
-      subject: ticket.subject,
-      status: ticket.status as 'IN_PROGRESS' | 'CLOSED' | 'OPEN',
-      lastUpdate: ticket.last_update,
-    }));
-  } catch (error) {
-    console.error('获取工单失败:', error);
-    console.warn('回退到模拟工单数据');
-    return MOCK_TICKETS;
-  }
-};
-
-// ==================== 日历事件 ====================
-export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
-  if (isDemoMode) {
-    console.warn('演示模式：使用模拟日历数据');
-    return MOCK_CALENDAR;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('calendar_events')
-      .select('*')
-      .order('date', { ascending: true });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      console.warn('数据库无日历事件，回退到模拟数据');
-      return MOCK_CALENDAR;
-    }
-
-    return data.map((event) => ({
-      id: event.id,
-      date: event.date,
-      title: event.title,
-      type: event.type,
-      time: event.time || undefined,
-      markets: event.markets || [],
-    }));
-  } catch (error) {
-    console.error('获取日历事件失败:', error);
-    console.warn('回退到模拟日历数据');
-    return MOCK_CALENDAR;
-  }
-};
-
-// ==================== 新股信息 ====================
-export const getIPOs = async (): Promise<Stock[]> => {
-  if (isDemoMode) {
-    console.warn('演示模式：返回空数组');
-    return [];
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('ipos')
-      .select('*')
-      .order('listing_date', { ascending: false });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      console.warn('数据库无新股信息，返回空数组');
-      return [];
-    }
-
-    return data.map((ipo) => ({
-      symbol: ipo.symbol,
-      name: ipo.name,
-      price: ipo.price || 0,
-      change: ipo.change || 0,
-      changePercent: ipo.change_percent || 0,
-      market: ipo.market as 'CN' | 'HK' | 'BOND' | 'FUND',
-      sparkline: [],
-      logoUrl: undefined,
-    }));
-  } catch (error) {
-    console.error('获取新股信息失败:', error);
-    console.warn('返回空数组');
-    return [];
-  }
-};
-
-
-
-// ==================== 横幅公告 ====================
-export const getBanners = async (): Promise<Banner[]> => {
-  if (isDemoMode) {
-    console.warn('演示模式：使用模拟横幅数据');
-    return BANNER_MOCK;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('banners')
-      .select('*')
-      .eq('is_active', true)
-      .order('position', { ascending: true });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      console.warn('数据库无横幅公告，回退到模拟数据');
-      return BANNER_MOCK;
-    }
-
-    return data.map((banner) => ({
-      id: banner.id,
-      title: banner.title,
-      desc: banner.desc,
-      img: banner.img,
-      category: banner.category,
-      date: banner.date,
-      content: banner.content,
-      relatedSymbol: banner.related_symbol || undefined,
-      isActive: banner.is_active,
-      position: banner.position,
-    }));
-  } catch (error) {
-    console.error('获取横幅公告失败:', error);
-    console.warn('回退到模拟横幅数据');
-    return BANNER_MOCK;
-  }
-};
-
-// ==================== 管理员写入函数 ====================
-// 以下函数仅限管理员使用，前端应配合权限检查调用
-
-export const createReport = async (report: Omit<ResearchReport, 'id'>) => {
+export const createReport = async (report: Partial<ResearchReport>) => {
   const { error } = await supabase.from('reports').insert({
     title: report.title,
     author: report.author,
-    date: report.date,
-    summary: report.summary,
     content: report.content,
-    category: report.category,
-    sentiment: report.sentiment,
-    tags: report.tags || [],
+    report_type: report.category || '个股',
+    status: 'DRAFT',
   });
-
   if (error) throw error;
 };
 
@@ -278,15 +77,10 @@ export const updateReport = async (id: string, report: Partial<ResearchReport>) 
     .update({
       title: report.title,
       author: report.author,
-      date: report.date,
-      summary: report.summary,
       content: report.content,
-      category: report.category,
-      sentiment: report.sentiment,
-      tags: report.tags,
+      report_type: report.category,
     })
     .eq('id', id);
-
   if (error) throw error;
 };
 
@@ -295,66 +89,154 @@ export const deleteReport = async (id: string) => {
   if (error) throw error;
 };
 
-// ==================== 投教内容 CRUD ====================
-export const createEducationTopic = async (topic: Omit<EducationTopic, 'id'>) => {
-  const { error } = await supabase.from('education_topics').insert({
-    title: topic.title,
-    category: topic.category,
-    image: topic.image || '',
-    duration: topic.duration || '',
-    content: topic.content || '',
-    order: 0,
-    is_published: true,
-  });
+// ==================== 工单 ====================
+export const getTickets = async (): Promise<SupportTicket[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) throw error;
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map((ticket) => ({
+      id: ticket.id,
+      userId: ticket.user_id,
+      type: ticket.ticket_type as 'TECHNICAL' | 'ACCOUNT' | 'TRADE' | 'SUGGESTION' | 'COMPLAINT' | 'OTHER',
+      subject: ticket.title,
+      description: ticket.description,
+      status: ticket.status as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED',
+      priority: ticket.priority as 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT',
+      createdAt: ticket.created_at,
+      updatedAt: ticket.updated_at,
+      lastUpdate: ticket.updated_at || ticket.created_at,
+    }));
+  } catch (error) {
+    console.error('获取工单失败:', error);
+    return [];
+  }
 };
 
-export const updateEducationTopic = async (id: string, topic: Partial<EducationTopic>) => {
-  const { error } = await supabase
-    .from('education_topics')
-    .update({
-      title: topic.title,
-      category: topic.category,
-      image: topic.image,
-      duration: topic.duration,
-      content: topic.content,
+export const getTicketsByUser = async (userId: string): Promise<SupportTicket[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((ticket) => ({
+      id: ticket.id,
+      userId: ticket.user_id,
+      type: ticket.ticket_type as any,
+      subject: ticket.title,
+      description: ticket.description,
+      status: ticket.status as any,
+      priority: ticket.priority as any,
+      createdAt: ticket.created_at,
+      updatedAt: ticket.updated_at,
+      lastUpdate: ticket.updated_at || ticket.created_at,
+    }));
+  } catch (error) {
+    console.error('获取用户工单失败:', error);
+    return [];
+  }
+};
+
+export const createTicket = async (ticket: {
+  user_id: string;
+  ticket_type: string;
+  title: string;
+  description: string;
+  priority?: string;
+}) => {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .insert({
+      user_id: ticket.user_id,
+      ticket_type: ticket.ticket_type,
+      title: ticket.title,
+      description: ticket.description,
+      priority: ticket.priority || 'NORMAL',
+      status: 'OPEN',
     })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const updateTicket = async (id: string, updates: Partial<{
+  status: string;
+  priority: string;
+  assigned_to: string;
+}>) => {
+  const { error } = await supabase
+    .from('support_tickets')
+    .update(updates)
     .eq('id', id);
-
   if (error) throw error;
 };
 
-export const deleteEducationTopic = async (id: string) => {
-  const { error } = await supabase.from('education_topics').delete().eq('id', id);
-  if (error) throw error;
+// ==================== 日历事件 ====================
+export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .order('event_date', { ascending: true });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map((event) => ({
+      id: event.id,
+      date: event.event_date,
+      title: event.title,
+      type: event.event_type || 'OTHER',
+      time: event.time || undefined,
+      markets: event.markets || undefined,
+    }));
+  } catch (error) {
+    console.error('获取日历事件失败:', error);
+    return [];
+  }
 };
 
-// ==================== 日历事件 CRUD ====================
-export const createCalendarEvent = async (event: Omit<CalendarEvent, 'id'>) => {
+export const createCalendarEvent = async (event: {
+  event_date: string;
+  title: string;
+  event_type?: string;
+  description?: string;
+}) => {
   const { error } = await supabase.from('calendar_events').insert({
-    date: event.date,
+    event_date: event.event_date,
     title: event.title,
-    type: event.type,
-    time: event.time || '',
-    markets: event.markets || [],
+    event_type: event.event_type || 'OTHER',
+    description: event.description,
   });
-
   if (error) throw error;
 };
 
-export const updateCalendarEvent = async (id: string, event: Partial<CalendarEvent>) => {
+export const updateCalendarEvent = async (id: string, event: Partial<{
+  event_date: string;
+  title: string;
+  event_type: string;
+}>) => {
   const { error } = await supabase
     .from('calendar_events')
-    .update({
-      date: event.date,
-      title: event.title,
-      type: event.type,
-      time: event.time,
-      markets: event.markets,
-    })
+    .update(event)
     .eq('id', id);
-
   if (error) throw error;
 };
 
@@ -363,80 +245,72 @@ export const deleteCalendarEvent = async (id: string) => {
   if (error) throw error;
 };
 
-// ==================== 新股信息 CRUD ====================
-export const createIPO = async (ipo: Omit<Stock, 'id' | 'sparkline' | 'logoUrl'> & { listing_date: string, status: string }) => {
-  const { error } = await supabase.from('ipos').insert({
-    symbol: ipo.symbol,
-    name: ipo.name,
-    price: ipo.price || 0,
-    change: ipo.change || 0,
-    change_percent: ipo.changePercent || 0,
-    market: ipo.market,
-    listing_date: ipo.listing_date,
-    status: ipo.status || 'UPCOMING',
-  });
+// ==================== 横幅 ====================
+export const getBanners = async (): Promise<Banner[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('banners')
+      .select('*')
+      .eq('status', 'ACTIVE')
+      .order('sort_order', { ascending: true });
 
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map((banner) => ({
+      id: banner.id,
+      title: banner.title,
+      subtitle: banner.subtitle || undefined,
+      imageUrl: banner.image_url || undefined,
+      linkUrl: banner.link_url || undefined,
+      desc: banner.subtitle || '',
+      img: banner.image_url || '',
+      category: '平台公告',
+      date: banner.created_at || new Date().toISOString(),
+      content: '',
+    }));
+  } catch (error) {
+    console.error('获取横幅失败:', error);
+    return [];
+  }
+};
+
+export const getAllBanners = async () => {
+  const { data, error } = await supabase
+    .from('banners')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+};
+
+export const createBanner = async (banner: {
+  title: string;
+  subtitle?: string;
+  image_url?: string;
+  link_url?: string;
+  sort_order?: number;
+}) => {
+  const { error } = await supabase.from('banners').insert(banner);
   if (error) throw error;
 };
 
-export const updateIPO = async (id: string, ipo: Partial<Stock> & { listing_date?: string, status?: string }) => {
-  const { error } = await supabase
-    .from('ipos')
-    .update({
-      symbol: ipo.symbol,
-      name: ipo.name,
-      price: ipo.price,
-      change: ipo.change,
-      change_percent: ipo.changePercent,
-      market: ipo.market,
-      listing_date: ipo.listing_date,
-      status: ipo.status,
-    })
-    .eq('id', id);
-
-  if (error) throw error;
-};
-
-export const deleteIPO = async (id: string) => {
-  const { error } = await supabase.from('ipos').delete().eq('id', id);
-  if (error) throw error;
-};
-
-
-
-// ==================== 横幅公告 CRUD ====================
-export const createBanner = async (banner: Omit<Banner, 'id'>) => {
-  const { error } = await supabase.from('banners').insert({
-    title: banner.title,
-    desc: banner.desc,
-    img: banner.img,
-    category: banner.category,
-    date: banner.date,
-    content: banner.content,
-    related_symbol: banner.relatedSymbol || null,
-    is_active: true,
-    position: 0,
-  });
-
-  if (error) throw error;
-};
-
-export const updateBanner = async (id: string, banner: Partial<Banner>) => {
+export const updateBanner = async (id: string, banner: Partial<{
+  title: string;
+  subtitle: string;
+  image_url: string;
+  link_url: string;
+  sort_order: number;
+  status: string;
+}>) => {
   const { error } = await supabase
     .from('banners')
-    .update({
-      title: banner.title,
-      desc: banner.desc,
-      img: banner.img,
-      category: banner.category,
-      date: banner.date,
-      content: banner.content,
-      related_symbol: banner.relatedSymbol,
-      is_active: banner.isActive,
-      position: banner.position,
-    })
+    .update(banner)
     .eq('id', id);
-
   if (error) throw error;
 };
 

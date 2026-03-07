@@ -158,11 +158,11 @@ const AdminBanners: React.FC = () => {
                           setSelectedBanner(banner);
                           setFormData({
                             title: banner.title,
-                            desc: banner.desc,
-                            img: banner.img,
-                            category: banner.category,
-                            date: banner.date,
-                            content: banner.content,
+                            desc: banner.desc || '',
+                            img: banner.img || '',
+                            category: banner.category || '',
+                            date: banner.date || '',
+                            content: banner.content || '',
                             relatedSymbol: banner.relatedSymbol || '',
                           });
                           setIsEditModalOpen(true);

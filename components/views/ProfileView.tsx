@@ -7,7 +7,7 @@ import StockIcon from '../shared/StockIcon';
 import { UserAccount } from '../../lib/types';
 
 interface ProfileViewProps {
-  account: UserAccount;
+  account: UserAccount | null;
   onOpenAnalysis: () => void;
   onOpenConditional: () => void;
   isDarkMode: boolean;
@@ -62,6 +62,16 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
 
   return (
     <div className="flex flex-col h-full animate-slide-up">
+      {/* 加载状态 */}
+      {!account ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-[var(--color-text-muted)]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D4AA] mx-auto mb-4"></div>
+            <p className="text-sm font-bold">加载中...</p>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* 顶部用户信息卡片 */}
       <div className="glass-card m-4 p-6 border-[var(--color-border)] bg-gradient-to-br from-[#00D4AA]/10 to-[#00D4AA]/5 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#00D4AA]/5 rounded-full -translate-y-16 translate-x-16" />
@@ -90,7 +100,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
           <div className="space-y-2 text-right">
             <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">持仓市值</p>
             <p className="text-2xl font-black font-mono text-[#00D4AA]">
-              {showAssets ? `¥${account.holdings.reduce((sum, h) => sum + h.marketValue, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}
+              {showAssets ? `¥${account.holdings.reduce((sum, h) => sum + (h.marketValue || h.quantity * h.currentPrice), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}
             </p>
           </div>
         </div>
@@ -162,6 +172,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
           <Outlet context={{ account, isDarkMode, toggleTheme, onOpenAnalysis, onOpenConditional }} />
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

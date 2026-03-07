@@ -1,4 +1,4 @@
-# Yinhe Zhengyu Trade System
+# 银河证券证裕交易单元系统
 > 工业级虚拟证券交易平台 | 完整业务闭环 + 真实数据源 + 合规安全
 
 ## 项目简介
@@ -94,7 +94,7 @@ vercel deploy --prod
 
 ```
 yinhezhengquan-zhengyu/
-├── components/          # React组件库
+├── components/          # React 组件库
 │   ├── admin/          # 管理后台组件
 │   ├── client/         # 客户端功能组件
 │   ├── auth/           # 认证相关组件
@@ -102,18 +102,28 @@ yinhezhengquan-zhengyu/
 │   ├── core/           # 核心布局组件
 │   ├── shared/         # 共享功能组件
 │   └── views/          # 页面视图组件
-├── services/           # 业务服务层
 ├── routes/             # 路由配置
-├── contexts/           # React上下文
-├── hooks/              # 自定义Hooks
+├── contexts/           # React 上下文
+├── hooks/              # 自定义 Hooks
 ├── lib/                # 工具库和常量
 ├── utils/              # 工具函数
-├── database/           # 数据库架构和脚本
-├── supabase/           # Supabase配置
+├── services/           # 业务服务层
+├── database/           # 数据库架构
+│   ├── schema.sql      # 完整数据库结构
+│   └── README.md       # 数据库文档
+├── supabase/           # Supabase 配置
+│   ├── migrations/     # 数据库迁移文件
+│   └── functions/      # Edge Functions
 ├── docs/               # 项目文档
+│   ├── 合规类/         # 合规文档
+│   ├── 运维类/         # 运维文档
+│   ├── 产品类/         # 产品文档
+│   └── 开发类/         # 开发文档
 ├── scripts/            # 构建和部署脚本
 ├── public/             # 静态资源
-└── config/             # 配置文件
+├── index.tsx           # 应用入口
+├── OptimizedApp.tsx    # 主应用组件
+└── .coze               # Coze 配置
 ```
 
 ## 核心功能

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { checkIsAdmin, checkIsSuperAdmin } from '../../lib/supabase';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;  // 新增 children 属性
@@ -111,17 +110,31 @@ export function ProtectedRoute({
     // 检查用户是否有允许的角色
     let hasAllowedRole = false;
     
-    // 统一权限检查逻辑
-    if (allowedRoles.includes('super_admin') && checkIsSuperAdmin(profile)) {
+    // 统一权限检查逻辑 - 同时支持 admin_level 和 role 字段
+    const userAdminLevel = profile?.admin_level || profile?.role;
+    const isAdminUser = userAdminLevel === 'admin' || userAdminLevel === 'super_admin';
+    const isSuperAdminUser = userAdminLevel === 'super_admin';
+    const isRegularUser = !!profile; // 有 profile 即为普通用户
+    
+    console.log('[ProtectedRoute] 权限检查:', {
+      allowedRoles,
+      userAdminLevel,
+      isAdminUser,
+      isSuperAdminUser,
+      isRegularUser
+    });
+    
+    if (allowedRoles.includes('super_admin') && isSuperAdminUser) {
       hasAllowedRole = true;
-    } else if (allowedRoles.includes('admin') && checkIsAdmin(profile)) {
+    } else if (allowedRoles.includes('admin') && isAdminUser) {
       hasAllowedRole = true;
-    } else if (allowedRoles.includes('user') && profile) {
+    } else if (allowedRoles.includes('user') && isRegularUser) {
       // user 角色只需要有 profile（已登录用户）
       hasAllowedRole = true;
     }
     
     if (!hasAllowedRole) {
+      console.warn('[ProtectedRoute] 权限不足，重定向到无权限页面');
       return <Navigate to={unauthorizedPath} replace />;
     }
   }

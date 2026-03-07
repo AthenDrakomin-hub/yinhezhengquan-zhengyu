@@ -61,6 +61,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = () => {
     { id: 'match', label: '撮合干预面板', icon: ICONS.Zap, path: '/admin/match', minLevel: 'super_admin' },
     { id: 'trades', label: '交易管理', icon: ICONS.Trade, path: '/admin/trades', minLevel: 'admin' },
     { id: 'users', label: '用户管理', icon: ICONS.Shield, path: '/admin/users', minLevel: 'admin' },
+    { id: 'feature-flags', label: '功能开关', icon: ICONS.Settings, path: '/admin/feature-flags', minLevel: 'super_admin' },
     { id: 'tickets', label: '工单管理', icon: ICONS.MessageCircle, path: '/admin/tickets', minLevel: 'admin' },
     { id: 'audit-logs', label: '审计日志', icon: ICONS.FileText, path: '/admin/audit-logs', minLevel: 'super_admin' },
     { id: 'data-export', label: '数据导出', icon: ICONS.Download, path: '/admin/data-export', minLevel: 'super_admin' },

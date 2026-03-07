@@ -57,7 +57,7 @@ type TradeModeKey = typeof TRADE_MODES[number]['key'];
 
 // ===================== 组件Props =====================
 interface TradePanelProps {
-  account: UserAccount;
+  account: UserAccount | null;
   onExecute: (type: TradeType, symbol: string, name: string, price: number, quantity: number, logoUrl?: string) => Promise<boolean>;
   initialStock?: Stock | null;
 }
@@ -110,11 +110,19 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   });
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
+  // ===================== 账户为空时的默认值 =====================
+  const safeAccount = account || {
+    balance: 0,
+    holdings: [],
+    transactions: [],
+    conditionalOrders: [],
+  };
+
   // ===================== 通用计算 =====================
   // 当前持仓
   const currentHolding = useMemo(() => 
-    account.holdings.find(h => h.symbol === selectedStock.symbol),
-  [account.holdings, selectedStock.symbol]);
+    safeAccount.holdings.find(h => h.symbol === selectedStock.symbol),
+  [safeAccount.holdings, selectedStock.symbol]);
 
   // 最大可交易数量
   const maxTradeQty = useMemo(() => {
@@ -123,15 +131,20 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     // 卖出：取可用持仓
     if (tradeSide === 'SELL') return currentHolding?.availableQuantity || 0;
     // 买入：取可用资金可买数量
-    return Math.floor(account.balance / p);
-  }, [price, tradeSide, account.balance, currentHolding]);
+    return Math.floor(safeAccount.balance / p);
+  }, [price, tradeSide, safeAccount.balance, currentHolding]);
 
-  // 预估成交金额
+  // ===================== 预估成交金额 =====================
   const estimatedAmount = useMemo(() => {
     const qty = parseInt(quantity) || 0;
     const p = parseFloat(price) || 0;
     return (qty * p).toLocaleString();
   }, [quantity, price]);
+
+  // ===================== 条件单列表 =====================
+  const activeConditionalOrders = useMemo(() => 
+    safeAccount.conditionalOrders.filter(o => o.status === 'ACTIVE' || o.status === 'RUNNING'),
+  [safeAccount.conditionalOrders]);
 
   // 盘口数据（缓存，仅股票切换时更新，杜绝闪烁）
   const orderBook = useMemo(() => {
@@ -306,7 +319,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     
     // 额外验证：检查交易金额是否超过账户余额
     const totalAmount = price * quantity;
-    if (tradeType === TradeType.BUY && totalAmount > account.balance) {
+    if (tradeType === TradeType.BUY && totalAmount > safeAccount.balance) {
       alert('交易金额超出可用资金');
       return false;
     }
@@ -337,7 +350,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     } finally {
       setIsSubmitting(false);
     }
-  }, [onExecute, account.balance]);
+  }, [onExecute, safeAccount.balance]);
 
   // ===================== 生命周期控制（无循环）=====================
   // 模式切换时加载对应数据
@@ -400,7 +413,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
           </div>
           <div className="text-right">
             <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">可用资金</p>
-            <p className="text-2xl font-black font-mono text-[#00D4AA]">¥{account.balance.toLocaleString()}</p>
+            <p className="text-2xl font-black font-mono text-[#00D4AA]">¥{safeAccount.balance.toLocaleString()}</p>
           </div>
         </div>
 
@@ -506,7 +519,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
               
               if (tradeSide === 'BUY') {
                 const totalAmount = p * qty;
-                if (totalAmount > account.balance) {
+                if (totalAmount > safeAccount.balance) {
                   alert('交易金额超出可用资金');
                   return;
                 }
@@ -641,7 +654,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                       <button 
                         onClick={() => {
                           // 计算实际申购数量，不超过个人上限和账户资金可购买的最大数量
-                          const maxQtyByFund = Math.floor(account.balance / ipo.发行价格);
+                          const maxQtyByFund = Math.floor(safeAccount.balance / ipo.发行价格);
                           const actualQuantity = Math.min(ipo.个人申购上限 * 10000, maxQtyByFund);
                           
                           if (actualQuantity <= 0) {
@@ -677,7 +690,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   const renderBlockTrade = () => {
     const blockPrice = selectedStock.price * blockDiscount;
     const minQuantity = 300000;
-    const maxQty = Math.floor(account.balance / blockPrice);
+    const maxQty = Math.floor(safeAccount.balance / blockPrice);
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1">
@@ -787,7 +800,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                 }
                 
                 const totalAmount = blockPrice * qty;
-                if (totalAmount > account.balance) {
+                if (totalAmount > safeAccount.balance) {
                   alert('交易金额超出可用资金');
                   return;
                 }
@@ -865,7 +878,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 overflow-y-auto no-scrollbar">
           {limitUpList.map(stock => {
             const limitUpPrice = stock.price;
-            const maxQty = Math.floor(account.balance / limitUpPrice);
+            const maxQty = Math.floor(safeAccount.balance / limitUpPrice);
             return (
               <div 
                 key={stock.symbol} 

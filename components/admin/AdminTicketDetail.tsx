@@ -219,7 +219,7 @@ const AdminTicketDetail: React.FC = () => {
                     {getStatusText(ticket.status)}
                   </span>
                   <span className="text-sm text-industrial-600">工单号: {ticket.id}</span>
-                  <span className="text-sm text-industrial-600">创建: {new Date(ticket.lastUpdate).toLocaleDateString('zh-CN')}</span>
+                  <span className="text-sm text-industrial-600">创建: {new Date(ticket.lastUpdate || ticket.createdAt || '').toLocaleDateString('zh-CN')}</span>
                 </div>
               </div>
             </div>

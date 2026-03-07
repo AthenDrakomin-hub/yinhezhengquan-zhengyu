@@ -18,6 +18,7 @@ const AdminTickets = lazy(() => import('../components/admin/AdminTickets'));
 const AdminTicketDetail = lazy(() => import('../components/admin/AdminTicketDetail'));
 const AdminAuditLogs = lazy(() => import('../components/admin/AdminAuditLogs'));
 const AdminDataExport = lazy(() => import('../components/admin/AdminDataExport'));
+const AdminFeatureFlags = lazy(() => import('../components/admin/AdminFeatureFlags'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -50,6 +51,7 @@ const AdminRoutes: React.FC = () => {
             <Route path="banners" element={<AdminBanners />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
+            <Route path="feature-flags" element={<AdminFeatureFlags />} />
             <Route path="audit-logs" element={<AdminAuditLogs />} />
             <Route path="data-export" element={<AdminDataExport />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />

@@ -15,22 +15,22 @@ export interface Transaction {
   id: string;
   symbol: string;
   name: string;
-  type: TradeType;
+  type: TradeType | 'BUY' | 'SELL' | 'IPO' | 'DIVIDEND';
   price: number;
   quantity: number;
   amount: number;
-  timestamp: Date;
-  status: 'SUCCESS' | 'PENDING' | 'FAILED' | 'MATCHING';
+  timestamp: Date | string;
+  status: 'SUCCESS' | 'PENDING' | 'FAILED' | 'MATCHING' | 'FILLED' | 'CANCELLED';
   metadata?: Record<string, any>; // 用于存储交易类型的额外信息
 }
 
 export interface ConditionalOrder {
   id: string;
   symbol: string;
-  name: string;
-  type: 'TP_SL' | 'GRID';
-  status: 'RUNNING' | 'TRIGGERED' | 'CANCELLED';
-  config: {
+  name?: string;
+  type: 'TP_SL' | 'GRID' | 'STOP_LOSS' | 'TAKE_PROFIT';
+  status: 'RUNNING' | 'TRIGGERED' | 'CANCELLED' | 'ACTIVE';
+  config?: {
     stopLoss?: number;
     takeProfit?: number;
     gridUpper?: number;
@@ -38,7 +38,9 @@ export interface ConditionalOrder {
     gridCount?: number;
     baseQty?: number;
   };
-  createdAt: Date;
+  triggerPrice?: number;
+  quantity?: number;
+  createdAt?: Date | string;
 }
 
 export interface AssetSnapshot {
@@ -92,11 +94,15 @@ export interface PersonalSettings {
 export interface Banner {
   id: string;
   title: string;
-  desc: string;
-  img: string;
-  category: string;
-  date: string;
-  content: string;
+  subtitle?: string;
+  imageUrl?: string;
+  linkUrl?: string;
+  // 兼容旧字段
+  desc?: string;
+  img?: string;
+  category?: string;
+  date?: string;
+  content?: string;
   relatedSymbol?: string;
   isActive?: boolean;
   position?: number;
@@ -120,12 +126,16 @@ export interface Holding {
   quantity: number;
   availableQuantity: number;
   averagePrice: number;
+  avgPrice?: number; // 别名
   currentPrice: number;
-  marketValue: number;
-  profit: number;
-  profitRate: number;
-  category: 'STOCK' | 'FUND' | 'BOND' | 'MARGIN';
+  marketValue?: number;
+  profit?: number;
+  profitRate?: number;
+  category?: 'STOCK' | 'FUND' | 'BOND' | 'MARGIN';
   logoUrl?: string;
+  riskLevel?: 'HIGH' | 'MEDIUM' | 'LOW';
+  isForcedSell?: boolean;
+  forcedSellReason?: string;
 }
 
 export interface Message {
@@ -140,10 +150,15 @@ export interface Message {
 
 export interface SupportTicket {
   id: string;
-  subject: string;
-  status: 'IN_PROGRESS' | 'CLOSED' | 'OPEN';
-  lastUpdate: string;
   userId?: string;
+  type?: 'TECHNICAL' | 'ACCOUNT' | 'TRADE' | 'SUGGESTION' | 'COMPLAINT' | 'OTHER';
+  subject: string;
+  description?: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  createdAt?: string;
+  updatedAt?: string;
+  lastUpdate?: string;
   lastMessageAt?: string;
   unreadCountUser?: number;
   unreadCountAdmin?: number;
@@ -153,11 +168,26 @@ export interface EducationTopic {
   id: string;
   title: string;
   category: string;
-  image: string;
-  duration: string;
-  content: string;
+  image?: string;
+  coverImage?: string;
+  duration?: string;
+  content?: string;
+  type?: 'video' | 'article' | 'document';
   order?: number;
   is_published?: boolean;
+  difficulty?: string;
+  author?: string;
+  authorTitle?: string;
+  views?: number;
+  likes?: number;
+  status?: string;
+  created_at?: string;
+  createdAt?: string;
+  description?: string;
+  videoUrl?: string;
+  documentUrl?: string;
+  tags?: string[];
+  isFeatured?: boolean;
 }
 
 export interface MarketHoliday {

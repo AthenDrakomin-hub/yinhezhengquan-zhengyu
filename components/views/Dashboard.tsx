@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { COLORS, BANNER_MOCK, ICONS, MOCK_CALENDAR, MOCK_REPORTS } from '../../lib/constants';
+import { ICONS } from '../../lib/constants';
 import { getGalaxyNews } from '../../services/marketService';
-import { Transaction, Banner, TradeType } from '../../lib/types';
+import { getBanners } from '../../services/contentService';
+import { Transaction, Banner } from '../../lib/types';
 import { HotStocksPanel } from '../client/market/HotStocksPanel';
 import { SmartRecommendations } from '../client/analysis/SmartRecommendations';
 import { usePerformanceMonitor } from '../../utils/performanceMonitor';
 
 // 图片加载组件：处理加载/错误状态
-const BannerImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+const BannerImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  if (error) {
+  if (!src || error) {
     return (
       <div className="absolute inset-0 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628] flex items-center justify-center">
         <div className="w-12 h-12 bg-[#00D4AA] rounded-2xl flex items-center justify-center font-black text-[#0A1628] opacity-50">ZY</div>
@@ -43,6 +44,34 @@ interface DashboardProps {
   onOpenBanner?: (banner: Banner) => void;
 }
 
+// 默认横幅数据
+const defaultBanners: Array<{
+  id: string;
+  title: string;
+  category: string;
+  desc: string;
+  img?: string;
+}> = [
+  {
+    id: 'default-1',
+    title: '银河证裕 · 智能交易单元',
+    category: '平台公告',
+    desc: '银河证券证裕交易单元全面上线，提供实时行情、智能交易、合规监控等功能',
+  },
+  {
+    id: 'default-2',
+    title: '风控合规 · 实时监测',
+    category: '合规公告',
+    desc: '合规盾牌实时监测交易行为，确保每一笔交易符合监管要求',
+  },
+  {
+    id: 'default-3',
+    title: '投教中心 · 理财知识',
+    category: '投教活动',
+    desc: '银河证券投资者教育基地，提供专业的投资知识和风险教育',
+  },
+];
+
 // 核心Dashboard组件
 const Dashboard: React.FC<DashboardProps> = ({ 
   transactions = [], 
@@ -54,6 +83,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [news, setNews] = useState<any[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
+  const [banners, setBanners] = useState<typeof defaultBanners>(defaultBanners);
   
   // 性能监控
   usePerformanceMonitor('Dashboard');
@@ -72,9 +102,29 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  // 获取横幅数据
+  const fetchBanners = async () => {
+    try {
+      const bannerData = await getBanners();
+      if (bannerData && bannerData.length > 0) {
+        setBanners(bannerData.map(b => ({
+          id: b.id,
+          title: b.title,
+          category: '平台公告',
+          desc: b.subtitle || '',
+          img: b.imageUrl,
+        })));
+      }
+    } catch (err) {
+      console.error('获取横幅失败:', err);
+      // 使用默认横幅
+    }
+  };
+
   // 初始化+定时刷新新闻
   useEffect(() => {
     fetchNews();
+    fetchBanners();
     const interval = setInterval(fetchNews, 300000); // 5分钟刷新一次
     return () => clearInterval(interval); // 组件卸载清除定时器
   }, []);
@@ -92,10 +142,10 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* 轮播Banner区 */}
       <section className="px-4">
         <div className="flex overflow-x-auto gap-6 no-scrollbar snap-x">
-          {BANNER_MOCK.map((banner) => (
+          {banners.map((banner) => (
             <div 
               key={banner.id} 
-              onClick={() => onOpenBanner?.(banner)}
+              onClick={() => onOpenBanner?.({ id: banner.id, title: banner.title, subtitle: banner.desc })}
               className="min-w-[90%] md:min-w-[45%] lg:min-w-[32%] snap-center relative h-56 rounded-4xl overflow-hidden group shadow-2xl border border-[var(--color-border)] cursor-pointer active:scale-[0.98] transition-all"
             >
               <BannerImage src={banner.img} alt={banner.title} />
@@ -206,18 +256,18 @@ const Dashboard: React.FC<DashboardProps> = ({
             {transactions.length === 0 ? (
               <div className="p-12 text-center text-[var(--color-text-muted)] font-black uppercase tracking-widest text-[10px]">暂无交易记录</div>
             ) : (
-              transactions.map((trade) => (
+              transactions.slice(0, 5).map((trade) => (
                 <div 
                   key={trade.id} 
                   className="p-6 flex justify-between items-center hover:bg-[var(--color-surface-hover)] transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
-                      trade.type === TradeType.BUY ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 
-                      trade.type === TradeType.SELL ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 
+                      trade.type === 'BUY' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 
+                      trade.type === 'SELL' ? 'bg-[#FF6B6B]/10 text-[#FF6B6B]' : 
                       'bg-blue-500/10 text-blue-500'
                     }`}>
-                      {trade.type === TradeType.BUY ? '买' : trade.type === TradeType.SELL ? '卖' : '申'}
+                      {trade.type === 'BUY' ? '买' : trade.type === 'SELL' ? '卖' : '申'}
                     </div>
                     <div>
                       <h4 className="text-sm font-black text-[var(--color-text-primary)]">{trade.name}</h4>
@@ -229,12 +279,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <div className="text-right">
                     <p className="text-sm font-black font-mono text-[var(--color-text-primary)]">¥{trade.price.toFixed(2)}</p>
                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
-                      trade.status === 'SUCCESS' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 
-                      trade.status === 'MATCHING' ? 'bg-blue-500/10 text-blue-500' :
+                      trade.status === 'FILLED' || trade.status === 'SUCCESS' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 
+                      trade.status === 'PENDING' || trade.status === 'MATCHING' ? 'bg-blue-500/10 text-blue-500' :
                       'bg-orange-500/10 text-orange-500'
                     }`}>
-                      {trade.status === 'SUCCESS' ? '成功' : 
-                       trade.status === 'MATCHING' ? '撮合中' : '处理中'}
+                      {trade.status === 'FILLED' || trade.status === 'SUCCESS' ? '成功' : 
+                       trade.status === 'PENDING' || trade.status === 'MATCHING' ? '撮合中' : '处理中'}
                     </span>
                   </div>
                 </div>

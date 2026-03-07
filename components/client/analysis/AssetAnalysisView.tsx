@@ -5,15 +5,16 @@ import { UserAccount, AssetSnapshot } from '../../../lib/types';
 import { COLORS } from '../../../lib/constants';
 
 interface AssetAnalysisViewProps {
-  account: UserAccount;
+  account: UserAccount | null;
   onBack: () => void;
 }
 
 const AssetAnalysisView: React.FC<AssetAnalysisViewProps> = ({ account, onBack }) => {
   const pieData = useMemo(() => {
+    if (!account) return [];
     const data = [
       { name: '可用资金', value: account.balance },
-      ...account.holdings.map(h => ({ name: h.name, value: h.marketValue }))
+      ...account.holdings.map(h => ({ name: h.name, value: h.marketValue || h.quantity * h.currentPrice }))
     ];
     return data;
   }, [account]);
@@ -29,6 +30,13 @@ const AssetAnalysisView: React.FC<AssetAnalysisViewProps> = ({ account, onBack }
         <h1 className="text-sm font-black uppercase tracking-[0.2em]">资产分析报告</h1>
       </header>
 
+      {!account ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-[var(--color-text-muted)]">
+            <p className="text-sm font-bold">加载中...</p>
+          </div>
+        </div>
+      ) : (
       <div className="flex-1 overflow-y-auto p-4 space-y-8 no-scrollbar pb-20">
         {/* Yield Curve */}
         <div className="glass-card p-6 space-y-4">
@@ -104,7 +112,9 @@ const AssetAnalysisView: React.FC<AssetAnalysisViewProps> = ({ account, onBack }
                     <span className="text-[var(--color-text-secondary)]">{entry.name}</span>
                   </div>
                   <span className="font-mono text-[var(--color-text-primary)]">
-                    {((entry.value / account.history[account.history.length-1].equity) * 100).toFixed(1)}%
+                    {account && account.history.length > 0 
+                      ? ((entry.value / account.history[account.history.length-1].equity) * 100).toFixed(1) + '%'
+                      : '-'}
                   </span>
                 </div>
               ))}
@@ -142,6 +152,7 @@ const AssetAnalysisView: React.FC<AssetAnalysisViewProps> = ({ account, onBack }
            </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

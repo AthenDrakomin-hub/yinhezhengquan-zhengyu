@@ -12,7 +12,7 @@ interface LayoutProps {
   isDarkMode: boolean;
   toggleTheme: () => void;
   onOpenSettings: () => void;
-  account: UserAccount;
+  account: UserAccount | null;
   userRole?: string;
 }
 
@@ -32,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, to
   ];
 
   const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
-  const notificationUnreadCount = account.notifications.filter(n => !n.isRead).length;
+  const notificationUnreadCount = account?.notifications?.filter(n => !n.isRead).length || 0;
 
   const isTabActive = (path: string) => location.pathname.startsWith(path);
 
@@ -142,7 +142,7 @@ const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, isDarkMode, to
       <div className="flex-1 flex flex-col relative w-full">
         
         {/* 待激活状态横幅 */}
-        {account.status === 'PENDING' && (
+        {account?.status === 'PENDING' && (
           <div className="bg-orange-500 py-2 px-6 flex items-center justify-between z-[60] shadow-lg">
             <div className="flex items-center gap-3">
               <ICONS.Shield size={14} className="text-white" />
