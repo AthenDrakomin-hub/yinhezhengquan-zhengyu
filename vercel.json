@@ -62,11 +62,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/ipo-sync-cron",
-      "schedule": "0 8 * * *"
-    }
   ]
 }
