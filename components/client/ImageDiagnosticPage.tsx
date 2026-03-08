@@ -6,6 +6,20 @@
 import React, { useState } from 'react';
 import { LazyImage } from '../shared/LazyImage';
 
+// 从环境变量读取图片 URL
+const CAROUSEL_IMAGES = {
+  image1: import.meta.env.VITE_CAROUSEL_IMAGE_1 || '/images/carousel-1.jpg',
+  image2: import.meta.env.VITE_CAROUSEL_IMAGE_2 || '/images/carousel-2.png',
+  image3: import.meta.env.VITE_CAROUSEL_IMAGE_3 || '/images/carousel-3.png',
+};
+
+const SERVICE_ICONS = {
+  icon1: import.meta.env.VITE_SERVICE_ICON_1 || '/images/service-icon-1.png',
+  icon2: import.meta.env.VITE_SERVICE_ICON_2 || '/images/service-icon-2.png',
+  icon3: import.meta.env.VITE_SERVICE_ICON_3 || '/images/service-icon-3.png',
+  icon4: import.meta.env.VITE_SERVICE_ICON_4 || '/images/service-icon-4.png',
+};
+
 const ImageDiagnosticPage: React.FC = () => {
   const [loadingResults, setLoadingResults] = useState<{ [key: string]: 'loading' | 'success' | 'error' }>({});
 
@@ -13,17 +27,17 @@ const ImageDiagnosticPage: React.FC = () => {
   const carouselImages = [
     {
       id: 'carousel-1',
-      url: 'https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/75581daa-fd55-45c5-8376-f51bf6852fde.jpg',
+      url: CAROUSEL_IMAGES.image1,
       title: '轮播图 1 - 证裕交易单元 Nexus',
     },
     {
       id: 'carousel-2',
-      url: 'https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/123.png',
+      url: CAROUSEL_IMAGES.image2,
       title: '轮播图 2 - 数字化资产管理',
     },
     {
       id: 'carousel-3',
-      url: 'https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/456.png',
+      url: CAROUSEL_IMAGES.image3,
       title: '轮播图 3 - 全球市场直连',
     },
   ];
@@ -32,22 +46,22 @@ const ImageDiagnosticPage: React.FC = () => {
   const serviceImages = [
     {
       id: 'service-1',
-      url: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_wealth_management@2x.96211330.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfd2VhbHRoX21hbmFnZW1lbnRAMnguOTYyMTEzMzAucG5nIiwiaWF0IjoxNzcyMzg5MzU1LCJleHAiOjE4MDM5MjUzNTV9.7V8gVGq24tWFBSLDUfDXMUB1rX8jJOiUtzHvPP5rETQ',
+      url: SERVICE_ICONS.icon1,
       title: '财富管理',
     },
     {
       id: 'service-2',
-      url: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_investment_financing@2x.541f016f.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW52ZXN0bWVudF9maW5hbmNpbmdAMnguNTQxZjAxNmYucG5nIiwiaWF0IjoxNzcyMzg5MzEwLCJleHAiOjE4MDM5MjUzMTB9.gNSFeBBk35kDEPVwV2wJmchpMNlXqUN1Vto5JqCQfD8',
+      url: SERVICE_ICONS.icon2,
       title: '投融资业务',
     },
     {
       id: 'service-3',
-      url: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_research_service@2x.213da3c3.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfcmVzZWFyY2hfc2VydmljZUAyeC4yMTNkYTNjMy5wbmciLCJpYXQiOjE3NzIzODkzMzcsImV4cCI6MTgwMzkyNTMzN30.nc7RAyo25jplNNl9R2Xuhv7DTg1RcCDSwW8bls5GEYk',
+      url: SERVICE_ICONS.icon3,
       title: '研究业务',
     },
     {
       id: 'service-4',
-      url: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_international_business@2x.d9987cf6.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW50ZXJuYXRpb25hbF9idXNpbmVzc0AyeC5kOTk4N2NmNi5wbmciLCJpYXQiOjE3NzIzODkyNzgsImV4cCI6MTgwMzkyNTI3OH0.EUasMximyC8PwoBmvG5IXPsX69crOsiC2AJNha-cCxs',
+      url: SERVICE_ICONS.icon4,
       title: '国际业务',
     },
   ];
@@ -74,7 +88,7 @@ const ImageDiagnosticPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-screen bg-gray-100 p-8 text-gray-900">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">图片加载诊断页面</h1>

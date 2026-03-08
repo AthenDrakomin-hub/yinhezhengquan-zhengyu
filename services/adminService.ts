@@ -265,7 +265,7 @@ export const adminService = {
         throw new Error('无法从Supabase URL中提取项目引用');
       }
 
-      const edgeFunctionUrl = `https://${projectRef}.functions.supabase.co/admin-verify`;
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/admin-verify`;
       
       const response = await fetch(edgeFunctionUrl, {
         method: 'GET',

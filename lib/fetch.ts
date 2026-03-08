@@ -40,8 +40,8 @@ export async function verifyAdminWithEdgeFunction(
   raw?: any;
 }> {
   try {
-    // 替换成你的函数域名（从 Supabase 后台复制）
-    const functionUrl = 'https://rfnrosyfeivcbkimjlwo.functions.supabase.co/admin-verify';
+    // 从环境变量读取 Edge Function URL
+    const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-verify`;
     
     const res = await fetch(functionUrl, {
       method: 'GET',

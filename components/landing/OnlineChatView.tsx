@@ -22,8 +22,8 @@ interface ChatMessage extends Message {
 
 type ChatPhase = 'form' | 'queuing' | 'chatting' | 'ended';
 
-const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
-const AGENT_AVATAR = "https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/yinxiaohe.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4veWlueGlhb2hlLnBuZyIsImlhdCI6MTc3Mjk2Nzk2NSwiZXhwIjoxODA1MDAzOTY1fQ.LcZ_SNBydmPi3LAzLCOo9I49Zjw3p45FBAI_zqXpE0E";
+const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
+const AGENT_AVATAR = import.meta.env.VITE_AGENT_AVATAR_URL || '/avatar-default.png';
 
 const QUICK_QUESTIONS = [
   '如何修改交易密码？',
@@ -334,7 +334,7 @@ const OnlineChatView: React.FC = () => {
   }, [messages.length]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 flex flex-col text-gray-900">
       {/* 访客信息弹窗 */}
       <VisitorInfoModal 
         isOpen={showForm} 

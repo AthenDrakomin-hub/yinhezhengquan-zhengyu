@@ -716,7 +716,7 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
     },
   });
 
-  const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
+  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
 
   const handleSendOtp = async (phone: string) => {
     const formattedPhone = phone.startsWith('+') ? phone : `+86${phone}`;
@@ -949,7 +949,7 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
 
   return (
     <FormProvider {...methods}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 text-gray-900">
         {/* 顶部导航 */}
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
           <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">

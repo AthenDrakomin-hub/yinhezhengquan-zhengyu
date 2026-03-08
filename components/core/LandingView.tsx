@@ -19,22 +19,37 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate(); // 添加导航钩子
 
-  const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
+  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
+  const CAROUSEL_IMAGES = {
+    image1: import.meta.env.VITE_CAROUSEL_IMAGE_1 || '/images/carousel-1.jpg',
+    image2: import.meta.env.VITE_CAROUSEL_IMAGE_2 || '/images/carousel-2.png',
+    image3: import.meta.env.VITE_CAROUSEL_IMAGE_3 || '/images/carousel-3.png',
+  };
+  const BACKGROUND_IMAGES = {
+    bg1: import.meta.env.VITE_BACKGROUND_IMAGE_1 || '/images/bg-1.png',
+    bg2: import.meta.env.VITE_BACKGROUND_IMAGE_2 || '/images/bg-2.png',
+  };
+  const SERVICE_ICONS = {
+    icon1: import.meta.env.VITE_SERVICE_ICON_1 || '/images/service-icon-1.png',
+    icon2: import.meta.env.VITE_SERVICE_ICON_2 || '/images/service-icon-2.png',
+    icon3: import.meta.env.VITE_SERVICE_ICON_3 || '/images/service-icon-3.png',
+    icon4: import.meta.env.VITE_SERVICE_ICON_4 || '/images/service-icon-4.png',
+  };
   const QR_PLACEHOLDER = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.zhengyutouzi.com/";
   
   const slides = [
     {
-      image: "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/75581daa-fd55-45c5-8376-f51bf6852fde.jpg",
+      image: CAROUSEL_IMAGES.image1,
       title: "证裕交易单元 Nexus",
       subtitle: "极速、稳定、合规的数字化底座"
     },
     {
-      image: "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/123.png",
+      image: CAROUSEL_IMAGES.image2,
       title: "数字化资产管理",
       subtitle: "赋能机构与专业投资者"
     },
     {
-      image: "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/456.png",
+      image: CAROUSEL_IMAGES.image3,
       title: "全球市场直连",
       subtitle: "多维度的投资组合管理体验"
     }
@@ -236,25 +251,25 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
               {
                 title: '财富管理',
                 desc: '为客户提供证券经纪、金融产品、投资顾问、证券金融、机构服务等多元化、智能化、专业化服务。',
-                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_wealth_management@2x.96211330.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfd2VhbHRoX21hbmFnZW1lbnRAMnguOTYyMTEzMzAucG5nIiwiaWF0IjoxNzcyMzg5MzU1LCJleHAiOjE4MDM5MjUzNTV9.7V8gVGq24tWFBSLDUfDXMUB1rX8jJOiUtzHvPP5rETQ',
+                img: SERVICE_ICONS.icon1,
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/wealthManagement.html'
               },
               {
                 title: '投融资业务',
                 desc: '为企业提供IPO、再融资、并购重组、债券发行等全周期投融资服务，支持实体经济发展。',
-                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_investment_financing@2x.541f016f.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW52ZXN0bWVudF9maW5hbmNpbmdAMnguNTQxZjAxNmYucG5nIiwiaWF0IjoxNzcyMzg5MzEwLCJleHAiOjE4MDM5MjUzMTB9.gNSFeBBk35kDEPVwV2wJmchpMNlXqUN1Vto5JqCQfD8',
+                img: SERVICE_ICONS.icon2,
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/investFinance.html'
               },
               {
                 title: '研究业务',
                 desc: '银河研究院提供宏观、策略、行业、企业研究，为机构投资者和政府企业提供智库支持。',
-                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_research_service@2x.213da3c3.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfcmVzZWFyY2hfc2VydmljZUAyeC4yMTNkYTNjMy5wbmciLCJpYXQiOjE3NzIzODkzMzcsImV4cCI6MTgwMzkyNTMzN30.nc7RAyo25jplNNl9R2Xuhv7DTg1RcCDSwW8bls5GEYk',
+                img: SERVICE_ICONS.icon3,
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchBusiness.html'
               },
               {
                 title: '国际业务',
                 desc: '通过银河国际及银河海外网络，为境内外客户提供跨境交易、融资、投资和财富管理服务。',
-                img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_international_business@2x.d9987cf6.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW50ZXJuYXRpb25hbF9idXNpbmVzc0AyeC5kOTk4N2NmNi5wbmciLCJpYXQiOjE3NzIzODkyNzgsImV4cCI6MTgwMzkyNTI3OH0.EUasMximyC8PwoBmvG5IXPsX69crOsiC2AJNha-cCxs',
+                img: SERVICE_ICONS.icon4,
                 url: 'https://www.chinastock.com.cn/newsite/cgs-services/internationalBusiness.html'
               }
             ].map((item, i) => (
@@ -286,7 +301,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
         {/* 底图 */}
         <div className="absolute inset-0">
           <img 
-            src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_investment_financing@2x.541f016f.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfaW52ZXN0bWVudF9maW5hbmNpbmdAMnguNTQxZjAxNmYucG5nIiwiaWF0IjoxNzcyMzkxMzU2LCJleHAiOjE4MDM5MjczNTZ9.uDT5S9E7Zl0fVoEgLWqcqg0TpDQgxFdOpYfGx4Ls7iI"
+            src={SERVICE_ICONS.icon2}
             alt="背景"
             className="w-full h-full object-cover"
           />
@@ -402,7 +417,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
         {/* 底图 */}
         <div className="absolute inset-0">
           <img 
-            src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/213213.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vMjEzMjEzLnBuZyIsImlhdCI6MTc3MjM5NDE0NiwiZXhwIjoxODAzOTMwMTQ2fQ.1_TkYlWYIio6rE4Xr6a1JzTm-5KTCt31EQZegoAGF50"
+            src={BACKGROUND_IMAGES.bg1}
             alt="背景"
             className="w-full h-full object-cover"
           />
@@ -422,7 +437,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
                     date: '2026-02-26',
                     title: '【中国银河宏观】经济增长目标会调整吗？—2026两会前瞻',
                     desc: '核心观点：2026年两会召开在即，政府工作报告和“十五五”规划纲要即将公布。',
-                    img: 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/img_home_CGS_research_5@2x.dc6d9350.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vaW1nX2hvbWVfQ0dTX3Jlc2VhcmNoXzVAMnguZGM2ZDkzNTAucG5nIiwiaWF0IjoxNzcyMzkzMjUwLCJleHAiOjE4MDM5MjkyNTB9.frHnyJRmKC9bXfeDyaUmYQTw_QW7De4aJzas36rEcUo',
+                    img: import.meta.env.VITE_RESEARCH_IMAGE_1 || '/images/research-1.png',
                     url: 'https://www.chinastock.com.cn/newsite/cgs-services/researchReportDetail.html?id=7866890'
                   },
                   {

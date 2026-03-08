@@ -1,6 +1,14 @@
 // 开户申请手机号验证服务
 import { supabase } from '../lib/supabase';
 
+// Edge Function URL
+const getPhoneLocationFunctionUrl = () => {
+  if (import.meta.env.VITE_PHONE_LOCATION_FUNCTION_URL) {
+    return import.meta.env.VITE_PHONE_LOCATION_FUNCTION_URL;
+  }
+  return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/phone-location`;
+};
+
 // 手机号格式验证
 export const validatePhoneFormat = (phone: string): boolean => {
   return /^1[3-9]\d{9}$/.test(phone);
@@ -11,41 +19,72 @@ export const validateNameFormat = (name: string): boolean => {
   return /^[\u4e00-\u9fa5]{2,8}$/.test(name) || /^[a-zA-Z\s]{2,30}$/.test(name);
 };
 
-// 查询手机号归属地/运营商 (使用免费API)
+// 手机号归属地查询结果
 export interface PhoneInfo {
   valid: boolean;
   operator?: string;
   province?: string;
   city?: string;
+  zipCode?: string;
+  areaCode?: string;
+  message?: string;
 }
 
+/**
+ * 查询手机号归属地/运营商
+ * 通过 Supabase Edge Function (phone-location)
+ * 
+ * 支持多源查询:
+ * 1. 聚合数据 API (juhe.cn) - 需要配置 JUHE_PHONE_API_KEY
+ * 2. ShowAPI (showapi.com) - 需要配置 SHOWAPI_APPID 和 SHOWAPI_SECRET
+ * 3. 备用免费 API
+ * 4. 本地号段查询 (兜底)
+ */
 export const queryPhoneInfo = async (phone: string): Promise<PhoneInfo> => {
   try {
-    // 方法1: 使用聚合数据的免费API (需要申请key)
-    // const response = await fetch(`https://apis.juhe.cn/mobile/get?phone=${phone}&key=YOUR_KEY`);
+    const { data: { session } } = await supabase.auth.getSession();
     
-    // 方法2: 使用简单的归属地查询API
-    const response = await fetch(`https://cx.shouji.360.cn/phonearea.php?number=${phone}`);
-    const data = await response.json();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
     
-    if (data.code === 0 && data.data) {
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    
+    const response = await fetch(
+      `${getPhoneLocationFunctionUrl()}/phone-location?phone=${encodeURIComponent(phone)}`,
+      { headers }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`查询失败: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success && result.data) {
       return {
-        valid: true,
-        operator: getOperatorName(data.data.sp),
-        province: data.data.province,
-        city: data.data.city,
+        valid: result.data.valid,
+        operator: result.data.operator,
+        province: result.data.province,
+        city: result.data.city,
+        zipCode: result.data.zipCode,
+        areaCode: result.data.areaCode,
+        message: result.data.message,
       };
     }
     
-    return { valid: false };
+    return { valid: false, message: result.error || '查询失败' };
   } catch (error) {
-    console.error('查询手机号信息失败:', error);
-    // 如果API失败，返回格式验证通过
+    console.error('查询手机号归属地失败:', error);
+    // API 失败时返回格式验证结果
     return { valid: validatePhoneFormat(phone) };
   }
 };
 
-// 解析运营商代码
+// 解析运营商代码 (兼容旧版 360 API)
 const getOperatorName = (sp: string): string => {
   const operators: Record<string, string> = {
     '1': '中国移动',
@@ -62,7 +101,6 @@ const getOperatorName = (sp: string): string => {
 // 实名认证方案 (需要企业资质和付费)
 // ============================================
 
-// 方案A: 阿里云实名认证
 export interface RealNameVerifyParams {
   name: string;
   phone: string;
@@ -174,7 +212,7 @@ export interface VerifyPhoneAndNameResult {
  * 阶段1 (当前): 基础验证
  * - 手机号格式验证
  * - 姓名格式验证
- * - 手机号归属地查询 (免费)
+ * - 手机号归属地查询 (通过 Edge Function)
  * 
  * 阶段2 (后续): 实名认证
  * - 接入第三方实名认证API
@@ -203,68 +241,51 @@ export const verifyPhoneAndName = async (
       valid: false,
       phoneValid,
       nameValid: false,
-      message: '姓名格式不正确(2-8个汉字或2-30个英文字母)',
+      message: '姓名格式不正确（请输入2-8位中文或2-30位英文）',
     };
   }
   
-  // 2. 查询手机号信息
+  // 2. 查询手机号归属地
   const phoneInfo = await queryPhoneInfo(phone);
   
   if (!phoneInfo.valid) {
     return {
       valid: false,
-      phoneValid: false,
+      phoneValid,
       nameValid,
       phoneInfo,
-      message: '手机号不存在或已停机',
+      message: phoneInfo.message || '手机号无效',
     };
   }
   
   // 3. 实名认证 (可选)
   if (useRealNameVerify) {
-    // 这里调用实际的实名认证API
-    // const result = await verifyRealNameJuhe({ name, phone });
-    
-    // 模拟实名认证
-    const mockMatch = Math.random() > 0.1; // 90%通过率模拟
-    
-    return {
-      valid: mockMatch,
-      phoneValid: true,
-      nameValid: true,
-      match: mockMatch,
-      phoneInfo,
-      message: mockMatch ? '验证通过' : '姓名与手机号实名信息不匹配',
-    };
+    // 这里可以接入阿里云/腾讯云实名认证
+    // const verifyResult = await verifyRealNameAliyun({ name, phone });
+    // if (!verifyResult.match) {
+    //   return {
+    //     valid: false,
+    //     phoneValid,
+    //     nameValid,
+    //     phoneInfo,
+    //     match: false,
+    //     message: '姓名与手机号不匹配',
+    //   };
+    // }
   }
   
-  // 基础验证通过
   return {
     valid: true,
-    phoneValid: true,
-    nameValid: true,
+    phoneValid,
+    nameValid,
     phoneInfo,
     message: '验证通过',
   };
 };
 
-// 保存验证记录
-export const saveVerificationRecord = async (
-  name: string,
-  phone: string,
-  result: VerifyPhoneAndNameResult
-) => {
-  try {
-    const { error } = await supabase.from('phone_verification_logs').insert({
-      name,
-      phone,
-      valid: result.valid,
-      phone_info: result.phoneInfo,
-      created_at: new Date().toISOString(),
-    });
-    
-    if (error) console.error('保存验证记录失败:', error);
-  } catch (err) {
-    console.error('保存验证记录失败:', err);
-  }
+export default {
+  validatePhoneFormat,
+  validateNameFormat,
+  queryPhoneInfo,
+  verifyPhoneAndName,
 };

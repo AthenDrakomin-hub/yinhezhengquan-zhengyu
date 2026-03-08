@@ -1,10 +1,11 @@
 /**
  * 涨停板数据服务
- * 通过 Supabase Edge Function 获取实时行情数据并判断涨停板
+ * 通过 Supabase Edge Function 或 yinhedataService 获取实时行情数据
  * 优先从数据库获取，失败时使用模拟数据
  */
 
 import { supabase } from '../lib/supabase';
+import { yinhedataService } from './yinhedataService';
 
 export interface LimitUpData {
   symbol: string;
@@ -127,12 +128,9 @@ function generateMockLimitUpData(symbols: string[]): LimitUpData[] {
   });
 }
 
-// 银禾数据代理服务地址（本地开发）
-const YINHE_API_URL = import.meta.env.VITE_YINHE_API_URL || 'http://localhost:8080';
-
 /**
  * 获取所有涨停股票列表
- * 优先级：数据库 -> 银禾数据代理服务 -> Edge Function -> 模拟数据
+ * 优先级：数据库 -> yinhedataService (Edge Function) -> 模拟数据
  *
  * @param symbols - 可选，指定要查询的股票列表。如果不提供，使用默认列表
  * @returns 涨停股票列表
@@ -172,52 +170,35 @@ export async function getLimitUpList(symbols?: string[]): Promise<LimitUpData[]>
       }));
     }
 
-    // 2. 尝试调用银禾数据代理服务
+    // 2. 尝试调用 yinhedataService (Edge Function)
     try {
-      const yinheResponse = await fetch(`${YINHE_API_URL}/api/limit-up?symbols=${stockList.join(',')}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (yinheResponse.ok) {
-        const yinheData = await yinheResponse.json();
-        if (yinheData && yinheData.length > 0) {
-          console.log(`✅ 从银禾数据服务获取 ${yinheData.length} 条数据`);
-          return yinheData.map((item: any) => ({
-            symbol: item.symbol,
-            name: item.name,
-            market: item.market,
-            stockType: item.stockType,
-            currentPrice: item.currentPrice,
-            preClose: item.preClose,
-            limitUpPrice: item.limitUpPrice,
-            limitDownPrice: item.limitDownPrice,
-            change: item.change,
-            changePercent: item.changePercent,
-            volume: item.volume,
-            turnover: item.turnover,
-            buyOneVolume: 0,
-            buyOnePrice: item.currentPrice,
-            isLimitUp: item.isLimitUp,
-            timestamp: item.timestamp,
-          }));
-        }
+      const yinheData = await yinhedataService.getLimitUpStocks();
+      if (yinheData && yinheData.length > 0) {
+        console.log(`✅ 从 yinhedataService 获取 ${yinheData.length} 条数据`);
+        return yinheData.map((item: any) => ({
+          symbol: item.symbol,
+          name: item.name,
+          market: item.market,
+          stockType: item.stockType,
+          currentPrice: item.currentPrice,
+          preClose: item.preClose,
+          limitUpPrice: item.limitUpPrice,
+          limitDownPrice: item.limitDownPrice,
+          change: item.change,
+          changePercent: item.changePercent,
+          volume: item.volume,
+          turnover: item.turnover,
+          buyOneVolume: 0,
+          buyOnePrice: item.currentPrice,
+          isLimitUp: item.isLimitUp,
+          timestamp: item.timestamp,
+        }));
       }
     } catch (yinheError) {
-      console.log('银禾数据服务不可用，尝试其他数据源');
+      console.log('yinhedataService 不可用，使用模拟数据');
     }
 
-    // 3. 尝试调用 Edge Function
-    const { data, error } = await supabase.functions.invoke('get-limit-up', {
-      body: { symbols: stockList },
-    });
-
-    if (!error && data?.success && data.data?.length > 0) {
-      console.log(`✅ 从 Edge Function 获取 ${data.data.length} 条数据`);
-      return data.data;
-    }
-
-    // 4. 使用模拟数据
+    // 3. 使用模拟数据
     console.log('⚠️ 外部数据源不可用，使用模拟数据');
     return generateMockLimitUpData(stockList);
     

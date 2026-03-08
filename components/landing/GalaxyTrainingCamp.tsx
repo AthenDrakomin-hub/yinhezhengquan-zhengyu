@@ -16,6 +16,12 @@ import {
 import TrainingCampChat from './TrainingCampChat';
 import WebsiteDisclaimerModal from './WebsiteDisclaimerModal';
 
+// 从环境变量读取图片 URL
+const TRAINING_BG_1 = import.meta.env.VITE_TRAINING_BG_1 || '/images/training-bg-1.png';
+const TRAINING_LOGO = import.meta.env.VITE_TRAINING_LOGO || '/logo.png';
+const TRAINING_BG_2 = import.meta.env.VITE_TRAINING_BG_2 || '/images/training-bg-2.png';
+const JOIN_US_BG = import.meta.env.VITE_JOIN_US_BG || 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/public/tupian/jiaruwomen-1.png';
+
 const GalaxyTrainingCamp: React.FC = () => {
   // 控制网站声明弹窗显示
   const [isDisclaimerOpen, setIsDisclaimerOpen] = React.useState(false);
@@ -129,7 +135,7 @@ const GalaxyTrainingCamp: React.FC = () => {
     <div 
       className="min-h-screen text-gray-900 relative"
       style={{
-        backgroundImage: `url('https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/121.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vMTIxLnBuZyIsImlhdCI6MTc3Mjk3MTk5MCwiZXhwIjoxODA0NTA3OTkwfQ.fiyk0XbPTlSgWfaf5eiexycOFrmP16U3uQRIVYYHgwg')`,
+        backgroundImage: `url('${TRAINING_BG_1}')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed'
@@ -142,7 +148,7 @@ const GalaxyTrainingCamp: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <img
-              src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/logo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vbG9nby5wbmciLCJpYXQiOjE3NzI5NTgyMDUsImV4cCI6MTgwNDQ5NDIwNX0.YUIr129FJb48hSjatqZYc4bSOJ-_1k4LlJk5YxwJQyM"
+              src={TRAINING_LOGO}
               alt="中国银河证券"
               className="h-8 w-auto"
             />
@@ -226,7 +232,7 @@ const GalaxyTrainingCamp: React.FC = () => {
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-20"
           style={{ 
-            backgroundImage: `url('https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/milky-way-2695569_1280.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vbWlsa3ktd2F5LTI2OTU1NjlfMTI4MC5qcGciLCJpYXQiOjE3NzI5NzE1NjIsImV4cCI6MTgwNDUwNzU2Mn0.2xZOsIaGK501i5FbEjeRyeRBrd2tcS8YBszdG74kqK4')` 
+            backgroundImage: `url('${TRAINING_BG_2}')` 
           }}
         />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -347,9 +353,19 @@ const GalaxyTrainingCamp: React.FC = () => {
       </section>
 
       {/* 申请信息 */}
-      <section id="apply" className="py-20 bg-[#F9FAFB]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#E5E7EB]">
+      <section 
+        id="apply" 
+        className="py-20 relative"
+        style={{
+          backgroundImage: `url('${JOIN_US_BG}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        {/* 背景遮罩 */}
+        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-[#E5E7EB]">
             <div className="grid md:grid-cols-2">
               <div className="p-8 md:p-12">
                 <h2 className="text-3xl font-bold text-[#1F2937] mb-4">加入银河·特训营</h2>

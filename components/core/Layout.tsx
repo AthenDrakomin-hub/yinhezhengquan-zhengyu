@@ -28,7 +28,7 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
   const [showSmartAssistant, setShowSmartAssistant] = useState(false);
   const [showSmartPicker, setShowSmartPicker] = useState(false);
 
-  const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
+  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
   const notificationUnreadCount = account?.notifications?.filter(n => !n.isRead).length || 0;
 
   const tabs = React.useMemo(() => [

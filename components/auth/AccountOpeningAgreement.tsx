@@ -72,7 +72,7 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4 text-gray-900">
         <div className="bg-white max-w-2xl w-full rounded-xl shadow-lg p-8 text-center">
           <FaCheckCircle className="text-6xl text-[#10B981] mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-[#1F2937] mb-2">签署成功</h2>
@@ -97,13 +97,13 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#F9FAFB] py-10 px-4 sm:px-6 lg:px-8 text-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* 品牌标识 */}
         <div className="flex items-center justify-between mb-6 border-b border-[#E5E7EB] pb-4">
           <div className="flex items-center gap-2">
             <img
-              src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/logo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vbG9nby5wbmciLCJpYXQiOjE3NzI5NTgyMDUsImV4cCI6MTgwNDQ5NDIwNX0.YUIr129FJb48hSjatqZYc4bSOJ-_1k4LlJk5YxwJQyM"
+              src={import.meta.env.VITE_LOGO_URL || '/logo.png'}
               alt="中国银河证券"
               className="h-8 w-auto"
             />
@@ -291,7 +291,7 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
               <div className="flex-1">
                 <p className="text-sm font-medium text-[#374151] mb-1">公司盖章</p>
                 <img
-                  src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/photo_2026-03-08_19-53-39.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vcGhvdG9fMjAyNi0wMy0wOF8xOS01My0zOS5qcGciLCJpYXQiOjE3NzI5NzEzMTEsImV4cCI6MTgwNDUwNzMxMX0.JmnXvaUK8ZgUMxC1HuFbroVakrNLDEDRbSbOFVyvbuY"
+                  src={import.meta.env.VITE_SEAL_URL || '/seal.png'}
                   alt="中国银河证券·证裕交易单元公章"
                   className="h-16 w-auto opacity-80 hover:opacity-100 transition-opacity"
                   title="电子公章"

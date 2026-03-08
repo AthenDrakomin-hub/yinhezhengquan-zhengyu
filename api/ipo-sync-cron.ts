@@ -1,27 +1,26 @@
 /**
- * Vercel Cron Job - IPO 数据同步
- * 每天 8:00 AM 自动执行
+ * Vercel Serverless Function - IPO 数据同步
+ * 每天 8:00 AM 自动执行（通过 vercel.json crons 配置）
  * 
- * 配置位置: vercel.json
- * Cron 表达式: 0 8 * * * (每天 8:00 AM)
+ * Vercel 路径: /api/ipo-sync-cron
+ * 兼容 Vercel Serverless Functions (Node.js runtime)
  */
 
-import { NextResponse } from 'next/server';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export const config = {
-  runtime: 'nodejs',
-};
-
-export default async function handler(req: Request) {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
   // 验证是否为 Vercel Cron 调用
-  const authHeader = req.headers.get('authorization');
+  const authHeader = req.headers.authorization;
   const cronSecret = process.env.VERCEL_CRON_SECRET;
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return res.status(401).json({
+      error: 'Unauthorized',
+      timestamp: new Date().toISOString()
+    });
   }
 
   try {
@@ -49,7 +48,7 @@ export default async function handler(req: Request) {
     
     console.log('✅ IPO 同步完成:', result);
     
-    return NextResponse.json({
+    return res.status(200).json({
       success: true,
       message: 'Vercel Cron 触发成功',
       syncResult: result,
@@ -59,19 +58,10 @@ export default async function handler(req: Request) {
   } catch (error) {
     console.error('❌ Vercel Cron 执行失败:', error);
     
-    return NextResponse.json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : '未知错误',
       timestamp: new Date().toISOString()
-    }, { status: 500 });
+    });
   }
-}
-
-// 为了兼容 Next.js 13+ 的 App Router
-export async function GET(req: Request) {
-  return handler(req);
-}
-
-export async function POST(req: Request) {
-  return handler(req);
 }

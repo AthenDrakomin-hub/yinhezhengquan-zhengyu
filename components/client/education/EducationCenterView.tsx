@@ -253,7 +253,7 @@ const EducationCenterView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
+    <div className="min-h-screen bg-gray-50 pb-8 text-gray-900">
       {/* 头部 */}
       <div className="bg-gradient-to-br from-[#0A1628] to-[#1A2638] text-white px-6 py-8">
         <div className="max-w-6xl mx-auto">

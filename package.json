@@ -18,9 +18,7 @@
     "security": "npm audit && npx @microsoft/security-advisory-checker",
     "sync-ipo": "tsx scripts/sync-ipo-data.ts",
     "init-db": "tsx scripts/init-db.ts",
-    "install-deps": "npm install --legacy-peer-deps",
-    "yinhedata": "python3 api/yinhedata_service.py",
-    "yinhedata:bg": "nohup python3 api/yinhedata_service.py > /app/work/logs/bypass/yinhedata.log 2>&1 &"
+    "install-deps": "npm install --legacy-peer-deps"
   },
   "overrides": {
     "node-fetch": "^2.6.7",
@@ -60,7 +58,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
+    "@vercel/node": "^5.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.19.13",

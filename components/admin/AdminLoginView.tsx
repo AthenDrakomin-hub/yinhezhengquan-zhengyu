@@ -96,7 +96,7 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
 const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
   
-  const LOGO_URL = "https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/sign/tupian/logol.jpeg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81OTE1YzMzMC03MGY2LTQ2ZmQtOGViMy01YzdjZDA2ODQ4NjgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0dXBpYW4vbG9nb2wuanBlZyIsImlhdCI6MTc3Mjk1OTkxMSwiZXhwIjoxODA0NDk1OTExfQ.bhqxljoPJDeezi1IzjikuXTr8nzmlF9Y15W86tz5Eis";
+  const LOGO_URL = import.meta.env.VITE_ADMIN_LOGO_URL || import.meta.env.VITE_LOGO_URL || '/logo.png';
   
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -560,7 +560,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 sm:p-6 text-gray-900">
       {/* 顶部品牌区 */}
       <div className="w-full max-w-md mb-6 flex justify-center">
         <img src={LOGO_URL} alt="中国银河证券" className="h-12 object-contain" />

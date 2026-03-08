@@ -1,13 +1,24 @@
 /**
  * 银禾数据库数据服务
- * 通过 Python 后端代理服务获取数据
+ * 通过 Supabase Edge Function 代理获取数据
  * 文档: https://yinhedata.com/interface/index.html
+ * 
+ * Edge Function: yinhe-data
+ * 本地开发: http://localhost:54321/functions/v1/yinhe-data
+ * 生产环境: https://<project>.supabase.co/functions/v1/yinhe-data
  */
 
 import { supabase } from '../lib/supabase';
 
-// 银禾数据代理服务地址
-const YINHE_API_URL = import.meta.env.VITE_YINHE_API_URL || 'http://localhost:8080';
+// Edge Function URL (从环境变量获取或使用 Supabase 函数 URL)
+const getYinheFunctionUrl = () => {
+  // 优先使用环境变量
+  if (import.meta.env.VITE_YINHE_FUNCTION_URL) {
+    return import.meta.env.VITE_YINHE_FUNCTION_URL;
+  }
+  // 使用 Supabase functions URL
+  return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/yinhe-data`;
+};
 
 // ==================== 类型定义 ====================
 
@@ -75,6 +86,60 @@ export interface YinheMoneyFlow {
   timestamp: string;
 }
 
+// ==================== 通用请求封装 ====================
+
+/**
+ * 调用银禾数据 Edge Function
+ */
+async function callYinheFunction<T>(
+  endpoint: string,
+  options: { params?: Record<string, string>; method?: string; body?: unknown } = {}
+): Promise<T | null> {
+  try {
+    const url = new URL(`${getYinheFunctionUrl()}${endpoint}`);
+    
+    // 添加查询参数
+    if (options.params) {
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.append(key, value);
+        }
+      });
+    }
+
+    // 获取当前会话 token
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    // 添加授权头
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: options.method || 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('银禾数据 API 错误:', errorData);
+      return null;
+    }
+
+    const result = await response.json();
+    return result.success ? result.data : result;
+  } catch (error) {
+    console.error('调用银禾数据 API 失败:', error);
+    return null;
+  }
+}
+
 // ==================== 银禾数据服务 ====================
 
 export const yinhedataService = {
@@ -83,14 +148,17 @@ export const yinhedataService = {
    */
   async checkStatus(): Promise<{ available: boolean; message: string }> {
     try {
-      const response = await fetch(`${YINHE_API_URL}/health`, {
+      const response = await fetch(`${getYinheFunctionUrl()}/health`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
       
       if (response.ok) {
         const data = await response.json();
-        return { available: true, message: '银禾数据服务正常' };
+        return { 
+          available: true, 
+          message: `银禾数据服务正常 (API Key: ${data.apiKeyConfigured ? '已配置' : '未配置'})` 
+        };
       }
       return { available: false, message: '服务响应异常' };
     } catch (error) {
@@ -102,145 +170,80 @@ export const yinhedataService = {
    * 获取股票行情
    */
   async getQuotes(symbols?: string[]): Promise<YinheQuote[]> {
-    try {
-      const url = symbols 
-        ? `${YINHE_API_URL}/api/quotes?symbols=${symbols.join(',')}`
-        : `${YINHE_API_URL}/api/quotes`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取行情失败:', error);
-    }
-    return [];
+    const data = await callYinheFunction<YinheQuote[]>('/api/quotes', {
+      params: symbols ? { symbols: symbols.join(',') } : undefined,
+    });
+    return data || [];
   },
 
   /**
    * 获取单只股票行情
    */
   async getQuote(symbol: string): Promise<YinheQuote | null> {
-    try {
-      const response = await fetch(`${YINHE_API_URL}/api/quote/${symbol}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error(`获取 ${symbol} 行情失败:`, error);
-    }
-    return null;
+    return await callYinheFunction<YinheQuote>(`/api/quote/${symbol}`);
   },
 
   /**
    * 获取涨停股票列表
    */
   async getLimitUpStocks(): Promise<YinheLimitUpStock[]> {
-    try {
-      const response = await fetch(`${YINHE_API_URL}/api/limit-up`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取涨停数据失败:', error);
-    }
-    return [];
+    const data = await callYinheFunction<YinheLimitUpStock[]>('/api/limit-up');
+    return data || [];
+  },
+
+  /**
+   * 获取跌停股票列表
+   */
+  async getLimitDownStocks(): Promise<unknown[]> {
+    const data = await callYinheFunction<unknown[]>('/api/limit-down');
+    return data || [];
   },
 
   /**
    * 获取新股申购列表
    */
   async getIPOList(): Promise<YinheIPOInfo[]> {
-    try {
-      const response = await fetch(`${YINHE_API_URL}/api/ipo`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取IPO数据失败:', error);
-    }
-    return [];
+    const data = await callYinheFunction<YinheIPOInfo[]>('/api/ipo');
+    return data || [];
   },
 
   /**
    * 获取K线数据
    */
-  async getKline(symbol: string, period: string = 'day', limit: number = 100): Promise<{
+  async getKline(
+    symbol: string, 
+    period: 'day' | 'week' | 'month' = 'day', 
+    limit: number = 100
+  ): Promise<{
     symbol: string;
     period: string;
     data: YinheKline[];
   }> {
-    try {
-      const response = await fetch(
-        `${YINHE_API_URL}/api/kline/${symbol}?period=${period}&limit=${limit}`,
-        { method: 'GET', headers: { 'Content-Type': 'application/json' } }
-      );
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取K线数据失败:', error);
-    }
-    return { symbol, period, data: [] };
+    const data = await callYinheFunction<{
+      symbol: string;
+      period: string;
+      data: YinheKline[];
+    }>('/api/kline/:symbol'.replace(':symbol', symbol), {
+      params: { period, limit: String(limit) },
+    });
+    return data || { symbol, period, data: [] };
   },
 
   /**
    * 获取资金流向
    */
   async getMoneyFlow(symbol: string): Promise<YinheMoneyFlow | null> {
-    try {
-      const response = await fetch(`${YINHE_API_URL}/api/money-flow/${symbol}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取资金流向失败:', error);
-    }
-    return null;
+    return await callYinheFunction<YinheMoneyFlow>(`/api/money-flow/${symbol}`);
   },
 
   /**
    * 获取龙虎榜数据
    */
-  async getDragonTiger(date?: string): Promise<any> {
-    try {
-      const url = date 
-        ? `${YINHE_API_URL}/api/dragon-tiger?date=${date}`
-        : `${YINHE_API_URL}/api/dragon-tiger`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取龙虎榜数据失败:', error);
-    }
-    return { date: date || new Date().toISOString().split('T')[0], data: [] };
+  async getDragonTiger(date?: string): Promise<{ date: string; data: unknown[] }> {
+    const data = await callYinheFunction<{ date: string; data: unknown[] }>('/api/dragon-tiger', {
+      params: date ? { date } : undefined,
+    });
+    return data || { date: date || new Date().toISOString().split('T')[0], data: [] };
   },
 
   /**
@@ -255,23 +258,18 @@ export const yinhedataService = {
       type: string;
     }>;
   }> {
-    try {
-      const url = market 
-        ? `${YINHE_API_URL}/api/stock-list?market=${market}`
-        : `${YINHE_API_URL}/api/stock-list`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取股票列表失败:', error);
-    }
-    return { total: 0, data: [] };
+    const data = await callYinheFunction<{
+      total: number;
+      data: Array<{
+        symbol: string;
+        name: string;
+        market: string;
+        type: string;
+      }>;
+    }>('/api/stock-list', {
+      params: market ? { market } : undefined,
+    });
+    return data || { total: 0, data: [] };
   },
 
   /**
@@ -287,20 +285,34 @@ export const yinhedataService = {
     totalAssets: number | null;
     totalLiabilities: number | null;
   } | null> {
-    try {
-      const response = await fetch(`${YINHE_API_URL}/api/financial/${symbol}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('获取财务数据失败:', error);
-    }
-    return null;
-  }
+    return await callYinheFunction(`/api/financial/${symbol}`);
+  },
+
+  /**
+   * 获取板块行情
+   */
+  async getSectors(): Promise<unknown[]> {
+    const data = await callYinheFunction<unknown[]>('/api/sectors');
+    return data || [];
+  },
+
+  /**
+   * 获取概念板块
+   */
+  async getConcepts(): Promise<unknown[]> {
+    const data = await callYinheFunction<unknown[]>('/api/concepts');
+    return data || [];
+  },
+
+  /**
+   * 搜索股票
+   */
+  async searchStocks(keyword: string): Promise<unknown[]> {
+    const data = await callYinheFunction<unknown[]>('/api/search', {
+      params: { keyword },
+    });
+    return data || [];
+  },
 };
 
 export default yinhedataService;

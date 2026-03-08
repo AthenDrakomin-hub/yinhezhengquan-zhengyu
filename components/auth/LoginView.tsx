@@ -119,7 +119,7 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
 const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) => {
   const navigate = useNavigate();
   
-  const LOGO_URL = "https://zlbemopcgjohrnyyiwvs.supabase.co/storage/v1/object/public/ZY/logologo-removebg-preview.png";
+  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
   
   // 表单状态
   const [email, setEmail] = useState('');
@@ -263,7 +263,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex flex-col items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex flex-col items-center justify-center p-4 sm:p-6 text-gray-900">
       {/* 装饰性背景元素 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl" />
