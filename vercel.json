@@ -69,11 +69,6 @@
       "schedule": "0 8 * * *"
     }
   ],
-  "env": {
-    "VITE_SUPABASE_URL": "@supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "VERCEL_CRON_SECRET": "@vercel_cron_secret"
-  },
   "functions": {
     "api/*.ts": {
       "runtime": "nodejs20.x"
