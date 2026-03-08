@@ -35,10 +35,10 @@ const downloadPackages: DownloadPackage[] = [
     id: 'windows',
     platform: 'windows',
     name: 'Windows 客户端',
-    version: 'v2.5.1',
-    size: '128 MB',
-    updateDate: '2024-03-08',
-    downloadUrl: '/downloads/zhengyu-setup-2.5.1.exe',
+    version: 'v1.0.0',
+    size: '76.2 MB',
+    updateDate: '2025-03-09',
+    downloadUrl: 'https://github.com/AthenDrakomin-hub/yinhezhengquan-zhengyu/releases/download/v1.0.0/银河证券·证裕交易单元_Setup_1.0.0.exe',
     description: '适用于 Windows 10/11 操作系统，提供完整的交易功能和专业分析工具',
     features: ['实时行情推送', '多窗口交易', '专业K线分析', '条件单管理', '资产分析报告'],
     requirements: 'Windows 10 或更高版本，4GB RAM，500MB 可用空间',
@@ -115,21 +115,44 @@ const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
   const handleDownload = async (pkg: DownloadPackage) => {
     setDownloading(pkg.id);
     
-    // 模拟下载延迟
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
     // iOS 跳转 App Store
     if (pkg.platform === 'ios') {
       window.open(pkg.downloadUrl, '_blank');
-    } else {
-      // 其他平台触发下载
-      const link = document.createElement('a');
-      link.href = pkg.downloadUrl;
-      link.download = pkg.downloadUrl.split('/').pop() || '';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      setDownloading(null);
+      return;
     }
+    
+    // Windows 客户端使用 fetch + blob 方式下载（解决跨域）
+    if (pkg.platform === 'windows') {
+      try {
+        const response = await fetch(pkg.downloadUrl);
+        if (!response.ok) {
+          throw new Error(`下载失败: ${response.status}`);
+        }
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = '银河证券·证裕交易单元_Setup_1.0.0.exe';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.error('下载失败:', error);
+        alert('下载失败，请稍后重试');
+      }
+      setDownloading(null);
+      return;
+    }
+    
+    // 其他平台直接下载
+    const link = document.createElement('a');
+    link.href = pkg.downloadUrl;
+    link.download = pkg.downloadUrl.split('/').pop() || '';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     
     setDownloading(null);
   };
