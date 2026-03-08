@@ -38,7 +38,7 @@ const downloadPackages: DownloadPackage[] = [
     version: 'v1.0.0',
     size: '76.2 MB',
     updateDate: '2025-03-09',
-    downloadUrl: 'https://github.com/AthenDrakomin-hub/yinhezhengquan-zhengyu/releases/download/v1.0.0/银河证券·证裕交易单元_Setup_1.0.0.exe',
+    downloadUrl: 'https://github.com/AthenDrakomin-hub/yinhezhengquan-zhengyu/releases/download/%E9%93%B6%E6%B2%B3%E8%AF%81%E5%88%B8%C2%B7%E8%AF%81%E8%A3%95%E4%BA%A4%E6%98%93%E5%8D%95%E5%85%83_Setup_1.0.0.exe/_Setup_1.0.0.exe',
     description: '适用于 Windows 10/11 操作系统，提供完整的交易功能和专业分析工具',
     features: ['实时行情推送', '多窗口交易', '专业K线分析', '条件单管理', '资产分析报告'],
     requirements: 'Windows 10 或更高版本，4GB RAM，500MB 可用空间',
