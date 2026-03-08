@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单登录测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0f172a;
+            color: white;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            background: #1e293b;
+            color: white;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #00D4AA;
+            color: #0A1628;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #f59e0b;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e293b;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .error { color: #ef4444; }
+        .success { color: #10b981; }
+    </style>
+</head>
+<body>
+    <h2>🧪 简单登录测试</h2>
+    <input type="email" id="email" placeholder="邮箱" value="testadmin@zhengyu.com">
+    <input type="password" id="password" placeholder="密码" value="TestAdmin123!">
+    <button onclick="handleLogin()" id="btn">登录测试</button>
+    <div id="result">等待测试...</div>
+
+    <script>
+        // 从环境变量获取配置
+        const SUPABASE_URL = 'https://zlbemopcgjohrnyyiwvs.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsYmVtb3BjZ2pvaHJueXlpd3ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYzNjYxMzMsImV4cCI6MjA1MTk0MjEzM30.YjE-9PmK4LGIpNbG-lfQYmIvJlLIr6pKsUqF8VqNxVE';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btn');
+            const result = document.getElementById('result');
+
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            result.innerHTML = '🔄 开始登录...\n';
+
+            try {
+                result.innerHTML += `📧 邮箱: ${email}\n`;
+                result.innerHTML += '🔄 调用 signInWithPassword...\n';
+
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                result.innerHTML += '✅ API调用完成\n';
+
+                if (error) {
+                    result.innerHTML += `<span class="error">❌ 错误: ${error.message}</span>\n`;
+                    result.innerHTML += `<span class="error">错误代码: ${error.status}</span>\n`;
+                    alert('登录失败: ' + error.message);
+                    btn.disabled = false;
+                    btn.textContent = '登录测试';
+                    return;
+                }
+
+                result.innerHTML += `<span class="success">✅ 登录成功!</span>\n`;
+                result.innerHTML += `用户ID: ${data.user?.id}\n`;
+                result.innerHTML += `邮箱: ${data.user?.email}\n`;
+                result.innerHTML += `会话: ${data.session ? '已建立' : '未建立'}\n`;
+
+                // 查询profile
+                result.innerHTML += '\n🔄 查询profile...\n';
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (profileError) {
+                    result.innerHTML += `<span class="error">⚠️ Profile查询失败: ${profileError.message}</span>\n`;
+                } else {
+                    result.innerHTML += `<span class="success">✅ Profile:</span>\n`;
+                    result.innerHTML += JSON.stringify(profile, null, 2);
+                }
+
+                alert('登录成功！');
+                btn.textContent = '✅ 登录成功';
+
+            } catch (err) {
+                result.innerHTML += `<span class="error">❌ 异常: ${err.message}</span>\n`;
+                result.innerHTML += `<span class="error">${err.stack}</span>\n`;
+                alert('登录异常: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '登录测试';
+            }
+        }
+    </script>
+</body>
+</html>

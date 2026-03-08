@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN" style="background-color: #0A1628;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>银河证券 · 证裕交易单元</title>
+  <meta name="description" content="银河证券证裕交易单元，专注一站式证券交易、资产监控与风险管控，为专业用户提供安全、高效、规范的数字化资产管理服务。" />
+  <meta property="og:title" content="银河证券 · 证裕交易单元" />
+  <meta property="og:description" content="银河证券旗下证裕交易单元，提供一站式证券交易、资产监控、运营管理与风险控制，助力资产安全高效运作。" />
+  <meta property="og:site_name" content="银河证券证裕交易单元" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.zhengyutouzi.com" />
+  <meta property="og:image" content="https://www.zhengyutouzi.com/og-preview.ico" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <!-- 移除CDN Tailwind脚本，使用本地Tailwind构建 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* 关键：在 HTML 层级就设置背景色，避免任何闪烁 */
+    html {
+      background-color: #0A1628 !important;
+    }
+    
+    html.light-mode {
+      background-color: #F1F5F9 !important;
+    }
+
+    :root {
+      --color-primary: #00D4AA;
+      --color-warning: #FF6B6B;
+      --color-bg: #0A1628;
+      --color-surface: rgba(255, 255, 255, 0.05);
+      --color-surface-hover: rgba(255, 255, 255, 0.08);
+      --color-border: rgba(255, 255, 255, 0.1);
+      --color-text-primary: #F8FAFC;
+      --color-text-secondary: #94A3B8;
+      --color-text-muted: #475569;
+      --nav-bg: rgba(10, 22, 40, 0.85);
+      --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+    }
+
+    body.light-mode {
+      --color-bg: #F1F5F9;
+      --color-surface: #FFFFFF;
+      --color-surface-hover: #F8FAFC;
+      --color-border: rgba(0, 0, 0, 0.08);
+      --color-text-primary: #0F172A;
+      --color-text-secondary: #334155;
+      --color-text-muted: #94A3B8;
+      --nav-bg: rgba(255, 255, 255, 0.9);
+      --card-shadow: 0 10px 30px -10px rgba(0,0,0,0.05);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+      transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.4s ease;
+      margin: 0;
+      user-select: none;
+      min-height: 100vh;
+    }
+
+    /* 初始加载状态 - 与主题一致 */
+    #root {
+      min-height: 100vh;
+      background-color: var(--color-bg);
+    }
+    
+    /* 加载动画 */
+    .initial-loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+    }
+    
+    .loader-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(0, 212, 170, 0.2);
+      border-top-color: #00D4AA;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .glass-card {
+      background: var(--color-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--color-border);
+      border-radius: 24px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .glass-nav {
+      background: var(--nav-bg);
+      backdrop-filter: blur(24px);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .nexus-button {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .nexus-button:active {
+      transform: scale(0.96);
+      opacity: 0.9;
+    }
+
+    .safe-area-bottom {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    @keyframes slide-up {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-up {
+      animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    .animate-marquee {
+      animation: marquee 20s linear infinite;
+    }
+  </style>
+  <!-- 移除importmap配置，Vite将从node_modules加载模块 -->
+  <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <div id="root">
+    <!-- 初始加载状态，JS加载完成后会被替换 -->
+    <div class="initial-loader">
+      <div class="loader-spinner"></div>
+    </div>
+  </div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

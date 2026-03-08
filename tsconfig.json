@@ -1,0 +1,60 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "strict": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "types": [
+      "vite/client"
+    ],
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": [
+    "index.tsx",
+    "OptimizedApp.tsx",
+    "contexts/**/*",
+    "routes/**/*",
+    "lib/**/*",
+    "services/**/*",
+    "utils/**/*",
+    "hooks/**/*",
+    "components/shared/**/*",
+    "components/core/**/*",
+    "components/auth/**/*",
+    "components/views/**/*",
+    "components/admin/**/*",
+    "components/client/analysis/**/*",
+    "components/client/compliance/**/*",
+    "components/client/trading/**/*",
+    "components/client/profile/**/*",
+    "components/client/reports/**/*",
+    "components/client/settings/**/*",
+    "components/client/calendar/**/*",
+    "components/client/orders/**/*",
+    "components/client/ChatView.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase/functions",
+    "docs/archive",
+    "scripts"
+  ]
+}

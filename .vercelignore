@@ -1,0 +1,28 @@
+# Vercel 部署时忽略的文件
+
+# 开发文档
+docs/
+DEV_LOG.md
+
+# 测试文件
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# 示例文件
+examples/
+
+# 开发脚本
+scripts/dev/
+
+# 本地配置
+.env.local
+.env.*.local
+
+# IDE配置
+.vscode/
+.idea/
+
+# 归档文档
+docs/archive/
