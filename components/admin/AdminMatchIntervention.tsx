@@ -70,8 +70,7 @@ const AdminMatchIntervention: React.FC = () => {
           stock_name,
           quantity,
           available_quantity,
-          avg_cost,
-          profiles!positions_user_id_fkey (username)
+          avg_cost
         `)
         .gt('quantity', 0);
 
@@ -102,7 +101,7 @@ const AdminMatchIntervention: React.FC = () => {
           profit_loss: profitLoss,
           profit_loss_percent: profitLossPercent,
           risk_level: riskLevel,
-          username: (p.profiles as any)?.username
+          username: p.user_id?.substring(0, 8) || 'N/A' // 使用 user_id 前8位作为标识
         };
       });
 

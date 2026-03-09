@@ -28,10 +28,10 @@ export const BatchIPOPanel: React.FC = () => {
 
   const loadIPOs = async () => {
     const { data } = await supabase
-      .from('ipo_stocks')
+      .from('ipos')
       .select('*')
       .eq('status', 'ONGOING')
-      .order('apply_start_date', { ascending: true });
+      .order('issue_date', { ascending: true });
 
     if (data) setIpos(data);
   };

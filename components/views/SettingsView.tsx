@@ -54,19 +54,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
   };
 
   const navItems: SettingsNavItem[] = [
-    { id: 'overview', label: '设置概览', path: '/settings', icon: ICONS.Settings },
-    { id: 'profile-detail', label: '个人资料', path: '/settings/profile-detail', icon: ICONS.User },
-    { id: 'security', label: '账户安全', path: '/settings/security', icon: ICONS.Shield },
-    { id: 'trading-preferences', label: '交易偏好', path: '/settings/trading-preferences', icon: ICONS.Zap },
-    { id: 'personalized', label: '个性化', path: '/settings/personalized', icon: ICONS.Eye },
-    { id: 'about', label: '关于', path: '/settings/about', icon: ICONS.Headset },
+    { id: 'overview', label: '设置概览', path: '', icon: ICONS.Settings },
+    { id: 'profile-detail', label: '个人资料', path: 'profile-detail', icon: ICONS.User },
+    { id: 'security', label: '账户安全', path: 'security', icon: ICONS.Shield },
+    { id: 'trading-preferences', label: '交易偏好', path: 'trading-preferences', icon: ICONS.Zap },
+    { id: 'personalized', label: '个性化', path: 'personalized', icon: ICONS.Eye },
+    { id: 'about', label: '关于', path: 'about', icon: ICONS.Headset },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/settings') {
-      return location.pathname === '/settings';
+    const currentPath = location.pathname;
+    const settingsBase = '/client/settings';
+    
+    if (path === '') {
+      // 概览页 - 只匹配 /client/settings
+      return currentPath === settingsBase || currentPath === settingsBase + '/';
     }
-    return location.pathname.startsWith(path);
+    // 其他页 - 匹配 /client/settings/xxx
+    return currentPath === `${settingsBase}/${path}`;
   };
 
   return (

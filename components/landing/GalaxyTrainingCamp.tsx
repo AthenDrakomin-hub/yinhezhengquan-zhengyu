@@ -99,219 +99,169 @@ const GalaxyTrainingCamp: React.FC = () => {
       institution: '张家豪资本',
       quote: '少做事、做对事、做大事。',
       story:
-        '2004年，谷歌以荷兰式拍卖模式IPO，深陷争议。张家豪逆势投入1500万美元，22年后，当谷歌母公司Alphabet市值突破4万亿美元时，这笔投资已斩获超25亿美元净利，回报超170倍。',
+        '2004年谷歌上市前夕，张家豪通过友人渠道获得少量原始股。此后22年，他经历了2008年金融危机、2020年疫情崩盘、2022年科技股暴跌，但始终未卖出谷歌股票。',
       detail:
-        '此后，他坚持"五维思维模型"，从金融、产业、社会、政治、人性五个维度交叉验证，在特斯拉、苹果、宁德时代等核心赛道持续布局，成为中国资本参与全球科技竞争的标杆人物。',
+        '2026年初，谷歌市值突破4万亿美元，成为全球第一家达到此里程碑的科技公司。张家豪当年的投资已增值170倍。他说："大多数人高估了1年的变化，低估了10年的变化。时间是价值投资者唯一的朋友。"',
       source: '据Alphabet市值数据及公开报道',
       image: '张家豪',
+    },
+  ];
+
+  // 特训营日程
+  const schedule = [
+    {
+      day: '第一天',
+      date: '5月16日',
+      sessions: ['开营仪式', '徐新：VC如何击中本垒打', '张家豪：全球资产配置逻辑'],
+      leader: '徐新',
+    },
+    {
+      day: '第二天',
+      date: '5月17日',
+      sessions: ['裘国根：价值投资的坚守与进化', '王麒诚：逆周期投资的底层逻辑', '案例研讨'],
+      leader: '裘国根',
+    },
+    {
+      day: '第三天',
+      date: '5月18日',
+      sessions: ['分组路演', '导师点评', '结营仪式'],
+      leader: '全体导师',
     },
   ];
 
   // 课程模块
   const modules = [
     {
-      title: '模块一：投资认知框架',
-      sessions: ['长期主义的底层逻辑', '如何识别"本垒打"项目', '五维思维模型实战应用'],
-      leader: '张家豪/徐新',
+      title: 'VC投资实战',
+      sessions: ['早期项目筛选标准', '尽调方法论', '估值谈判技巧'],
+      leader: '徐新',
     },
     {
-      title: '模块二：赛道研判方法论',
-      sessions: ['未来5-10年的核心痛点', '新能源、AI、硬科技的布局时点', '从产业趋势到投资决策'],
-      leader: '王麒诚/粘洪峰',
+      title: '价值投资体系',
+      sessions: ['深度研究框架', '逆向投资时机', '长期持有心态'],
+      leader: '裘国根',
     },
     {
-      title: '模块三：投后管理与赋能',
-      sessions: ['生态协同如何创造价值', '从"投资人"到"赋能者"', '被投企业的成长陪伴'],
-      leader: '裘国根/蒋锦志',
+      title: '逆周期布局',
+      sessions: ['宏观周期判断', '行业轮动逻辑', '风险控制体系'],
+      leader: '王麒诚',
     },
     {
-      title: '模块四：退出策略与时机',
-      sessions: ['IPO、并购、转让的抉择', '如何把握卖出时点', '周期波动中的应对之道'],
-      leader: '张磊/赵军',
+      title: '全球配置',
+      sessions: ['跨市场比较', '汇率风险管理', '地缘政治影响'],
+      leader: '张家豪',
     },
   ];
 
   return (
-    <div 
-      className="min-h-screen text-gray-900 relative"
-      style={{
-        backgroundImage: `url('${TRAINING_BG_1}')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      }}
-    >
-      {/* 内容容器 */}
-      <div className="relative z-10">
-      {/* 导航栏 */}
-      <nav className="bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-20 border-b border-[#E5E7EB]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <img
-              src={TRAINING_LOGO}
-              alt="中国银河证券"
-              className="h-8 w-auto"
-            />
-          </div>
-          <div className="flex gap-6 text-sm text-[#4B5563]">
-            <a href="/" className="hover:text-[#2563EB] transition">首页</a>
-            <span className="text-[#2563EB] font-medium">银河·特训营</span>
+    <div className="min-h-screen bg-[#F1F5F9]">
+      {/* 头部 */}
+      <header className="bg-white border-b border-[#E5E7EB] sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <img src={TRAINING_LOGO} alt="银河证券" className="h-10 w-auto" />
+              <span className="text-xl font-bold text-[#1F2937]">银河特训营</span>
+            </div>
+            <nav className="flex items-center gap-6">
+              <a href="#stories" className="text-[#4B5563] hover:text-[#2563EB] transition">
+                投资故事
+              </a>
+              <a href="#schedule" className="text-[#4B5563] hover:text-[#2563EB] transition">
+                课程安排
+              </a>
+              <a href="#apply" className="bg-[#FFD700] hover:bg-[#E5C100] text-[#1F2937] px-4 py-2 rounded-lg font-bold transition">
+                立即申请
+              </a>
+            </nav>
           </div>
         </div>
-      </nav>
+      </header>
 
       {/* Hero 区域 */}
-      <section className="relative bg-gradient-to-r from-[#0F2B5C] to-[#1E3A8A] text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black/20 mix-blend-multiply"></div>
-        <div className="absolute inset-0 opacity-10">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
-          <div className="flex flex-col items-center text-center">
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-              <FaRegGem className="text-[#FFD700]" />
-              <span className="text-sm font-medium">十大私募机构 · 联合打造</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 max-w-4xl">
-              银河·特训营
+      <section
+        className="relative py-20"
+        style={{
+          backgroundImage: `url('${TRAINING_BG_1}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0F2B5C]/90 to-[#1E3A8A]/80"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="max-w-3xl">
+            <h1 className="text-4xl md:text-5xl font-bold text-[#FFD700] mb-6">
+              银河特训营
             </h1>
-            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl">
-              与顶尖投资人同行，聆听真实的投资故事<br />
-              从认知到实战，重塑你的投资基因
+            <p className="text-xl text-[#1F2937] mb-8">
+              与顶尖投资人面对面，学习价值投资的底层逻辑与实战方法
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <div className="flex flex-wrap gap-4">
               <a
                 href="#apply"
-                className="bg-[#FFD700] hover:bg-[#E5C100] text-[#0F2B5C] font-semibold px-8 py-4 rounded-lg text-lg transition shadow-lg hover:shadow-xl"
+                className="bg-[#FFD700] hover:bg-[#E5C100] text-[#0F2B5C] px-8 py-3 rounded-lg font-bold text-lg transition"
               >
-                立即申请 →
+                申请加入
               </a>
-              <a
-                href="#courses"
-                className="border-2 border-white hover:bg-white/10 text-white font-semibold px-8 py-4 rounded-lg text-lg transition"
+              <button
+                onClick={() => setIsDisclaimerOpen(true)}
+                className="bg-[#FFD700] hover:bg-[#E5C100] text-[#1F2937] border border-[#FFD700] px-8 py-3 rounded-lg font-bold transition"
               >
-                查看课程大纲
-              </a>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-6 mt-16 text-center">
-              <div>
-                <div className="text-3xl font-bold">10+</div>
-                <div className="text-sm text-blue-200">顶级私募</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold">20+</div>
-                <div className="text-sm text-blue-200">实战导师</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold">8周</div>
-                <div className="text-sm text-blue-200">深度特训</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold">100+</div>
-                <div className="text-sm text-blue-200">真实案例</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold">∞</div>
-                <div className="text-sm text-blue-200">生态资源</div>
-              </div>
+                了解更多
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 联合机构 */}
-      <section className="py-20 bg-white relative">
-        {/* 透明背景图 */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{ 
-            backgroundImage: `url('${TRAINING_BG_2}')` 
-          }}
-        />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <h2 className="text-3xl font-bold text-center text-[#1F2937] mb-4">十大联合发起机构</h2>
-          <p className="text-center text-[#6B7280] mb-12 max-w-2xl mx-auto">
-            汇聚中国顶尖私募力量，覆盖消费、科技、价值投资、宏观对冲全赛道
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {partnerInstitutions.map((inst, idx) => (
-              <div
-                key={idx}
-                className="bg-white/80 backdrop-blur-sm border border-[#E5E7EB] rounded-lg p-4 text-center hover:shadow-md transition"
-              >
-                <div className="font-semibold text-[#1F2937]">{inst.name}</div>
-                <div className="text-xs text-[#2563EB] mt-1">{inst.focus}</div>
-                <div className="text-xs text-[#6B7280] mt-1">{inst.rep}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 投资故事板块 */}
-      <section className="py-20 bg-[#F9FAFB]">
+      {/* 联合发起机构 */}
+      <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-[#1F2937] mb-4">真实投资故事</h2>
-            <p className="text-lg text-[#6B7280] max-w-3xl mx-auto">
-              这不是纸上谈兵。每一位导师都将亲临分享他们职业生涯中最关键的战役——<br />
-              那些决定成败的瞬间、穿越周期的坚守、以及不为人知的决策细节。
-            </p>
+          <div className="max-w-5xl mx-auto">
+            <img 
+              src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/public/tupian/jigou.png" 
+              alt="联合发起机构" 
+              className="w-full h-auto rounded-xl shadow-lg"
+              onError={(e) => {
+                console.error('机构图片加载失败');
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           </div>
+        </div>
+      </section>
 
-          <div className="space-y-12">
-            {stories.map((story, idx) => (
+      {/* 投资故事 */}
+      <section id="stories" className="py-20 bg-[#F9FAFB]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-[#1F2937] text-center mb-4">
+            真实投资故事
+          </h2>
+          <p className="text-[#6B7280] text-center mb-12 max-w-2xl mx-auto">
+            这些案例均基于公开市场信息，展示顶尖投资人的思考方式与决策逻辑
+          </p>
+          <div className="grid md:grid-cols-2 gap-8">
+            {stories.map((story) => (
               <div
                 key={story.id}
-                className={`bg-white rounded-2xl shadow-md overflow-hidden border border-[#E5E7EB] flex flex-col lg:flex-row ${
-                  idx % 2 === 1 ? 'lg:flex-row-reverse' : ''
-                }`}
+                className="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden hover:shadow-md transition"
               >
-                {/* 左侧/右侧：故事内容 */}
-                <div className="flex-1 p-8 lg:p-10">
-                  <div className="flex items-center gap-2 text-sm text-[#2563EB] font-medium mb-3">
-                    <FaShieldAlt />
-                    <span>{story.institution} · {story.person}</span>
-                  </div>
-                  <h3 className="text-2xl font-bold text-[#1F2937] mb-4">{story.title}</h3>
-                  <div className="relative mb-6">
-                    <FaQuoteRight className="absolute -top-2 -left-2 text-[#E5E7EB] text-4xl opacity-50" />
-                    <p className="relative text-lg text-[#4B5563] italic pl-6">"{story.quote}"</p>
-                  </div>
-                  <p className="text-[#1F2937] mb-4 leading-relaxed">{story.story}</p>
-                  <p className="text-[#6B7280] mb-4 leading-relaxed">{story.detail}</p>
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#E5E7EB]">
-                    <div className="flex items-center gap-2 text-xs text-[#9CA3AF]">
-                      <FaSearch />
-                      <span>可核查来源：{story.source}</span>
+                <div className="p-6">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 bg-[#FFD700] rounded-full flex items-center justify-center text-[#1F2937] font-bold text-lg">
+                      {story.person[0]}
                     </div>
-                    <a href="#" className="text-sm text-[#2563EB] hover:underline flex items-center gap-1">
-                      阅读完整案例 <span>→</span>
-                    </a>
-                  </div>
-                </div>
-
-                {/* 右侧/左侧：视觉元素 */}
-                <div className="lg:w-80 bg-gradient-to-br from-[#0F2B5C] to-[#1E3A8A] p-8 flex flex-col items-center justify-center text-white">
-                  <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mb-4 border-4 border-white/20">
-                    <FaUserTie className="text-4xl text-[#FFD700]" />
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold mb-1">{story.person}</div>
-                    <div className="text-sm text-blue-200 mb-3">{story.institution}</div>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      <span className="px-3 py-1 bg-white/10 rounded-full text-xs">
-                        {story.id === 1 ? '18倍回报' : story.id === 2 ? '8年坚守' : story.id === 3 ? '逆周期' : '170倍'}
-                      </span>
+                    <div>
+                      <h3 className="font-bold text-[#1F2937]">{story.person}</h3>
+                      <p className="text-sm text-[#6B7280]">{story.institution}</p>
                     </div>
                   </div>
+                  <h4 className="text-lg font-bold text-[#1F2937] mb-3">{story.title}</h4>
+                  <p className="text-[#4B5563] mb-4">{story.story}</p>
+                  <div className="bg-[#F9FAFB] rounded-lg p-4 mb-4">
+                    <p className="text-sm text-[#4B5563] italic">"{story.quote}"</p>
+                  </div>
+                  <p className="text-xs text-[#9CA3AF]">{story.source}</p>
                 </div>
               </div>
             ))}
@@ -319,22 +269,50 @@ const GalaxyTrainingCamp: React.FC = () => {
         </div>
       </section>
 
-      {/* 课程模块 */}
-      <section id="courses" className="py-20 bg-white">
+      {/* 课程安排 */}
+      <section id="schedule" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-[#1F2937] mb-4">特训课程模块</h2>
-          <p className="text-center text-[#6B7280] mb-12 max-w-2xl mx-auto">
-            4大模块 · 8周深度特训 · 20+真实案例复盘
-          </p>
-          <div className="grid md:grid-cols-2 gap-6">
-            {modules.map((module, idx) => (
-              <div key={idx} className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-6 hover:shadow-lg transition">
+          <h2 className="text-3xl font-bold text-[#1F2937] text-center mb-12">
+            课程安排
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {schedule.map((day, index) => (
+              <div
+                key={index}
+                className="bg-[#F9FAFB] rounded-xl p-6 border border-[#E5E7EB]"
+              >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-[#2563EB] rounded-lg flex items-center justify-center text-white font-bold">
-                    {idx + 1}
-                  </div>
-                  <h3 className="text-xl font-semibold text-[#1F2937]">{module.title}</h3>
+                  <span className="bg-[#FFD700] text-[#1F2937] px-3 py-1 rounded-full text-sm font-bold">
+                    {day.day}
+                  </span>
+                  <span className="text-[#6B7280]">{day.date}</span>
                 </div>
+                <ul className="space-y-3">
+                  {day.sessions.map((session, sidx) => (
+                    <li key={sidx} className="flex items-start gap-2 text-[#4B5563]">
+                      <span className="text-[#2563EB] mt-1">•</span>
+                      <span>{session}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="text-sm text-[#6B7280] border-t border-[#E5E7EB] pt-3 mt-4">
+                  领衔导师：{day.leader}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 课程模块 */}
+          <h3 className="text-2xl font-bold text-[#1F2937] text-center mb-8">
+            核心课程模块
+          </h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {modules.map((module, index) => (
+              <div
+                key={index}
+                className="bg-[#F9FAFB] rounded-xl p-6 border border-[#E5E7EB] hover:shadow-md transition"
+              >
+                <h4 className="font-bold text-[#1F2937] mb-3">{module.title}</h4>
                 <ul className="space-y-2 mb-4">
                   {module.sessions.map((session, sidx) => (
                     <li key={sidx} className="flex items-start gap-2 text-[#4B5563]">
@@ -411,33 +389,33 @@ const GalaxyTrainingCamp: React.FC = () => {
                   <TrainingCampChat subject="银河特训营助理" />
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-[#0F2B5C] to-[#1E3A8A] p-8 md:p-12 text-white">
-                <h3 className="text-2xl font-bold mb-4">申请流程</h3>
+              <div className="bg-[#F9FAFB] p-8 md:p-12 border-l border-[#E5E7EB]">
+                <h3 className="text-2xl font-bold mb-4 text-[#1F2937]">申请流程</h3>
                 <div className="space-y-4 mb-8">
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">1</div>
-                    <div>在线提交申请（3月31日截止）</div>
+                    <div className="w-6 h-6 bg-[#FFD700] rounded-full flex items-center justify-center text-sm font-bold text-[#1F2937]">1</div>
+                    <div className="text-[#1F2937] font-medium">在线提交申请（3月31日截止）</div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">2</div>
-                    <div>简历筛选与电话沟通</div>
+                    <div className="w-6 h-6 bg-[#FFD700] rounded-full flex items-center justify-center text-sm font-bold text-[#1F2937]">2</div>
+                    <div className="text-[#1F2937] font-medium">简历筛选与电话沟通</div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">3</div>
-                    <div>导师面试（线上）</div>
+                    <div className="w-6 h-6 bg-[#FFD700] rounded-full flex items-center justify-center text-sm font-bold text-[#1F2937]">3</div>
+                    <div className="text-[#1F2937] font-medium">导师面试（线上）</div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">4</div>
-                    <div>录取通知（4月中旬）</div>
+                    <div className="w-6 h-6 bg-[#FFD700] rounded-full flex items-center justify-center text-sm font-bold text-[#1F2937]">4</div>
+                    <div className="text-[#1F2937] font-medium">录取通知（4月中旬）</div>
                   </div>
                 </div>
                 <a
                   href="#"
-                  className="block w-full bg-[#FFD700] hover:bg-[#E5C100] text-[#0F2B5C] text-center font-semibold py-4 rounded-lg text-lg transition shadow-lg"
+                  className="block w-full bg-[#FFD700] hover:bg-[#E5C100] text-[#1F2937] text-center font-bold py-4 rounded-lg text-lg transition shadow-lg"
                 >
                   立即申请
                 </a>
-                <p className="text-xs text-blue-200 text-center mt-4">
+                <p className="text-xs text-[#6B7280] text-center mt-4">
                   申请截止：2026年3月31日 24:00
                 </p>
               </div>
@@ -458,39 +436,11 @@ const GalaxyTrainingCamp: React.FC = () => {
         </div>
       </section>
 
-      {/* 页脚 */}
-      <footer className="border-t border-[#E5E7EB] py-6 bg-white/90 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-[#9CA4B0]">
-              Copyright © 2026 中国银河证券·证裕交易单元 版权所有 | 许可证号：Z123456
-            </p>
-            <div className="flex items-center gap-6 text-sm">
-              <a 
-                href="https://www.chinastock.com.cn/newsite/online/branchNetwork.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#6B7280] hover:text-[#2563EB] transition"
-              >
-                站点地图
-              </a>
-              <button 
-                onClick={() => setIsDisclaimerOpen(true)}
-                className="text-[#6B7280] hover:text-[#2563EB] transition"
-              >
-                网站声明
-              </button>
-            </div>
-          </div>
-        </div>
-      </footer>
-      
       {/* 网站声明弹窗 */}
-      <WebsiteDisclaimerModal 
-        isOpen={isDisclaimerOpen} 
-        onClose={() => setIsDisclaimerOpen(false)} 
+      <WebsiteDisclaimerModal
+        isOpen={isDisclaimerOpen}
+        onClose={() => setIsDisclaimerOpen(false)}
       />
-      </div>
     </div>
   );
 };

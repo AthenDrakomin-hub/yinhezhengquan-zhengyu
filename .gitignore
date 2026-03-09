@@ -85,6 +85,3 @@ temp/
 # ==================== Vercel 相关 ====================
 .vercel
 .env*.local
-
-.vercel
-.env*.local

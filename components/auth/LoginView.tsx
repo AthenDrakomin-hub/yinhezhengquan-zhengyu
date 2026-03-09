@@ -212,7 +212,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('status, role, username')
+        .select('status, admin_level, username, email')
         .eq('id', authData.user.id)
         .single();
 
@@ -222,14 +222,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
         return;
       }
 
-      if (profile.status === 'PENDING') {
+      if (profile.status?.toLowerCase() === 'pending') {
         await supabase.auth.signOut();
         setErrors({ form: '账户正在审核中' });
         setLoading(false);
         return;
       }
 
-      if (profile.status === 'BANNED') {
+      if (profile.status?.toLowerCase() === 'banned') {
         await supabase.auth.signOut();
         setErrors({ form: '账户已被禁用' });
         setLoading(false);
@@ -250,7 +250,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
       setLoading(false);
       onLoginSuccess({
         ...authData.user,
-        role: profile.role,
+        admin_level: profile.admin_level,
         username: profile.username
       });
       

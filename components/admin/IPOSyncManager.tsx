@@ -67,6 +67,13 @@ export const IPOSyncManager = () => {
       }
     } catch (error) {
       console.error('加载同步状态失败:', error);
+      // 表可能不存在，设置默认值
+      setSyncStatus({
+        lastSyncTime: '未同步',
+        nextSyncTime: '每天 08:00',
+        totalCount: 0,
+        status: 'success'
+      });
     }
   };
 

@@ -156,9 +156,12 @@ export function getTrainingBgUrl(index: number): string {
 /**
  * 检查图片 URL 是否有效（返回占位图）
  * @param url 图片 URL
- * @param fallback 备用图片路径
+ * @param fallback 备用图片路径或 data URL
  */
-export function getImageWithFallback(url: string | undefined, fallback: string = '/placeholder.png'): string {
-  if (!url || url === '') return fallback;
+export function getImageWithFallback(url: string | undefined, fallback?: string): string {
+  if (!url || url === '') {
+    // 使用内联 SVG 作为默认占位图，避免外部文件依赖
+    return fallback || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Cpath fill="%239ca3af" d="M35 40h30v20H35z"/%3E%3Cpath fill="%23d1d5db" d="M30 55l15-15 10 10 15-15v20H30z"/%3E%3C/svg%3E';
+  }
   return url;
 }

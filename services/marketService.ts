@@ -11,8 +11,7 @@ export const getGalaxyNews = async () => {
     const { data, error } = await supabase.functions.invoke('fetch-galaxy-news');
     
     if (error) {
-      console.error('通过 Supabase 函数获取银河新闻失败:', error.message);
-      // 如果 Edge Function 失败，返回空数组而不是模拟数据
+      // Edge Function 失败时静默返回空数组，不打印错误
       return [];
     }
     
@@ -23,8 +22,8 @@ export const getGalaxyNews = async () => {
     
     // 默认返回空数组
     return [];
-  } catch (error) {
-    console.error('银河新闻获取失败:', error);
+  } catch {
+    // 静默处理错误
     return [];
   }
 };

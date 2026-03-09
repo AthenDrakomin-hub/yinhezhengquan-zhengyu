@@ -7,10 +7,6 @@
   "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
       "source": "/assets/(.*)",
       "destination": "/assets/$1"
     },
@@ -44,7 +40,7 @@
           "value": "DENY"
         },
         {
-          "key": "X-XSS-Protection",
+          "key": "X-SS-Protection",
           "value": "1; mode=block"
         },
         {

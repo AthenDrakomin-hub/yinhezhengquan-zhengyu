@@ -93,7 +93,7 @@ const TrainingCampChat: React.FC<TrainingCampChatProps> = ({ subject = '银河�
     <div className="relative">
       {/* 聊天窗口 */}
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-50">
+        <div className="absolute bottom-16 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-[100]">
           {/* 头部 */}
           <div className="bg-gradient-to-r from-[#0F2B5C] to-[#1E3A8A] p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ const TrainingCampChat: React.FC<TrainingCampChatProps> = ({ subject = '银河�
               </div>
               <div>
                 <div className="text-white font-semibold text-sm">{subject}</div>
-                <div className="text-blue-200 text-xs">在线客服</div>
+                <div className="text-[#1F2937] text-xs">在线客服</div>
               </div>
             </div>
             <button 
@@ -135,7 +135,7 @@ const TrainingCampChat: React.FC<TrainingCampChatProps> = ({ subject = '银河�
                     <div 
                       className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
                         msg.senderType === 'user' 
-                          ? 'bg-[#2563EB] text-white rounded-br-none' 
+                          ? 'bg-[#FFD700] text-[#1F2937] rounded-br-none' 
                           : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none'
                       }`}
                     >
@@ -163,7 +163,7 @@ const TrainingCampChat: React.FC<TrainingCampChatProps> = ({ subject = '银河�
               <button
                 onClick={handleSendMessage}
                 disabled={!userId || !inputMessage.trim() || loading}
-                className="px-3 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1D4ED8] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 bg-[#FFD700] text-[#1F2937] rounded-lg hover:bg-[#E5C100] transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FaPaperPlane size={14} />
               </button>

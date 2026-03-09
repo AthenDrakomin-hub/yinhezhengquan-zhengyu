@@ -79,7 +79,7 @@ const AdminDashboard: React.FC = () => {
 
         // 获取待处理工单数
         const { count: ticketCount } = await supabase
-          .from('tickets')
+          .from('support_tickets')
           .select('*', { count: 'exact', head: true })
           .in('status', ['open', 'pending']);
         

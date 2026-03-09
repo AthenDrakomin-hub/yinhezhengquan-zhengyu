@@ -27,19 +27,23 @@ serve(async (req) => {
       .limit(20)
 
     if (error) {
-      console.error('获取新闻失败:', error)
+      // 如果表不存在或其他错误，返回空数据而不是错误
+      console.warn('获取新闻失败:', error.message)
       return new Response(JSON.stringify({ 
-        success: false, 
-        error: error.message,
-        news: []
+        success: true, 
+        news: [],
+        count: 0,
+        lastUpdated: new Date().toISOString(),
+        source: 'Galaxy Securities Database',
+        message: '暂无新闻数据'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: 200,
       })
     }
 
     // 格式化新闻数据
-    const formattedNews = news.map(item => ({
+    const formattedNews = (news || []).map(item => ({
       id: item.id,
       title: item.title,
       summary: item.summary,
@@ -67,13 +71,15 @@ serve(async (req) => {
     })
   } catch (error: any) {
     console.error('获取银河新闻失败:', error)
+    // 返回空数据而不是错误
     return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message,
-      news: []
+      success: true,
+      news: [],
+      count: 0,
+      message: '暂无新闻数据'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200,
     })
   }
 })

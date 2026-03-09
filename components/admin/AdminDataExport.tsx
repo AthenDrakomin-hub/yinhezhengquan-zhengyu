@@ -131,7 +131,7 @@ const AdminDataExport: React.FC = () => {
 
         case 'orders':
           const { data: ordersData, error: ordersError } = await supabase
-            .from('trade_orders')
+            .from('trades')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(500);

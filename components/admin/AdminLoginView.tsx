@@ -193,49 +193,43 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      // 获取用户资料（包含 totp_secret）
-      const { data: profile } = await supabase
+      // 获取用户资料
+      const profileResult = await supabase
         .from('profiles')
-        .select('role, status, username, totp_secret')
+        .select('admin_level, status, username, email')
         .eq('id', data.user.id)
         .single();
 
-      if (!profile || profile.status === 'BANNED') {
-        setError(profile?.status === 'BANNED' ? '账户已被禁用' : '用户资料不存在');
+      console.log('[Admin] profileResult:', profileResult);
+      console.log('[Admin] data.user.id:', data.user.id);
+
+      const profile = profileResult.data;
+      
+      if (profileResult.error) {
+        console.error('[Admin] profiles 查询错误:', profileResult.error);
+      }
+
+      if (!profile || profile.status?.toLowerCase() === 'banned') {
+        setError(profile?.status?.toLowerCase() === 'banned' ? '账户已被禁用' : '用户资料不存在');
         await supabase.auth.signOut();
         setLoading(false);
         return;
       }
 
-      if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+      if (profile.admin_level !== 'admin' && profile.admin_level !== 'super_admin') {
         setError('无管理员权限');
         await supabase.auth.signOut();
         setLoading(false);
         return;
       }
 
-      // 检查是否已绑定 TOTP
-      if (!profile.totp_secret) {
-        // 未绑定，进入绑定流程
-        setCurrentUser({ ...data.user, ...profile });
-        setStep('totp-setup');
-        
-        // 生成 TOTP 密钥和二维码
-        try {
-          const secret = await generateTOTPSecret(profile.username);
-          setQrCodeUrl(secret.qrCodeDataUrl);
-          setTotpSecret(secret.base32);
-          setInfo('请使用 Google Authenticator 扫描二维码完成绑定');
-        } catch (err) {
-          setError('生成二维码失败，请刷新重试');
-        }
-      } else {
-        // 已绑定，进入验证流程
-        setCurrentUser({ ...data.user, ...profile, totp_secret: profile.totp_secret });
-        setStep('totp-verify');
-      }
-      
+      // 登录成功，直接完成
+      const userData = { ...data.user, ...profile };
+      setCurrentUser(userData);
+      const now = new Date().toLocaleString('zh-CN');
+      localStorage.setItem('adminLastLogin', now);
       setLoading(false);
+      onLoginSuccess(userData);
     } catch {
       setError('登录失败，请稍后重试');
       refreshCaptcha();

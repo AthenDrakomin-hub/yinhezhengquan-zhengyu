@@ -30,6 +30,9 @@ const TransactionHistory = lazy(() => import('../components/client/orders/Transa
 const FundFlowsView = lazy(() => import('../components/client/analysis/FundFlowsView'));
 const TradingPreferencesView = lazy(() => import('../components/client/settings/TradingPreferencesView'));
 const PersonalizedSettingsView = lazy(() => import('../components/client/settings/PersonalizedSettingsView'));
+const ProfileDetailSettings = lazy(() => import('../components/client/settings/ProfileDetailSettings'));
+const SecuritySettings = lazy(() => import('../components/client/settings/SecuritySettings'));
+const AboutSettings = lazy(() => import('../components/client/settings/AboutSettings'));
 const EducationCenterView = lazy(() => import('../components/client/education/EducationCenterView'));
 const NewsDetailView = lazy(() => import('../components/client/news/NewsDetailView'));
 
@@ -266,7 +269,11 @@ const ClientRoutes: React.FC = () => {
               <Route path="trading-preferences" element={<TradingPreferencesView />} />
               <Route path="settings" element={<SettingsWrapper onLogout={handleLogout} />}>
                 <Route index element={<SettingsOverview />} />
+                <Route path="profile-detail" element={<ProfileDetailSettings />} />
+                <Route path="security" element={<SecuritySettings />} />
+                <Route path="trading-preferences" element={<TradingPreferencesView />} />
                 <Route path="personalized" element={<PersonalizedSettingsView />} />
+                <Route path="about" element={<AboutSettings />} />
               </Route>
               <Route path="news/:newsId" element={<NewsDetailView />} />
               
@@ -283,17 +290,81 @@ const ClientRoutes: React.FC = () => {
 const DashboardWrapper: React.FC = () => {
   const { account } = useUserAccount();
   const navigate = useNavigate();
+  const [selectedBanner, setSelectedBanner] = React.useState<any | null>(null);
   
   return (
-    <Dashboard
-      transactions={account?.transactions || []}
-      onOpenBanner={(banner) => console.log('打开横幅:', banner.title)}
-      onOpenCalendar={() => navigate('/client/calendar')}
-      onOpenReports={() => navigate('/client/reports')}
-      onOpenEducation={() => navigate('/client/education')}
-      onOpenCompliance={() => navigate('/client/compliance')}
-      onOpenNews={(newsId) => navigate(`/client/news/${newsId}`)}
-    />
+    <>
+      <Dashboard
+        transactions={account?.transactions || []}
+        onOpenBanner={(banner) => setSelectedBanner(banner)}
+        onOpenCalendar={() => navigate('/client/calendar')}
+        onOpenReports={() => navigate('/client/reports')}
+        onOpenEducation={() => navigate('/client/education')}
+        onOpenCompliance={() => navigate('/client/compliance')}
+        onOpenNews={(newsId) => navigate(`/client/news/${newsId}`)}
+      />
+      
+      {/* 横幅详情弹窗 */}
+      {selectedBanner && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedBanner(null)}
+        >
+          <div 
+            className="bg-[#1a1f2e] rounded-3xl max-w-lg w-full overflow-hidden border border-[#00D4AA]/30 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 头部图片 */}
+            {selectedBanner.img && (
+              <div className="h-48 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628]">
+                <img 
+                  src={selectedBanner.img} 
+                  alt={selectedBanner.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* 内容 */}
+            <div className="p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px] font-black text-[#00D4AA] uppercase tracking-wider bg-[#00D4AA]/10 px-2 py-1 rounded">
+                  {selectedBanner.category || '公告'}
+                </span>
+              </div>
+              <h3 className="text-xl font-black text-white mb-3">{selectedBanner.title}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                {selectedBanner.desc || selectedBanner.subtitle || '暂无详情'}
+              </p>
+              
+              {/* 操作按钮 */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedBanner(null)}
+                  className="flex-1 py-3 rounded-xl bg-gray-700 text-gray-300 font-semibold hover:bg-gray-600 transition-colors"
+                >
+                  关闭
+                </button>
+                {selectedBanner.linkUrl && (
+                  <button
+                    onClick={() => {
+                      window.open(selectedBanner.linkUrl, '_blank');
+                      setSelectedBanner(null);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-[#00D4AA] text-[#0A1628] font-black hover:bg-[#00D4AA]/90 transition-colors"
+                  >
+                    查看详情
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
