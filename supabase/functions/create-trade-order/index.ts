@@ -53,12 +53,43 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // 创建两个客户端：
+    // 1. 使用 ANON_KEY 验证用户身份
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { 
+          headers: { 
+            Authorization: req.headers.get('Authorization') ?? '' 
+          } 
+        } 
+      }
     )
 
+    // 验证用户身份
+    const { data: { user }, error: authError } = await authClient.auth.getUser()
+    
+    if (authError || !user) {
+      console.error('授权验证失败:', authError)
+      return new Response(JSON.stringify({ 
+        error: '未授权，请先登录', 
+        code: 401 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+
+    const userId = user.id
+
+    // 2. 使用 SERVICE_ROLE_KEY 访问数据库（绕过 RLS）
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // 解析请求体
     const { 
       market_type, 
       trade_type, 
@@ -82,13 +113,6 @@ serve(async (req) => {
         });
       }
     }
-
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) throw new Error('未授权')
-
-    const userId = user.id
-
-    // 获取用户信息（包含用户级别）
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('level, role')

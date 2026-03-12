@@ -12,14 +12,26 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // 1. 使用 ANON_KEY 验证用户身份
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    const { data: { user }, error: authError } = await authClient.auth.getUser()
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: '未授权，请先登录', code: 401 }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+
+    // 2. 使用 SERVICE_ROLE_KEY 访问数据库
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
     const { data: profile } = await supabaseClient.from('profiles').select('role, admin_level').eq('id', user.id).single()
     

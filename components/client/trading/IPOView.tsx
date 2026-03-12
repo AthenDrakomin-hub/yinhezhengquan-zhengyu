@@ -173,9 +173,10 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
           // 表头
           React.createElement('thead', null,
             React.createElement('tr', { className: 'border-b border-[var(--color-border)]' },
-              ['证券代码','申购代码','证券简称','上网发行日期','上市日期','发行数量(万股)','上网发行数量(万股)','发行价格(元)','市盈率','申购操作'].map(text => 
+              ['证券代码','申购代码','证券简称','上网发行日期','上市日期','发行数量(万股)','上网发行数量(万股)','发行价格(元)','市盈率','申购操作'].map((text, idx) => 
                 React.createElement('th', {
-                  className: 'text-left py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider'
+                  key: idx,
+                  className: `text-left py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider whitespace-nowrap ${idx === 0 || idx === 1 ? 'w-24' : ''}`
                 }, text)
               )
             )
@@ -188,9 +189,9 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
                 className: 'border-b border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-all'
               },
                 // 证券代码
-                React.createElement('td', { className: 'py-4 px-3 text-left font-mono text-sm font-black' }, ipo.symbol),
+                React.createElement('td', { className: 'py-4 px-3 text-left font-mono text-sm font-black whitespace-nowrap' }, ipo.symbol || '-'),
                 // 申购代码
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm font-black text-[#00D4AA]' }, ipo.subscription_code || '-'),
+                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm font-black text-[#00D4AA] whitespace-nowrap' }, ipo.subscription_code || ipo.symbol || '-'),
                 // 证券简称
                 React.createElement('td', { className: 'py-4 px-3 text-left' },
                   React.createElement('div', { className: 'font-bold' }, ipo.name),

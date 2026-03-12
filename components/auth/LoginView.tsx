@@ -374,17 +374,19 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
             <FaShieldAlt className="text-[var(--color-primary)]" />
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">安全信息</span>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-[var(--color-text-muted)]">登录IP</span>
-              <span className="text-[var(--color-text-secondary)]">{clientIP}</span>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center">
+              <span className="w-16 shrink-0 text-[var(--color-text-muted)]">登录IP</span>
+              <span className="text-[var(--color-text-secondary)] font-mono">{clientIP}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--color-text-muted)]">上次登录</span>
+            <div className="flex items-center">
+              <span className="w-16 shrink-0 text-[var(--color-text-muted)]">上次登录</span>
               <span className="text-[var(--color-text-secondary)]">{lastLogin}</span>
             </div>
           </div>
-          <div className="mt-2 text-xs text-[var(--color-text-muted)]">{verifyInfo}</div>
+          <div className="mt-3 pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">
+            {verifyInfo}
+          </div>
         </div>
 
         {/* 底部链接 */}

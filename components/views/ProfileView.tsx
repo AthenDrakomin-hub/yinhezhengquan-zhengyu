@@ -1,10 +1,11 @@
 "use strict";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ICONS } from '../../lib/constants';
 import StockIcon from '../shared/StockIcon';
 import { UserAccount } from '../../lib/types';
+import notificationService from '../../services/notificationService';
 
 interface ProfileViewProps {
   account: UserAccount | null;
@@ -31,9 +32,57 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
     priceAlerts: true,
     systemNews: false
   });
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+
+  // 加载通知设置
+  useEffect(() => {
+    loadNotificationSettings();
+  }, []);
+
+  const loadNotificationSettings = async () => {
+    try {
+      setIsLoadingSettings(true);
+      const settings = await notificationService.getNotificationSettings();
+      setNotifications({
+        tradeAlerts: settings.trade_alerts_enabled,
+        priceAlerts: settings.price_alerts_enabled,
+        systemNews: settings.system_news_enabled
+      });
+    } catch (error) {
+      console.error('加载通知设置失败:', error);
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  };
+
+  const handleNotificationChange = async (key: keyof typeof notifications) => {
+    const newValue = !notifications[key];
+    
+    // 立即更新UI
+    setNotifications(prev => ({ ...prev, [key]: newValue }));
+    
+    // 保存到数据库
+    try {
+      const mapping: Record<string, string> = {
+        tradeAlerts: 'trade_alerts_enabled',
+        priceAlerts: 'price_alerts_enabled',
+        systemNews: 'system_news_enabled'
+      };
+      
+      await notificationService.updateNotificationSettings({
+        [mapping[key]]: newValue
+      });
+    } catch (error) {
+      console.error('保存通知设置失败:', error);
+      // 回滚UI
+      setNotifications(prev => ({ ...prev, [key]: !newValue }));
+    }
+  };
 
   const navItems: ProfileNavItem[] = [
     { id: 'overview', label: '个人概览', path: '/client/profile', type: 'menu' },
+    { id: 'transactions', label: '交易记录', path: '/client/transactions', type: 'menu' },
+    { id: 'funds', label: '资金流水', path: '/client/funds', type: 'menu' },
     { id: 'compliance', label: '合规中心', path: '/client/profile/compliance', type: 'menu' },
     { id: 'education', label: '投教中心', path: '/client/profile/education', type: 'menu' },
     { id: 'analysis', label: '资产分析', path: '', type: 'action', icon: ICONS.Chart },
@@ -181,6 +230,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
             {/* 通知设置 */}
             <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
               <h3 className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-3">通知设置</h3>
+              {isLoadingSettings ? (
+                <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">加载中...</div>
+              ) : (
               <div className="space-y-3">
                 {[
                   { id: 'tradeAlerts', label: '成交回报', checked: notifications.tradeAlerts },
@@ -190,7 +242,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
                   <div key={item.id} className="flex items-center justify-between">
                     <span className="text-xs font-bold text-[var(--color-text-secondary)]">{item.label}</span>
                     <button
-                      onClick={() => setNotifications(prev => ({ ...prev, [item.id]: !item.checked }))}
+                      onClick={() => handleNotificationChange(item.id as keyof typeof notifications)}
                       className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${
                         item.checked ? 'bg-[#00D4AA]' : 'bg-[var(--color-surface-hover)] border border-[var(--color-border)]'
                       }`}
@@ -204,6 +256,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
 

@@ -118,6 +118,7 @@ const defaultBanners: Array<{
   title: string;
   category: string;
   desc: string;
+  content?: string;
   img?: string;
 }> = [
   {
@@ -125,21 +126,68 @@ const defaultBanners: Array<{
     title: '银河日斗 · 智能交易单元',
     category: '平台公告',
     desc: '银河证券日斗投资单元全面上线，提供实时行情、智能交易、合规监控等功能',
-    img: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&h=400&fit=crop&q=80', // 金融科技
+    content: `尊敬的投资者：
+
+银河证券"日斗"智能交易单元正式上线！
+
+【核心功能】
+• 实时行情：覆盖A股、港股市场，支持分时图、K线图、五档行情
+• 智能交易：支持普通买卖、新股申购、大宗交易、涨停打板等多种交易模式
+• 合规盾牌：实时监测交易行为，确保每一笔交易符合监管要求
+• 投教中心：提供专业的投资知识和风险教育内容
+
+【风险提示】
+股市有风险，投资需谨慎。请根据自身风险承受能力合理配置资产。
+
+银河证券客户服务热线：95551`,
+    img: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&h=400&fit=crop&q=80',
   },
   {
     id: 'default-2',
     title: '风控合规 · 实时监测',
     category: '合规公告',
     desc: '合规盾牌实时监测交易行为，确保每一笔交易符合监管要求',
-    img: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop&q=80', // 数据分析
+    content: `尊敬的投资者：
+
+银河证券"合规盾牌"系统运行公告
+
+【监测功能】
+• 异常报单拦截：自动识别并拦截异常价格、异常数量的委托
+• 价格偏离度监控：实时监测委托价格与市场价格的偏离程度
+• 持仓集中度审查：定期审查客户持仓集中度，提示风险
+• 反洗钱(AML)筛查：对所有交易进行反洗钱合规筛查
+
+【合规提示】
+请确保您的交易行为符合《证券法》及相关监管规定，避免违规操作。
+
+银河证券合规部`,
+    img: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop&q=80',
   },
   {
     id: 'default-3',
     title: '投教中心 · 理财知识',
     category: '投教活动',
     desc: '银河证券投资者教育基地，提供专业的投资知识和风险教育',
-    img: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop&q=80', // 理财教育
+    content: `尊敬的投资者：
+
+银河证券投资者教育基地欢迎您！
+
+【课程内容】
+• 股票入门基础知识
+• 技术分析入门：K线图解读
+• 价值投资理念与实践
+• 风险管理与仓位控制
+• 新股申购全攻略
+• 基金定投策略指南
+
+【学习建议】
+建议您从基础课程开始学习，逐步提升投资能力。每个课程配有练习题和模拟交易环节。
+
+【风险教育】
+投资有风险，入市需谨慎。请根据自身风险承受能力（C1-C5）选择适合的投资产品。
+
+银河证券投教团队`,
+    img: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop&q=80',
   },
 ];
 
@@ -218,8 +266,9 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
           setBanners(bannerData.map(b => ({
             id: b.id,
             title: b.title,
-            category: '平台公告',
+            category: b.category || '平台公告',
             desc: b.subtitle || '',
+            content: b.content || b.subtitle || '',
             img: b.imageUrl,
           })));
         }
@@ -252,7 +301,15 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
           {banners.map((banner) => (
             <div 
               key={banner.id} 
-              onClick={() => onOpenBanner?.({ id: banner.id, title: banner.title, subtitle: banner.desc })}
+              onClick={() => onOpenBanner?.({ 
+                id: banner.id, 
+                title: banner.title, 
+                subtitle: banner.desc,
+                desc: banner.desc,
+                content: banner.content,
+                category: banner.category,
+                img: banner.img
+              })}
               className="min-w-[85%] md:min-w-[45%] lg:min-w-[32%] snap-center relative h-48 rounded-xl overflow-hidden group shadow-sm border border-[var(--color-border)] cursor-pointer hover:shadow-md transition-all"
             >
               <BannerImage src={banner.img} alt={banner.title} />

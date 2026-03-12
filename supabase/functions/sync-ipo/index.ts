@@ -112,7 +112,7 @@ async function fetchIPO(): Promise<any[]> {
             subscription_code: subscribeCode,
             issue_volume: issueVolume,
             online_issue_volume: onlineIssueVolume,
-            pe_ratio: pe_ratio
+            pe_ratio: peRatio
           });
         }
 

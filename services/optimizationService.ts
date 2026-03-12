@@ -196,29 +196,42 @@ export const performanceService = {
     value: number,
     metadata?: any
   ) {
-    await supabase.rpc('record_performance_metric', {
-      p_metric_type: metricType,
-      p_metric_name: metricName,
-      p_value: value,
-      p_metadata: metadata || {},
-    });
+    try {
+      await supabase.rpc('record_performance_metric', {
+        p_metric_type: metricType,
+        p_metric_name: metricName,
+        p_value: value,
+        p_metadata: metadata || {},
+      });
+    } catch (error) {
+      // RPC 函数可能不存在，静默处理
+      console.warn('记录性能指标失败（RPC 函数可能不存在）:', error);
+    }
   },
 
   /**
    * 获取性能统计
    */
   async getMetrics(metricType: string, hours: number = 24) {
-    const since = new Date(Date.now() - hours * 3600 * 1000);
-    
-    const { data, error } = await supabase
-      .from('performance_metrics')
-      .select('*')
-      .eq('metric_type', metricType)
-      .gte('created_at', since.toISOString())
-      .order('created_at', { ascending: false });
+    try {
+      const since = new Date(Date.now() - hours * 3600 * 1000);
+      
+      const { data, error } = await supabase
+        .from('performance_metrics')
+        .select('*')
+        .eq('metric_type', metricType)
+        .gte('created_at', since.toISOString())
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.warn('获取性能指标失败:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      console.warn('获取性能指标失败:', error);
+      return [];
+    }
   },
 };
 

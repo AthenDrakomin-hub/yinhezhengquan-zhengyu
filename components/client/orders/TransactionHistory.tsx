@@ -21,12 +21,14 @@ interface TransactionHistoryProps {
   userId?: string;
   limit?: number;
   showAll?: boolean;
+  onBack?: () => void;
 }
 
 const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   userId,
   limit = 20,
-  showAll = false
+  showAll = false,
+  onBack
 }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,13 +255,23 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full animate-slide-up">
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-black">交易记录</h2>
-          <p className="text-[var(--color-text-muted)] text-sm mt-1">
-            查看您的所有交易记录
-          </p>
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+          )}
+          <div>
+            <h2 className="text-xl font-black">交易记录</h2>
+            <p className="text-[var(--color-text-muted)] text-sm mt-1">
+              查看您的所有交易记录
+            </p>
+          </div>
         </div>
         <button
           onClick={loadTransactions}

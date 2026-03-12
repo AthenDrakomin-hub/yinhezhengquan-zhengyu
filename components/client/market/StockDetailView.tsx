@@ -174,13 +174,19 @@ const StockDetailView: React.FC<StockDetailViewProps> = ({ onTrade }) => {
       }
 
       // 检查是否在自选股中
-      const { data: watchlistData } = await supabase
-        .from('watchlist')
-        .select('id')
-        .eq('symbol', symbol)
-        .single();
-      
-      setInWatchlist(!!watchlistData);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: watchlistData } = await supabase
+          .from('watchlist')
+          .select('id')
+          .eq('symbol', symbol)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setInWatchlist(!!watchlistData);
+      } else {
+        setInWatchlist(false);
+      }
 
     } catch (error) {
       console.error('加载股票数据失败:', error);
@@ -275,19 +281,22 @@ const StockDetailView: React.FC<StockDetailViewProps> = ({ onTrade }) => {
     if (!stock || !symbol) return;
     
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('请先登录');
+        return;
+      }
+      
       if (inWatchlist) {
-        await supabase.from('watchlist').delete().eq('symbol', symbol);
+        await supabase.from('watchlist').delete().eq('symbol', symbol).eq('user_id', user.id);
         setInWatchlist(false);
       } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('watchlist').insert({
-            user_id: user.id,
-            symbol,
-            name: stock.name,
-          });
-          setInWatchlist(true);
-        }
+        await supabase.from('watchlist').insert({
+          user_id: user.id,
+          symbol,
+          name: stock.name,
+        });
+        setInWatchlist(true);
       }
     } catch (error) {
       console.error('操作自选股失败:', error);

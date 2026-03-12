@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Stock, ConditionalOrder } from '../../../lib/types';
 import { ICONS } from '../../../lib/constants';
 import StockIcon from '../../shared/StockIcon';
+import conditionalOrderService from '../../../services/conditionalOrderService';
 
 interface ConditionalOrderPanelProps {
   onBack: () => void;
@@ -17,22 +18,79 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
   const [gridUpper, setGridUpper] = useState((stock.price * 1.05).toFixed(2));
   const [gridLower, setGridLower] = useState((stock.price * 0.95).toFixed(2));
   const [gridCount, setGridCount] = useState('10');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingOrders, setExistingOrders] = useState<ConditionalOrder[]>([]);
 
-  const handleSubmit = () => {
-    const config = type === 'TP_SL' 
-      ? { stopLoss: parseFloat(stopLoss), takeProfit: parseFloat(takeProfit) }
-      : { gridUpper: parseFloat(gridUpper), gridLower: parseFloat(gridLower), gridCount: parseInt(gridCount) };
-    
-    onAddOrder({
-      symbol: stock.symbol,
-      name: stock.name,
-      type,
-      config,
-      status: 'RUNNING',
-      createdAt: new Date()
-    });
-    alert('条件单已部署至银河 Nexus 云端执行引擎');
-    onBack();
+  // 加载该股票已有的条件单
+  useEffect(() => {
+    loadExistingOrders();
+  }, [stock.symbol]);
+
+  const loadExistingOrders = async () => {
+    try {
+      const orders = await conditionalOrderService.getConditionalOrders('ACTIVE');
+      const stockOrders = orders.filter((o: any) => o.symbol === stock.symbol);
+      setExistingOrders(stockOrders.map((o: any) => ({
+        id: o.id,
+        symbol: o.symbol,
+        name: o.name,
+        type: o.type,
+        status: o.status,
+        config: o.config,
+        createdAt: o.createdAt
+      })));
+    } catch (error) {
+      console.error('加载条件单失败:', error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const config = type === 'TP_SL' 
+        ? { stop_loss_price: parseFloat(stopLoss), take_profit_price: parseFloat(takeProfit) }
+        : { 
+            grid_upper_price: parseFloat(gridUpper), 
+            grid_lower_price: parseFloat(gridLower), 
+            grid_count: parseInt(gridCount) 
+          };
+
+      // 保存到数据库
+      await conditionalOrderService.createConditionalOrder({
+        symbol: stock.symbol,
+        stock_name: stock.name,
+        order_type: type,
+        ...config
+      });
+
+      // 回调通知父组件
+      onAddOrder({
+        symbol: stock.symbol,
+        name: stock.name,
+        type,
+        config: type === 'TP_SL' 
+          ? { stopLoss: parseFloat(stopLoss), takeProfit: parseFloat(takeProfit) }
+          : { gridUpper: parseFloat(gridUpper), gridLower: parseFloat(gridLower), gridCount: parseInt(gridCount) },
+        status: 'ACTIVE',
+        createdAt: new Date()
+      });
+
+      alert('条件单已部署至银河 Nexus 云端执行引擎');
+      onBack();
+    } catch (error: any) {
+      alert(error.message || '创建条件单失败，请重试');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      await conditionalOrderService.cancelConditionalOrder(orderId);
+      await loadExistingOrders();
+    } catch (error) {
+      console.error('取消条件单失败:', error);
+    }
   };
 
   return (
@@ -121,14 +179,56 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
         <div className="pt-6">
            <button 
              onClick={handleSubmit}
-             className="w-full py-5 rounded-3xl bg-[#DC2626] text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+             disabled={isSubmitting}
+             className="w-full py-5 rounded-3xl bg-[#DC2626] text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
            >
-             <ICONS.Zap size={18} /> 部署条件单
+             {isSubmitting ? (
+               <>
+                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                 部署中...
+               </>
+             ) : (
+               <>
+                 <ICONS.Zap size={18} /> 部署条件单
+               </>
+             )}
            </button>
            <p className="text-center text-[9px] font-black text-[var(--color-text-muted)] mt-4 uppercase tracking-widest">
              条件单由银河 Nexus 云端免费执行，不占用本地资源
            </p>
         </div>
+
+        {/* 已有条件单列表 */}
+        {existingOrders.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
+            <h3 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest mb-4">
+              已有条件单 ({existingOrders.length})
+            </h3>
+            <div className="space-y-3">
+              {existingOrders.map((order) => (
+                <div key={order.id} className="galaxy-card p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs font-bold text-[var(--color-text-primary)]">
+                      {order.type === 'TP_SL' ? '止盈止损' : order.type === 'GRID' ? '网格交易' : '条件单'}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted)] font-mono mt-1">
+                      {order.config?.stopLoss && `止损: ${order.config.stopLoss}`}
+                      {order.config?.takeProfit && ` 止盈: ${order.config.takeProfit}`}
+                      {order.config?.gridUpper && ` 上限: ${order.config.gridUpper}`}
+                      {order.config?.gridLower && ` 下限: ${order.config.gridLower}`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleCancelOrder(order.id!)}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-[10px] font-black hover:bg-red-500/20 transition-colors"
+                  >
+                    撤销
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

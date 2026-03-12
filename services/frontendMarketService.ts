@@ -139,15 +139,18 @@ const DATA_SOURCES = {
     priority: 1,
     enabled: useRealMarketData,
     getRealtimeUrl: (symbol: string, market: 'CN' | 'HK'): string => {
+      // 清理股票代码：移除 SH/SZ/HK 等前缀
+      const cleanSymbol = symbol.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
+      
       // 东方财富市场代码: 1=沪市A股, 0=深市A股, 116=港股
       let marketCode = '1'; // 默认沪市
       if (market === 'HK') {
         marketCode = '116';
-      } else if (symbol.startsWith('0') || symbol.startsWith('3')) {
+      } else if (cleanSymbol.startsWith('0') || cleanSymbol.startsWith('3')) {
         marketCode = '0'; // 深市
       }
       // 使用批量接口（ulist.np）获取单只股票，更稳定
-      return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${marketCode}.${symbol}`;
+      return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${marketCode}.${cleanSymbol}`;
     },
     parseRealtimeData: (data: any, symbol: string, market: 'CN' | 'HK'): Partial<Stock> | null => {
       try {
@@ -177,13 +180,16 @@ const DATA_SOURCES = {
     enabled: useRealMarketData,
     getBatchUrl: (symbols: string[], market: 'CN' | 'HK'): string => {
       const codeList = symbols.map(sym => {
+        // 清理股票代码：移除 SH/SZ/HK 等前缀
+        const cleanSymbol = sym.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
+        
         // 深市股票需要用 0. 前缀，沪市用 1.，港股用 116.
         if (market === 'HK') {
-          return `116.${sym}`;
-        } else if (sym.startsWith('0') || sym.startsWith('3')) {
-          return `0.${sym}`;
+          return `116.${cleanSymbol}`;
+        } else if (cleanSymbol.startsWith('0') || cleanSymbol.startsWith('3')) {
+          return `0.${cleanSymbol}`;
         }
-        return `1.${sym}`;
+        return `1.${cleanSymbol}`;
       }).join(',');
       return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${codeList}`;
     },

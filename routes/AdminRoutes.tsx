@@ -20,6 +20,8 @@ const AdminTickets = lazy(() => import('../components/admin/AdminTickets'));
 const AdminTicketDetail = lazy(() => import('../components/admin/AdminTicketDetail'));
 const AdminAuditLogs = lazy(() => import('../components/admin/AdminAuditLogs'));
 const AdminDataExport = lazy(() => import('../components/admin/AdminDataExport'));
+const AdminConditionalOrders = lazy(() => import('../components/admin/AdminConditionalOrders'));
+const AdminNotifications = lazy(() => import('../components/admin/AdminNotifications'));
 
 // 使用 CSS 变量的加载指示器
 const LoadingSpinner = () => (
@@ -43,6 +45,8 @@ const AdminRoutes: React.FC = () => {
             <Route path="trades" element={<AdminTradeManagement />} />
             <Route path="match" element={<AdminMatchIntervention />} />
             <Route path="rules" element={<TradeRulesManagement />} />
+            <Route path="conditional-orders" element={<AdminConditionalOrders />} />
+            <Route path="notifications" element={<AdminNotifications />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
             <Route path="content" element={<AdminContentManagement />} />

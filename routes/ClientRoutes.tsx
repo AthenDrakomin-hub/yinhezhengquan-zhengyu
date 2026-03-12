@@ -257,7 +257,7 @@ const ClientRoutes: React.FC = () => {
               
               {/* 高级功能路由 */}
               <Route path="analysis" element={<AnalysisWrapper />} />
-              <Route path="compliance" element={<ComplianceCenter />} />
+              <Route path="compliance" element={<ComplianceCenter onBack={() => navigate('/client/dashboard')} onOpenShield={() => navigate('/client/compliance/shield')} />} />
               <Route path="compliance/shield" element={<ComplianceShieldView onBack={() => navigate('/client/compliance')} />} />
               <Route path="chat" element={<ChatView onBack={() => navigate('/client/support')} />} />
               <Route path="ipo" element={<IPOView />} />
@@ -268,7 +268,7 @@ const ClientRoutes: React.FC = () => {
               <Route path="calendar" element={<InvestmentCalendarView onBack={() => navigate('/client/dashboard')} />} />
               <Route path="limit-up" element={<Navigate to="/client/trade?mode=limitUp" replace />} />
               <Route path="image-diagnostic" element={<ImageDiagnosticPage />} />
-              <Route path="education" element={<EducationCenterView />} />
+              <Route path="education" element={<EducationCenterView onBack={() => navigate('/client/dashboard')} />} />
               <Route path="profile/detail" element={<ProfileDetailView />} />
               <Route path="profile/overview" element={<ProfileOverviewWrapper />} />
               <Route path="transactions" element={<TransactionHistoryWrapper />} />
@@ -307,7 +307,7 @@ const DashboardWrapper: React.FC = () => {
         onOpenCalendar={() => navigate('/client/calendar')}
         onOpenReports={() => navigate('/client/reports')}
         onOpenEducation={() => navigate('/client/education')}
-        onOpenCompliance={() => navigate('/client/compliance')}
+        onOpenCompliance={() => navigate('/client/compliance/shield')}
         onOpenNews={(newsId) => navigate(`/client/news/${newsId}`)}
       />
       
@@ -318,12 +318,12 @@ const DashboardWrapper: React.FC = () => {
           onClick={() => setSelectedBanner(null)}
         >
           <div 
-            className="bg-[#1a1f2e] rounded-3xl max-w-lg w-full overflow-hidden border border-[#00D4AA]/30 shadow-2xl"
+            className="bg-[#1a1f2e] rounded-3xl max-w-lg w-full max-h-[80vh] overflow-hidden border border-[#00D4AA]/30 shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 头部图片 */}
             {selectedBanner.img && (
-              <div className="h-48 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628]">
+              <div className="h-48 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628] shrink-0">
                 <img 
                   src={selectedBanner.img} 
                   alt={selectedBanner.title}
@@ -336,19 +336,22 @@ const DashboardWrapper: React.FC = () => {
             )}
             
             {/* 内容 */}
-            <div className="p-6">
+            <div className="p-6 flex-1 overflow-y-auto">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-[10px] font-black text-[#00D4AA] uppercase tracking-wider bg-[#00D4AA]/10 px-2 py-1 rounded">
                   {selectedBanner.category || '公告'}
                 </span>
+                {selectedBanner.date && (
+                  <span className="text-[10px] text-gray-500">{selectedBanner.date}</span>
+                )}
               </div>
               <h3 className="text-xl font-black text-white mb-3">{selectedBanner.title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                {selectedBanner.desc || selectedBanner.subtitle || '暂无详情'}
-              </p>
+              <div className="text-gray-400 text-sm leading-relaxed mb-6 whitespace-pre-wrap">
+                {selectedBanner.content || selectedBanner.desc || selectedBanner.subtitle || '暂无详情'}
+              </div>
               
               {/* 操作按钮 */}
-              <div className="flex gap-3">
+              <div className="flex gap-3 sticky bottom-0 pt-4 bg-[#1a1f2e]">
                 <button
                   onClick={() => setSelectedBanner(null)}
                   className="flex-1 py-3 rounded-xl bg-gray-700 text-gray-300 font-semibold hover:bg-gray-600 transition-colors"
@@ -495,12 +498,14 @@ const ProfileOverviewWrapper: React.FC = () => {
 
 const TransactionHistoryWrapper: React.FC = () => {
   const { account } = useUserAccount();
-  return <TransactionHistory userId={account?.id || ''} />;
+  const navigate = useNavigate();
+  return <TransactionHistory userId={account?.id || ''} onBack={() => navigate('/client/profile')} />;
 };
 
 const FundFlowsWrapper: React.FC = () => {
   const { account } = useUserAccount();
-  return <FundFlowsView userId={account?.id || ''} />;
+  const navigate = useNavigate();
+  return <FundFlowsView userId={account?.id || ''} onBack={() => navigate('/client/profile')} />;
 };
 
 const SettingsWrapper: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {

@@ -62,6 +62,8 @@ const AdminLayout: React.FC = () => {
     { id: 'dashboard', label: '总览', icon: ICONS.Home, path: '/admin/dashboard', minLevel: 'admin' },
     { id: 'users', label: '用户管理', icon: ICONS.User, path: '/admin/users', minLevel: 'admin' },
     { id: 'trades', label: '交易管理', icon: ICONS.Trade, path: '/admin/trades', minLevel: 'admin' },
+    { id: 'conditional-orders', label: '条件单管理', icon: ICONS.Zap, path: '/admin/conditional-orders', minLevel: 'admin' },
+    { id: 'notifications', label: '通知管理', icon: ICONS.Bell, path: '/admin/notifications', minLevel: 'admin' },
     { id: 'match', label: '撮合干预', icon: ICONS.Zap, path: '/admin/match', minLevel: 'super_admin' },
     { id: 'rules', label: '规则管理', icon: ICONS.Shield, path: '/admin/rules', minLevel: 'super_admin' },
     { id: 'tickets', label: '工单管理', icon: ICONS.MessageCircle, path: '/admin/tickets', minLevel: 'admin' },
