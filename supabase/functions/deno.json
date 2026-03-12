@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true,
+    "noImplicitAny": true
+  },
+  "fmt": {
+    "options": {
+      "singleQuote": true,
+      "semiColons": false
+    }
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}

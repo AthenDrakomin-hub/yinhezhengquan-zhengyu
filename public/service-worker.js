@@ -1,21 +1,15 @@
 // Service Worker 配置
-// 版本：2.0.0 - 强制清除旧缓存，修复主题问题
+// 版本：2.0.1 - 修复预缓存问题
 // 功能：离线缓存、资源预加载、后台同步
 
-const CACHE_NAME = 'zhengyu-trade-v2.0.0';
+const CACHE_NAME = 'zhengyu-trade-v2.0.1';
 const RUNTIME_CACHE = 'zhengyu-trade-runtime-v2';
 
-// 需要预缓存的核心资源
+// 需要预缓存的核心资源（只缓存确定存在的静态资源）
+// 注意：带 hash 的 JS/CSS 文件会在运行时动态缓存，不在这里预缓存
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/index.css',
-  // 核心依赖 chunk
-  '/assets/js/react-vendor-[hash].js',
-  '/assets/js/data-vendor-[hash].js',
-  '/assets/js/form-vendor-[hash].js',
-  '/assets/js/query-vendor-[hash].js',
-  // 图标
   '/favicon.ico',
 ];
 

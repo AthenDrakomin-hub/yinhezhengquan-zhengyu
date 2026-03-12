@@ -9,6 +9,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { searchStocks as localSearchStocks, type StockInfo } from '../lib/stockList';
 
 // Edge Function URL (从环境变量获取或使用 Supabase 函数 URL)
 const getYinheFunctionUrl = () => {
@@ -305,13 +306,12 @@ export const yinhedataService = {
   },
 
   /**
-   * 搜索股票
+   * 搜索股票（本地搜索）
+   * 支持按股票代码或名称搜索
    */
-  async searchStocks(keyword: string): Promise<unknown[]> {
-    const data = await callYinheFunction<unknown[]>('/api/search', {
-      params: { keyword },
-    });
-    return data || [];
+  async searchStocks(keyword: string): Promise<StockInfo[]> {
+    // 使用本地股票列表搜索
+    return localSearchStocks(keyword, 20);
   },
 };
 

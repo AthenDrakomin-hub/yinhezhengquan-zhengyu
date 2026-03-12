@@ -132,20 +132,90 @@ interface DataSourceConfig {
 
 // 免费、无CORS限制的公开行情数据源
 const DATA_SOURCES = {
-  // 新浪财经实时行情 (通过代理解决跨域，覆盖A股、港股)
+  // 东方财富实时行情 (无CORS限制，推荐首选)
+  // 使用批量接口获取单只股票，因为单只接口不稳定
+  EASTMONEY_REALTIME: {
+    name: '东方财富实时行情',
+    priority: 1,
+    enabled: useRealMarketData,
+    getRealtimeUrl: (symbol: string, market: 'CN' | 'HK'): string => {
+      // 东方财富市场代码: 1=沪市A股, 0=深市A股, 116=港股
+      let marketCode = '1'; // 默认沪市
+      if (market === 'HK') {
+        marketCode = '116';
+      } else if (symbol.startsWith('0') || symbol.startsWith('3')) {
+        marketCode = '0'; // 深市
+      }
+      // 使用批量接口（ulist.np）获取单只股票，更稳定
+      return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${marketCode}.${symbol}`;
+    },
+    parseRealtimeData: (data: any, symbol: string, market: 'CN' | 'HK'): Partial<Stock> | null => {
+      try {
+        // 批量接口返回格式: { data: { diff: [...] } }
+        if (!data || !data.data || !data.data.diff || data.data.diff.length === 0) return null;
+        const item = data.data.diff[0];
+        return {
+          symbol: item.f12 || symbol,
+          name: item.f14 || symbol,
+          price: item.f2 || 0,
+          change: item.f4 || 0,
+          changePercent: item.f3 || 0,
+          market,
+          sparkline: []
+        };
+      } catch (error) {
+        console.error('解析东方财富数据失败:', error);
+        return null;
+      }
+    }
+  },
+
+  // 东方财富批量行情 (无CORS限制)
+  EASTMONEY_BATCH: {
+    name: '东方财富批量行情',
+    priority: 2,
+    enabled: useRealMarketData,
+    getBatchUrl: (symbols: string[], market: 'CN' | 'HK'): string => {
+      const codeList = symbols.map(sym => {
+        // 深市股票需要用 0. 前缀，沪市用 1.，港股用 116.
+        if (market === 'HK') {
+          return `116.${sym}`;
+        } else if (sym.startsWith('0') || sym.startsWith('3')) {
+          return `0.${sym}`;
+        }
+        return `1.${sym}`;
+      }).join(',');
+      return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${codeList}`;
+    },
+    parseBatchData: (data: any): Partial<Stock>[] => {
+      try {
+        if (!data || !data.data || !data.data.diff) return [];
+        
+        return data.data.diff.map((item: any) => ({
+          symbol: item.f12,
+          name: item.f14,
+          price: item.f2,
+          change: item.f4,
+          changePercent: item.f3,
+          sparkline: []
+        }));
+      } catch (error) {
+        console.error('解析东方财富批量数据失败:', error);
+        return [];
+      }
+    }
+  },
+
+  // 新浪财经实时行情 (有CORS限制，作为备选)
   SINA_REALTIME: {
     name: '新浪财经实时行情',
-    priority: 1,
-    enabled: useRealMarketData, // 根据环境变量启用
+    priority: 3,
+    enabled: false, // 禁用，因为有 CORS 限制
     getRealtimeUrl: (symbol: string, market: 'CN' | 'HK'): string => {
-      // A股: sh600000, sz000001
-      // 港股: hk00700
       const prefix = market === 'CN' 
         ? (symbol.startsWith('6') ? 'sh' : 'sz')
         : 'hk';
-      // 直接请求新浪财经（通过代理）
-      // 注意：Vite代理会移除 /api/stock 前缀，所以需要保留斜杠
-      return `/api/stock/?list=${prefix}${symbol}`;
+      return `https://hq.sinajs.cn/list=${prefix}${symbol}`;
     },
     parseRealtimeData: (text: string, symbol: string, market: 'CN' | 'HK'): Partial<Stock> | null => {
       try {
@@ -186,12 +256,12 @@ const DATA_SOURCES = {
       }
     }
   },
-  
+
   // 腾讯财经K线数据 (无CORS限制)
   TENCENT_KLINE: {
     name: '腾讯财经K线数据',
-    priority: 2,
-    enabled: useRealMarketData, // 根据环境变量启用
+    priority: 4,
+    enabled: useRealMarketData,
     getKlineUrl: (symbol: string, market: 'CN' | 'HK', period: 'day' | 'week' | 'month' = 'day'): string => {
       const marketCode = market === 'CN' ? 'sz' : 'hk';
       return `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${marketCode}${symbol},${period},,,320`;
@@ -200,38 +270,9 @@ const DATA_SOURCES = {
       try {
         if (!data || !data.data || !data.data[`${data.code}`]) return [];
         const klineData = data.data[`${data.code}`][`${data.period}`] || [];
-        return klineData.map((item: any[]) => parseFloat(item[1])).slice(-20); // 取最近20个收盘价
+        return klineData.map((item: any[]) => parseFloat(item[1])).slice(-20);
       } catch (error) {
         console.error('解析腾讯K线数据失败:', error);
-        return [];
-      }
-    }
-  },
-  
-  // 东方财富批量行情 (无CORS限制)
-  EASTMONEY_BATCH: {
-    name: '东方财富批量行情',
-    priority: 3,
-    enabled: useRealMarketData, // 根据环境变量启用
-    getBatchUrl: (symbols: string[], market: 'CN' | 'HK'): string => {
-      const marketCode = market === 'CN' ? '1.' : '116.';
-      const codeList = symbols.map(sym => `${marketCode}${sym}`).join(',');
-      return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${codeList}`;
-    },
-    parseBatchData: (data: any): Partial<Stock>[] => {
-      try {
-        if (!data || !data.data || !data.data.diff) return [];
-        
-        return data.data.diff.map((item: any) => ({
-          symbol: item.f12,
-          name: item.f14,
-          price: item.f2,
-          change: item.f4,
-          changePercent: item.f3,
-          sparkline: []
-        }));
-      } catch (error) {
-        console.error('解析东方财富批量数据失败:', error);
         return [];
       }
     }
@@ -433,8 +474,33 @@ export const frontendMarketService = {
       try {
         let stockData: Partial<Stock> | null = null;
         
-        if (sourceKey === 'SINA_REALTIME') {
-          // 新浪财经实时行情 - 直接使用DATA_SOURCES.SINA_REALTIME避免类型问题
+        if (sourceKey === 'EASTMONEY_REALTIME') {
+          // 东方财富实时行情 - 无 CORS 限制
+          const url = DATA_SOURCES.EASTMONEY_REALTIME.getRealtimeUrl(symbol, market);
+          console.log(`尝试数据源 ${source.name}: URL=${url}`);
+          
+          const response = await fetch(url);
+          console.log(`数据源 ${source.name} 响应状态: ${response.status}`);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const json = await response.json();
+          stockData = DATA_SOURCES.EASTMONEY_REALTIME.parseRealtimeData(json, symbol, market);
+          
+          if (stockData) {
+            console.log(`数据源 ${source.name} 解析成功:`, stockData);
+            // 获取K线数据生成走势图
+            const klineUrl = DATA_SOURCES.TENCENT_KLINE.getKlineUrl(symbol, market, 'day');
+            const klineResponse = await fetch(klineUrl);
+            if (klineResponse.ok) {
+              const klineData = await klineResponse.json();
+              stockData.sparkline = DATA_SOURCES.TENCENT_KLINE.parseKlineData(klineData);
+            }
+          }
+        } else if (sourceKey === 'SINA_REALTIME') {
+          // 新浪财经实时行情
           const url = DATA_SOURCES.SINA_REALTIME.getRealtimeUrl(symbol, market);
           console.log(`尝试数据源 ${source.name}: URL=${url}`);
           
@@ -445,35 +511,22 @@ export const frontendMarketService = {
             }
           });
           
-          console.log(`数据源 ${source.name} 响应状态: ${response.status} ${response.statusText}`);
+          console.log(`数据源 ${source.name} 响应状态: ${response.status}`);
           
           if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            throw new Error(`HTTP ${response.status}`);
           }
           
           const text = await response.text();
-          console.log(`数据源 ${source.name} 响应长度: ${text.length} 字符`);
-          
           stockData = DATA_SOURCES.SINA_REALTIME.parseRealtimeData(text, symbol, market);
           
           if (stockData) {
-            console.log(`数据源 ${source.name} 解析成功:`, stockData);
-            // 获取K线数据生成走势图
             const klineUrl = DATA_SOURCES.TENCENT_KLINE.getKlineUrl(symbol, market, 'day');
-            console.log(`尝试获取K线数据: URL=${klineUrl}`);
-            
             const klineResponse = await fetch(klineUrl);
-            console.log(`K线数据响应状态: ${klineResponse.status} ${klineResponse.statusText}`);
-            
             if (klineResponse.ok) {
               const klineData = await klineResponse.json();
               stockData.sparkline = DATA_SOURCES.TENCENT_KLINE.parseKlineData(klineData);
-              console.log(`K线数据解析成功，生成 ${stockData.sparkline?.length || 0} 个数据点`);
-            } else {
-              console.warn(`K线数据获取失败: ${klineResponse.status} ${klineResponse.statusText}`);
             }
-          } else {
-            console.warn(`数据源 ${source.name} 解析失败，响应文本: ${text.substring(0, 200)}...`);
           }
         }
         
