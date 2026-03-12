@@ -11,7 +11,7 @@ export const SkeletonLine: React.FC<{ width?: string; height?: string }> = ({
 );
 
 export const SkeletonCard: React.FC = () => (
-  <div className="glass-card p-6 rounded-2xl space-y-4">
+  <div className="galaxy-card p-6 rounded-2xl space-y-4">
     <SkeletonLine width="60%" height="1.5rem" />
     <SkeletonLine width="100%" />
     <SkeletonLine width="80%" />
@@ -20,7 +20,7 @@ export const SkeletonCard: React.FC = () => (
 );
 
 export const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
-  <div className="glass-card rounded-2xl overflow-hidden">
+  <div className="galaxy-card rounded-2xl overflow-hidden">
     <div className="p-4 bg-slate-800 space-y-2">
       <SkeletonLine width="30%" height="1rem" />
     </div>

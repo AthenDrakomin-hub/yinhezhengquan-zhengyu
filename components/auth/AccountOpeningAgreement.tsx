@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { FaCheckCircle, FaPen, FaShieldAlt } from 'react-icons/fa';
 import SignatureCanvas from 'react-signature-canvas';
+import { imageConfig } from '../../lib/imageConfig';
 
 interface AccountOpeningAgreementProps {
   onSubmit?: (data: AgreementData) => void;
@@ -76,7 +77,7 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
         <div className="bg-white max-w-2xl w-full rounded-xl shadow-lg p-8 text-center">
           <FaCheckCircle className="text-6xl text-[#10B981] mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-[#1F2937] mb-2">签署成功</h2>
-          <p className="text-[#6B7280] mb-6">您已成功签署《客户账户开户协议》，感谢您选择中国银河证券·证裕交易单元。</p>
+          <p className="text-[#6B7280] mb-6">您已成功签署《客户账户开户协议》，感谢您选择中国银河证券·日斗投资单元。</p>
           <div className="flex gap-4 justify-center">
             <button
               onClick={() => window.location.href = '/'}
@@ -103,7 +104,7 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
         <div className="flex items-center justify-between mb-6 border-b border-[#E5E7EB] pb-4">
           <div className="flex items-center gap-2">
             <img
-              src={import.meta.env.VITE_LOGO_URL || '/logo.png'}
+              src={imageConfig.logo.fullUrl}
               alt="中国银河证券"
               className="h-8 w-auto"
             />
@@ -116,7 +117,7 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
           {/* 协议内容 - 可滚动区域 */}
           <div className="p-6 sm:p-8 max-h-[400px] overflow-y-auto bg-[#F9FAFB] border-b border-[#E5E7EB]">
             <div className="prose prose-sm max-w-none text-[#1F2937]">
-              <h1 className="text-xl font-bold text-center text-[#1F2937] mb-2">中国银河证券·证裕交易单元</h1>
+              <h1 className="text-xl font-bold text-center text-[#1F2937] mb-2">中国银河证券·日斗投资单元</h1>
               <h2 className="text-lg font-semibold text-center text-[#2563EB] mb-6">客户账户开户协议</h2>
               
               <div className="text-sm text-[#4B5563] space-y-4">
@@ -292,7 +293,7 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
                 <p className="text-sm font-medium text-[#374151] mb-1">公司盖章</p>
                 <img
                   src={import.meta.env.VITE_SEAL_URL || '/seal.png'}
-                  alt="中国银河证券·证裕交易单元公章"
+                  alt="中国银河证券·日斗投资单元公章"
                   className="h-16 w-auto opacity-80 hover:opacity-100 transition-opacity"
                   title="电子公章"
                 />
@@ -335,7 +336,7 @@ const AccountOpeningAgreement: React.FC<AccountOpeningAgreementProps> = ({
 
         {/* 页脚 */}
         <div className="text-center text-xs text-[#9CA3AF] mt-6">
-          Copyright © 2026 中国银河证券·证裕交易单元 版权所有 | 许可证号：Z123456
+          Copyright © 2026 中国银河证券·日斗投资单元 版权所有 | 许可证号：Z123456
         </div>
       </div>
     </div>

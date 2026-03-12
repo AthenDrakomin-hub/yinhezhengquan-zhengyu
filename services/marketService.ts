@@ -1,30 +1,39 @@
 import { supabase } from '../lib/supabase';
 import { frontendMarketService } from './frontendMarketService';
 
+// 新闻缓存（5分钟有效期）
+let newsCache: { data: any[]; timestamp: number } | null = null;
+const NEWS_CACHE_TTL = 5 * 60 * 1000; // 5分钟
+
 /**
- * 获取银河证券新闻 - 从公开渠道获取
- * 通过 Supabase Edge Function 代理请求以避免 CORS 问题
+ * 获取银河证券新闻 - 从数据库获取管理端发布的新闻
+ * 使用 supabase.functions.invoke 自动传递用户 JWT token
  */
 export const getGalaxyNews = async () => {
   try {
-    // 尝试通过 Edge Function 获取新闻数据
-    const { data, error } = await supabase.functions.invoke('fetch-galaxy-news');
-    
-    if (error) {
-      // Edge Function 失败时静默返回空数组，不打印错误
-      return [];
+    // 检查缓存
+    if (newsCache && Date.now() - newsCache.timestamp < NEWS_CACHE_TTL) {
+      return newsCache.data;
     }
-    
-    // 如果 Edge Function 返回数据，直接返回
+
+    // 使用 supabase.functions.invoke 自动传递 JWT token
+    const { data, error } = await supabase.functions.invoke('fetch-galaxy-news');
+
+    if (error) {
+      // 如果失败，返回缓存数据或空数组
+      return newsCache?.data || [];
+    }
+
+    // 更新缓存
     if (data && Array.isArray(data.news)) {
+      newsCache = { data: data.news, timestamp: Date.now() };
       return data.news;
     }
     
-    // 默认返回空数组
-    return [];
+    return newsCache?.data || [];
   } catch {
-    // 静默处理错误
-    return [];
+    // 出错时返回缓存或空数组
+    return newsCache?.data || [];
   }
 };
 
@@ -181,8 +190,12 @@ export const getStockQuote = async (symbol: string) => {
  */
 export const getMarketOverview = async () => {
   try {
-    const cnStocks = await getMarketList('CN');
-    const hkStocks = await getMarketList('HK');
+    const cnResult = await getMarketList('CN', 1, 10);
+    const hkResult = await getMarketList('HK', 1, 10);
+    
+    // 处理返回结果（可能是数组或分页对象）
+    const cnStocks = Array.isArray(cnResult) ? cnResult : (cnResult as any).stocks || [];
+    const hkStocks = Array.isArray(hkResult) ? hkResult : (hkResult as any).stocks || [];
     
     const allStocks = [...cnStocks, ...hkStocks];
     const totalVolume = allStocks.reduce((sum, stock) => sum + (stock.price * 100 || 0), 0); // 使用价格乘以虚拟成交量计算
@@ -202,25 +215,89 @@ export const getMarketOverview = async () => {
   }
 };
 
-// Default stock symbols for market list
+// Default stock symbols for market list (扩展以支持分页)
 const DEFAULT_STOCK_SYMBOLS = {
-  CN: ['600519', '000858', '601318', '000001', '300750', '600036', '601166', '600887', '600276', '600900'],
-  HK: ['00700', '09988', '03690', '01810', '01024', '00941', '02318', '01299', '00883', '00388']
+  CN: [
+    // 第1页 - 热门蓝筹
+    '600519', '000858', '601318', '000001', '300750',
+    '600036', '601166', '600887', '600276', '600900',
+    // 第2页 - 金融银行
+    '601398', '601288', '600000', '600016', '601988',
+    '601939', '600030', '601211', '600837', '601688',
+    // 第3页 - 热门题材
+    '002594', '000333', '002415', '601888', '600019',
+    '601012', '002352', '600309', '601899', '600585',
+    // 第4页 - 科技消费
+    '000063', '002714', '300059', '600547', '601225',
+    '601668', '600028', '601857', '600104', '601390',
+    // 第5页 - 更多热门股
+    '601186', '600150', '601766', '601788', '600109',
+    '000776', '002736', '002230', '002475', '600588',
+    // 第6页 - 医药消费
+    '300760', '000538', '600196', '002007', '000568',
+    '002304', '000895', '603369', '002032', '002371'
+  ],
+  HK: [
+    // 第1页
+    '00700', '09988', '03690', '01810', '01024',
+    '00941', '02318', '01299', '00883', '00388',
+    // 第2页
+    '01109', '02313', '00386', '00939', '00998',
+    '02628', '01398', '03988', '01288', '00960',
+    // 第3页
+    '02269', '00669', '02015', '00285', '00358',
+    '02382', '00688', '01088', '01378', '00522'
+  ]
 };
+
+// 分页配置
+const PAGE_SIZE = 10; // 每页显示股票数量
 
 /**
  * 获取市场股票列表
  * @param market 市场类型: 'CN' (A股) 或 'HK' (港股)
+ * @param page 页码（从1开始）
+ * @param pageSize 每页数量
  */
-export const getMarketList = async (market: 'CN' | 'HK' = 'CN') => {
+export const getMarketList = async (market: 'CN' | 'HK' = 'CN', page: number = 1, pageSize: number = PAGE_SIZE) => {
   try {
-    const symbols = DEFAULT_STOCK_SYMBOLS[market];
-    return await frontendMarketService.getBatchStocks(symbols, market);
+    const allSymbols = DEFAULT_STOCK_SYMBOLS[market];
+    
+    // 计算分页
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const symbols = allSymbols.slice(startIndex, endIndex);
+    
+    // 如果当前页没有数据，返回空数组
+    if (symbols.length === 0) {
+      return [];
+    }
+    
+    const stocks = await frontendMarketService.getBatchStocks(symbols, market);
+    
+    // 返回分页信息
+    return {
+      stocks,
+      pagination: {
+        page,
+        pageSize,
+        total: allSymbols.length,
+        totalPages: Math.ceil(allSymbols.length / pageSize),
+        hasMore: endIndex < allSymbols.length
+      }
+    };
   } catch (error) {
     console.error('获取市场列表失败:', error);
     // 返回空数组而不是抛出错误，避免前端崩溃
     return [];
   }
+};
+
+/**
+ * 获取所有股票代码（用于计算总数）
+ */
+export const getTotalStockCount = (market: 'CN' | 'HK' = 'CN'): number => {
+  return DEFAULT_STOCK_SYMBOLS[market].length;
 };
 
 // 集成服务 - 已移除，不再需要API密钥管理功能

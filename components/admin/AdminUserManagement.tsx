@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ICONS } from '@/lib/constants';
 import { userService } from '@/services/userService';
-import { supabase } from '@/lib/supabase';
+import Pagination from '@/components/shared/Pagination';
+
+const ITEMS_PER_PAGE = 10;
+
+// 风险等级说明
+const RISK_LEVEL_INFO = {
+  '保守型': { color: '#22c55e', desc: '适合低风险投资，主要配置债券、货币基金等稳健产品，股票仓位不超过30%' },
+  '稳健型': { color: '#3b82f6', desc: '适合中等风险投资，股票仓位30%-60%，平衡配置股票和债券' },
+  '积极型': { color: '#ef4444', desc: '适合高风险投资，股票仓位可达60%以上，可参与IPO、打板等高风险操作' }
+};
 
 const AdminUserManagement: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -11,6 +20,7 @@ const AdminUserManagement: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,15 +28,18 @@ const AdminUserManagement: React.FC = () => {
   const [riskLevelFilter, setRiskLevelFilter] = useState<string>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  
   const [formData, setFormData] = useState({
     username: '',
     phone: '',
     id_card: '',
     real_name: '',
+    password: '123456', // 默认密码
     role: 'USER',
     risk_level: '稳健型',
-    status: 'ACTIVE',
-    initial_balance: 500000
+    status: 'ACTIVE'
   });
   const [amount, setAmount] = useState('');
   const [remark, setRemark] = useState('');
@@ -50,7 +63,6 @@ const AdminUserManagement: React.FC = () => {
 
   // 筛选用户列表
   const filteredUsers = users.filter(user => {
-    // 搜索条件
     const matchesSearch = !searchTerm || 
       user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.phone?.includes(searchTerm) ||
@@ -58,25 +70,45 @@ const AdminUserManagement: React.FC = () => {
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.id?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // 状态筛选
     const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
-    
-    // 风险等级筛选
     const matchesRiskLevel = riskLevelFilter === 'ALL' || user.risk_level === riskLevelFilter;
-    
-    // 角色筛选
     const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
     
     return matchesSearch && matchesStatus && matchesRiskLevel && matchesRole;
   });
 
+  // 分页计算
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // 当筛选条件变化时重置页码
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, riskLevelFilter, roleFilter]);
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await userService.createUser(formData as any);
-      alert('用户创建成功！');
+      await userService.createUser({
+        ...formData,
+        initial_balance: 0 // 新建用户资金固定为0
+      });
+      alert(`用户创建成功！\n\n登录账号：${formData.phone}\n登录密码：${formData.password}\n\n请妥善保管登录信息！`);
       setIsCreateModalOpen(false);
+      setFormData({
+        username: '',
+        phone: '',
+        id_card: '',
+        real_name: '',
+        password: '123456',
+        role: 'USER',
+        risk_level: '稳健型',
+        status: 'ACTIVE'
+      });
       fetchUsers();
     } catch (err: any) {
       alert(err.message || '创建失败');
@@ -90,7 +122,6 @@ const AdminUserManagement: React.FC = () => {
     if (!selectedUser) return;
     setSubmitting(true);
     try {
-      // 更新用户基础信息
       await userService.updateUser(selectedUser.id, {
         username: formData.username,
         phone: formData.phone,
@@ -100,24 +131,6 @@ const AdminUserManagement: React.FC = () => {
         role: formData.role,
         status: formData.status
       });
-      
-      // 更新用户资产信息 - 通过服务层进行，以确保安全验证
-      if (selectedUser.balance !== undefined || selectedUser.total_asset !== undefined || selectedUser.frozen_balance !== undefined) {
-        // 使用userService的adjustBalance方法来安全地更新用户资金
-        const currentAssets = users.find(u => u.id === selectedUser.id);
-        const balanceDiff = (selectedUser.balance || 0) - (currentAssets?.balance || 0);
-        const totalAssetDiff = (selectedUser.total_asset || 0) - (currentAssets?.total_asset || 0);
-        const frozenBalanceDiff = (selectedUser.frozen_balance || 0) - (currentAssets?.frozen_balance || 0);
-        
-        if (Math.abs(balanceDiff) > 0.01 || Math.abs(totalAssetDiff) > 0.01 || Math.abs(frozenBalanceDiff) > 0.01) {
-          // 根据差额进行相应的资金操作
-          if (balanceDiff > 0) {
-            await userService.adjustBalance(selectedUser.id, balanceDiff, 'RECHARGE', '管理员手动调整');
-          } else if (balanceDiff < 0) {
-            await userService.adjustBalance(selectedUser.id, Math.abs(balanceDiff), 'WITHDRAW', '管理员手动调整');
-          }
-        }
-      }
       
       alert('用户信息更新成功！');
       setIsEditModalOpen(false);
@@ -129,11 +142,11 @@ const AdminUserManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm('确定要删除该用户吗？此操作不可逆。')) return;
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!window.confirm(`确定要删除用户 "${username}" 吗？\n\n此操作将封禁该用户账户，不可逆！`)) return;
     try {
       await userService.deleteUser(userId);
-      alert('用户已删除');
+      alert('用户已封禁');
       fetchUsers();
     } catch (err: any) {
       alert(err.message || '删除失败');
@@ -141,12 +154,12 @@ const AdminUserManagement: React.FC = () => {
   };
 
   const handleResetPassword = async (userId: string) => {
-    if (!window.confirm('确定要重置该用户的密码吗？新密码将设置为：123456')) return;
+    if (!window.confirm('确定要重置该用户的密码吗？\n\n新密码将设置为：123456')) return;
     try {
       await userService.resetPassword(userId);
-      alert('密码已重置为123456');
+      alert('密码已重置为：123456');
     } catch (err: any) {
-      alert(err.message || '重置失败');
+      alert(err.message || '重置失败：' + err.message);
     }
   };
 
@@ -162,7 +175,7 @@ const AdminUserManagement: React.FC = () => {
       setSelectedUser(null);
       setAmount('');
       setRemark('');
-      fetchUsers(); // 刷新列表
+      fetchUsers();
     } catch (err: any) {
       alert(err.message || '操作失败');
     }
@@ -170,6 +183,9 @@ const AdminUserManagement: React.FC = () => {
 
   const toggleUserStatus = async (user: any) => {
     const newStatus = user.status === 'ACTIVE' ? 'BANNED' : 'ACTIVE';
+    const action = newStatus === 'BANNED' ? '封禁' : '解封';
+    if (!window.confirm(`确定要${action}用户 "${user.username}" 吗？`)) return;
+    
     try {
       await userService.updateUserStatus(user.id, newStatus);
       fetchUsers();
@@ -179,44 +195,108 @@ const AdminUserManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest">用户列表</h3>
-        <div className="flex gap-4">
-          <button className="industrial-button-secondary" onClick={fetchUsers}>
-            <ICONS.Market size={16} className={loading ? 'animate-spin' : ''} /> 刷新
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* 头部 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>用户管理</h3>
+          <p style={{ fontSize: '12px', color: '#94a3b8' }}>管理系统用户账户、权限和资金</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            onClick={fetchUsers}
+            style={{
+              padding: '8px 16px',
+              background: '#334155',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            {loading ? '⏳' : '🔄'} 刷新
           </button>
-          <button className="industrial-button-primary" onClick={() => {
-            setFormData({ username: '', phone: '', id_card: '', real_name: '', role: 'USER', risk_level: '稳健型', status: 'ACTIVE', initial_balance: 500000 });
-            setIsCreateModalOpen(true);
-          }}>
-            <ICONS.Plus size={16} /> 新建用户
+          <button 
+            onClick={() => {
+              setFormData({
+                username: '',
+                phone: '',
+                id_card: '',
+                real_name: '',
+                password: '123456',
+                role: 'USER',
+                risk_level: '稳健型',
+                status: 'ACTIVE'
+              });
+              setIsCreateModalOpen(true);
+            }}
+            style={{
+              padding: '8px 16px',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            ➕ 新建用户
           </button>
         </div>
       </div>
 
       {/* 搜索和筛选区域 */}
-      <div className="industrial-card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div style={{
+        background: '#1e293b',
+        borderRadius: '12px',
+        padding: '20px',
+        border: '1px solid #334155'
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
           {/* 搜索框 */}
-          <div className="md:col-span-2">
-            <div className="relative">
-              <ICONS.Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-industrial-400" />
-              <input
-                type="text"
-                placeholder="搜索用户名/手机/姓名/邮箱/ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="industrial-input pl-10 w-full"
-              />
-            </div>
+          <div style={{ gridColumn: 'span 2', position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="搜索用户名/手机号/姓名/邮箱/ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 36px',
+                background: '#0f172a',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
           </div>
           
           {/* 状态筛选 */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="industrial-input"
+            style={{
+              padding: '10px 12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '13px',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
           >
             <option value="ALL">全部状态</option>
             <option value="ACTIVE">已激活</option>
@@ -228,7 +308,16 @@ const AdminUserManagement: React.FC = () => {
           <select
             value={riskLevelFilter}
             onChange={(e) => setRiskLevelFilter(e.target.value)}
-            className="industrial-input"
+            style={{
+              padding: '10px 12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '13px',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
           >
             <option value="ALL">全部风险等级</option>
             <option value="保守型">保守型</option>
@@ -240,7 +329,16 @@ const AdminUserManagement: React.FC = () => {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="industrial-input"
+            style={{
+              padding: '10px 12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '13px',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
           >
             <option value="ALL">全部角色</option>
             <option value="USER">普通用户</option>
@@ -250,11 +348,11 @@ const AdminUserManagement: React.FC = () => {
         </div>
         
         {/* 筛选结果统计 */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-industrial-100">
-          <div className="flex items-center gap-4 text-xs text-industrial-400">
-            <span>共 <span className="font-black text-industrial-800">{users.length}</span> 个用户</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #334155' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: '#94a3b8' }}>
+            <span>共 <span style={{ fontWeight: 'bold', color: 'white' }}>{users.length}</span> 个用户</span>
             <span>|</span>
-            <span>筛选结果: <span className="font-black text-industrial-800">{filteredUsers.length}</span> 个</span>
+            <span>筛选结果: <span style={{ fontWeight: 'bold', color: 'white' }}>{filteredUsers.length}</span> 个</span>
           </div>
           {(searchTerm || statusFilter !== 'ALL' || riskLevelFilter !== 'ALL' || roleFilter !== 'ALL') && (
             <button
@@ -264,7 +362,14 @@ const AdminUserManagement: React.FC = () => {
                 setRiskLevelFilter('ALL');
                 setRoleFilter('ALL');
               }}
-              className="text-xs text-blue-600 font-bold hover:underline"
+              style={{
+                fontSize: '12px',
+                color: '#3b82f6',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
             >
               清除筛选
             </button>
@@ -272,62 +377,137 @@ const AdminUserManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="industrial-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+      {/* 用户列表 */}
+      <div style={{
+        background: '#1e293b',
+        borderRadius: '12px',
+        border: '1px solid #334155',
+        overflow: 'hidden'
+      }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
-              <tr className="bg-industrial-50 border-b border-industrial-200">
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">用户ID</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">用户信息</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">账户余额</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">总资产</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">状态</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">风险等级</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">角色</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">注册时间</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest text-right">操作</th>
+              <tr style={{ background: '#0f172a' }}>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>用户ID</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>登录账号</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>用户信息</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>账户余额</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>总资产</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>状态</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>风险等级</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>角色</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155', textAlign: 'right' }}>操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-industrial-100">
+            <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">加载中...</td></tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">
-                  {users.length === 0 ? '暂无用户' : '没有匹配的筛选结果'}
-                </td></tr>
-              ) : filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-industrial-50 transition-colors">
-                  <td className="px-6 py-4 text-xs font-black text-industrial-800 truncate max-w-[120px]">{user.id}</td>
-                  <td className="px-6 py-4">
-                    <p className="text-xs font-bold text-industrial-700">{user.username || '未设置'}</p>
-                    <p className="text-[9px] text-industrial-400 font-mono">{user.real_name || '未填写姓名'}</p>
-                    <p className="text-[9px] text-industrial-400 font-mono">{user.phone}</p>
+                <tr>
+                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    加载中...
                   </td>
-                  <td className="px-6 py-4 text-xs font-black text-industrial-900">¥{parseFloat(user.balance).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-xs font-black text-industrial-900">¥{parseFloat(user.total_asset).toLocaleString()}</td>
-                  <td className="px-6 py-4">
+                </tr>
+              ) : paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    {users.length === 0 ? '暂无用户' : '没有匹配的筛选结果'}
+                  </td>
+                </tr>
+              ) : paginatedUsers.map((user) => (
+                <tr key={user.id} style={{ borderBottom: '1px solid #334155' }}>
+                  <td style={{ padding: '14px 16px', fontSize: '11px', color: '#64748b', fontFamily: 'monospace', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.id?.substring(0, 8)}...
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <span style={{ 
+                      fontSize: '12px', 
+                      fontWeight: 'bold', 
+                      color: '#22c55e',
+                      background: '#22c55e20',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      {user.phone || user.email || '未设置'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>{user.username || '未设置'}</p>
+                    <p style={{ fontSize: '11px', color: '#64748b' }}>{user.real_name || '未填写姓名'}</p>
+                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 'bold', color: 'white' }}>
+                    ¥{Number(user.balance || 0).toLocaleString()}
+                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 'bold', color: 'white' }}>
+                    ¥{Number(user.total_asset || 0).toLocaleString()}
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
                     <button 
                       onClick={() => toggleUserStatus(user)}
-                      className={`text-[9px] font-black px-2 py-0.5 rounded cursor-pointer transition-opacity hover:opacity-80 ${
-                        user.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                      }`}
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        padding: '4px 10px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: user.status === 'ACTIVE' ? '#22c55e20' : '#ef444420',
+                        color: user.status === 'ACTIVE' ? '#22c55e' : '#ef4444'
+                      }}
                     >
                       {user.status === 'ACTIVE' ? '已激活' : '已封禁'}
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-[10px] text-industrial-400 font-bold uppercase">{user.risk_level}</td>
-                  <td className="px-6 py-4 text-[10px] text-industrial-400 font-bold uppercase">{user.role}</td>
-                  <td className="px-6 py-4 text-[10px] text-industrial-400">
-                    {user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '-'}
+                  <td style={{ padding: '14px 16px' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      color: RISK_LEVEL_INFO[user.risk_level as keyof typeof RISK_LEVEL_INFO]?.color || '#64748b'
+                    }}>
+                      {user.risk_level}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex gap-3 justify-end">
+                  <td style={{ padding: '14px 16px' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: user.role === 'ADMIN' ? '#f9731620' : user.role === 'OPERATOR' ? '#3b82f620' : '#64748b20',
+                      color: user.role === 'ADMIN' ? '#f97316' : user.role === 'OPERATOR' ? '#3b82f6' : '#94a3b8'
+                    }}>
+                      {user.role === 'ADMIN' ? '管理员' : user.role === 'OPERATOR' ? '操作员' : '用户'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button 
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setIsDetailModalOpen(true);
+                        }}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          color: '#94a3b8',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        查看
+                      </button>
                       <button 
                         onClick={() => {
                           setSelectedUser(user);
                           setIsFundModalOpen(true);
                         }}
-                        className="text-[10px] font-black text-emerald-600 uppercase hover:underline"
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          color: '#22c55e',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
                       >
                         上下分
                       </button>
@@ -339,23 +519,36 @@ const AdminUserManagement: React.FC = () => {
                             phone: user.phone || '',
                             id_card: user.id_card || '',
                             real_name: user.real_name || '',
+                            password: '',
                             role: user.role || 'USER',
                             risk_level: user.risk_level || '稳健型',
-                            status: user.status || 'ACTIVE',
-
-                            initial_balance: 0
+                            status: user.status || 'ACTIVE'
                           });
                           setIsEditModalOpen(true);
                         }}
-                        className="text-[10px] font-black text-blue-600 uppercase hover:underline"
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          color: '#3b82f6',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
                       >
                         编辑
                       </button>
                       <button 
-                        onClick={() => handleResetPassword(user.id)}
-                        className="text-[10px] font-black text-orange-600 uppercase hover:underline"
+                        onClick={() => handleDeleteUser(user.id, user.username)}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          color: '#ef4444',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
                       >
-                        重置
+                        删除
                       </button>
                     </div>
                   </td>
@@ -364,62 +557,388 @@ const AdminUserManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* 分页 */}
+        {filteredUsers.length > ITEMS_PER_PAGE && (
+          <div style={{ padding: '16px', borderTop: '1px solid #334155' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Create User Modal */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-industrial-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      {/* 查看用户详情弹窗 */}
+      {isDetailModalOpen && selectedUser && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="industrial-card w-full max-w-lg p-8 bg-white"
+            style={{
+              background: '#1e293b',
+              borderRadius: '12px',
+              border: '1px solid #334155',
+              width: '100%',
+              maxWidth: '560px',
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}
           >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">新建用户</h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-industrial-400 hover:text-industrial-800">
-                <ICONS.Plus className="rotate-45" size={24} />
+            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>用户详情</h3>
+              <button onClick={() => setIsDetailModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <div style={{ padding: '20px' }}>
+              {/* 登录信息 */}
+              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#22c55e', marginBottom: '12px' }}>🔐 登录信息</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>登录账号</p>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{selectedUser.phone || selectedUser.email || '未设置'}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>默认密码</p>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#f97316' }}>123456</p>
+                  </div>
+                </div>
+                <p style={{ fontSize: '10px', color: '#64748b', marginTop: '12px' }}>⚠️ 首次登录后请提示用户修改密码</p>
+              </div>
+              
+              {/* 基本信息 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>用户ID</p>
+                  <p style={{ fontSize: '12px', color: 'white', fontFamily: 'monospace' }}>{selectedUser.id}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>用户名</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedUser.username || '未设置'}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>真实姓名</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedUser.real_name || '未填写'}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>手机号</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedUser.phone || '未绑定'}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>邮箱</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedUser.email || '未绑定'}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>身份证号</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedUser.id_card || '未填写'}</p>
+                </div>
+              </div>
+              
+              {/* 资产信息 */}
+              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: '#3b82f6', marginBottom: '12px' }}>💰 资产信息</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  <div>
+                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>账户余额</p>
+                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>¥{Number(selectedUser.balance || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>总资产</p>
+                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>¥{Number(selectedUser.total_asset || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>冻结资金</p>
+                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#f97316' }}>¥{Number(selectedUser.frozen_balance || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 风险等级说明 */}
+              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: RISK_LEVEL_INFO[selectedUser.risk_level as keyof typeof RISK_LEVEL_INFO]?.color, marginBottom: '8px' }}>
+                  📊 风险等级：{selectedUser.risk_level}
+                </h4>
+                <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: '1.6' }}>
+                  {RISK_LEVEL_INFO[selectedUser.risk_level as keyof typeof RISK_LEVEL_INFO]?.desc}
+                </p>
+              </div>
+              
+              {/* 状态与角色 */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ flex: 1, background: '#0f172a', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>状态</p>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: selectedUser.status === 'ACTIVE' ? '#22c55e' : '#ef4444'
+                  }}>
+                    {selectedUser.status === 'ACTIVE' ? '✓ 已激活' : '✕ 已封禁'}
+                  </span>
+                </div>
+                <div style={{ flex: 1, background: '#0f172a', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>角色</p>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>
+                    {selectedUser.role === 'ADMIN' ? '管理员' : selectedUser.role === 'OPERATOR' ? '操作员' : '普通用户'}
+                  </span>
+                </div>
+              </div>
+              
+              <p style={{ fontSize: '11px', color: '#64748b', textAlign: 'center' }}>
+                注册时间：{selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString('zh-CN') : '-'}
+              </p>
+            </div>
+            
+            <div style={{ padding: '16px', borderTop: '1px solid #334155', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => handleResetPassword(selectedUser.id)}
+                style={{
+                  padding: '10px 16px',
+                  background: '#f97316',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                重置密码
+              </button>
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  setIsFundModalOpen(true);
+                }}
+                style={{
+                  padding: '10px 16px',
+                  background: '#22c55e',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                资金操作
+              </button>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                style={{
+                  padding: '10px 16px',
+                  background: '#334155',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                关闭
               </button>
             </div>
+          </motion.div>
+        </div>
+      )}
 
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">用户名</label>
-                  <input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="industrial-input" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">手机号</label>
-                  <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="industrial-input" />
+      {/* 新建用户弹窗 */}
+      {isCreateModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              background: '#1e293b',
+              borderRadius: '12px',
+              border: '1px solid #334155',
+              width: '100%',
+              maxWidth: '480px'
+            }}
+          >
+            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>新建用户</h3>
+              <button onClick={() => setIsCreateModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleCreateUser} style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ background: '#0f172a', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '11px', color: '#f97316', marginBottom: '4px' }}>⚠️ 重要提示</p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8' }}>新建用户资金默认为 <span style={{ color: '#22c55e', fontWeight: 'bold' }}>¥0</span>，如需调整请创建后使用"上下分"功能</p>
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">身份证号</label>
-                <input required type="text" value={formData.id_card} onChange={e => setFormData({...formData, id_card: e.target.value})} className="industrial-input" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">角色</label>
-                  <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="industrial-input">
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>用户名 *</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.username} 
+                    onChange={e => setFormData({...formData, username: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>手机号（登录账号） *</label>
+                  <input 
+                    required 
+                    type="tel" 
+                    value={formData.phone} 
+                    onChange={e => setFormData({...formData, phone: e.target.value})} 
+                    placeholder="将作为登录账号"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>真实姓名</label>
+                <input 
+                  type="text" 
+                  value={formData.real_name} 
+                  onChange={e => setFormData({...formData, real_name: e.target.value})} 
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: 'white',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>身份证号</label>
+                <input 
+                  type="text" 
+                  value={formData.id_card} 
+                  onChange={e => setFormData({...formData, id_card: e.target.value})} 
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: 'white',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>角色</label>
+                  <select 
+                    value={formData.role} 
+                    onChange={e => setFormData({...formData, role: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <option value="USER">普通用户</option>
                     <option value="OPERATOR">操作员</option>
                     <option value="ADMIN">管理员</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">风险等级</label>
-                  <select value={formData.risk_level} onChange={e => setFormData({...formData, risk_level: e.target.value})} className="industrial-input">
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>风险等级</label>
+                  <select 
+                    value={formData.risk_level} 
+                    onChange={e => setFormData({...formData, risk_level: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <option value="保守型">保守型</option>
                     <option value="稳健型">稳健型</option>
                     <option value="积极型">积极型</option>
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">初始资金 (CNY)</label>
-                <input type="number" value={formData.initial_balance} onChange={e => setFormData({...formData, initial_balance: Number(e.target.value)})} className="industrial-input" />
+              
+              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>初始密码</p>
+                <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#f97316' }}>123456</p>
+                <p style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>用户首次登录后请提示修改密码</p>
               </div>
 
-              <button disabled={submitting} type="submit" className="w-full mt-4 industrial-button-primary">
+              <button 
+                disabled={submitting} 
+                type="submit" 
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: submitting ? '#334155' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  cursor: submitting ? 'not-allowed' : 'pointer'
+                }}
+              >
                 {submitting ? '创建中...' : '确认创建'}
               </button>
             </form>
@@ -427,56 +946,162 @@ const AdminUserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Edit User Modal */}
+      {/* 编辑用户弹窗 */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-industrial-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="industrial-card w-full max-w-lg p-8 bg-white"
+            style={{
+              background: '#1e293b',
+              borderRadius: '12px',
+              border: '1px solid #334155',
+              width: '100%',
+              maxWidth: '480px'
+            }}
           >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">编辑用户</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-industrial-400 hover:text-industrial-800">
-                <ICONS.Plus className="rotate-45" size={24} />
-              </button>
+            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>编辑用户</h3>
+              <button onClick={() => setIsEditModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <form onSubmit={handleUpdateUser} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleUpdateUser} style={{ padding: '20px' }}>
+              {/* 登录信息提示 */}
+              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>🔐 登录账号</p>
+                <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#22c55e' }}>{selectedUser?.phone || selectedUser?.email || '未设置'}</p>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">用户名</label>
-                  <input required type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="industrial-input" />
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>用户名</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.username} 
+                    onChange={e => setFormData({...formData, username: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">真实姓名</label>
-                  <input type="text" value={formData.real_name} onChange={e => setFormData({...formData, real_name: e.target.value})} className="industrial-input" />
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>真实姓名</label>
+                  <input 
+                    type="text" 
+                    value={formData.real_name} 
+                    onChange={e => setFormData({...formData, real_name: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  />
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">手机号</label>
-                  <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="industrial-input" />
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>手机号</label>
+                  <input 
+                    required 
+                    type="tel" 
+                    value={formData.phone} 
+                    onChange={e => setFormData({...formData, phone: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">身份证号</label>
-                  <input type="text" value={formData.id_card} onChange={e => setFormData({...formData, id_card: e.target.value})} className="industrial-input" />
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>身份证号</label>
+                  <input 
+                    type="text" 
+                    value={formData.id_card} 
+                    onChange={e => setFormData({...formData, id_card: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  />
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">角色</label>
-                  <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="industrial-input">
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>角色</label>
+                  <select 
+                    value={formData.role} 
+                    onChange={e => setFormData({...formData, role: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <option value="USER">普通用户</option>
                     <option value="OPERATOR">操作员</option>
                     <option value="ADMIN">管理员</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">风险等级</label>
-                  <select value={formData.risk_level} onChange={e => setFormData({...formData, risk_level: e.target.value})} className="industrial-input">
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>风险等级</label>
+                  <select 
+                    value={formData.risk_level} 
+                    onChange={e => setFormData({...formData, risk_level: e.target.value})} 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: '#0f172a',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontSize: '13px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <option value="保守型">保守型</option>
                     <option value="稳健型">稳健型</option>
                     <option value="积极型">积极型</option>
@@ -484,60 +1109,63 @@ const AdminUserManagement: React.FC = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">用户状态</label>
-                  <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="industrial-input">
-                    <option value="ACTIVE">活跃</option>
-                    <option value="BANNED">封禁</option>
-                    <option value="PENDING">待审核</option>
-                  </select>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>用户状态</label>
+                <select 
+                  value={formData.status} 
+                  onChange={e => setFormData({...formData, status: e.target.value})} 
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: 'white',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="ACTIVE">活跃</option>
+                  <option value="BANNED">封禁</option>
+                  <option value="PENDING">待审核</option>
+                </select>
+              </div>
+
+              {/* 当前资产信息 */}
+              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>💰 当前资产（资金变更请使用"上下分"功能）</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                  <div>
+                    <p style={{ fontSize: '10px', color: '#64748b' }}>账户余额</p>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>¥{Number(selectedUser?.balance || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '10px', color: '#64748b' }}>总资产</p>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>¥{Number(selectedUser?.total_asset || 0).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '10px', color: '#64748b' }}>冻结资金</p>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#f97316' }}>¥{Number(selectedUser?.frozen_balance || 0).toLocaleString()}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">账户余额</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    value={selectedUser?.balance || 0} 
-                    onChange={e => {
-                      const newBalance = parseFloat(e.target.value) || 0;
-                      setSelectedUser((prev: any) => prev ? {...prev, balance: newBalance} : null);
-                    }} 
-                    className="industrial-input font-mono" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">总资产</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    value={selectedUser?.total_asset || 0} 
-                    onChange={e => {
-                      const newTotalAsset = parseFloat(e.target.value) || 0;
-                      setSelectedUser((prev: any) => prev ? {...prev, total_asset: newTotalAsset} : null);
-                    }} 
-                    className="industrial-input font-mono" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">冻结资金</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    value={selectedUser?.frozen_balance || 0} 
-                    onChange={e => {
-                      const newFrozenBalance = parseFloat(e.target.value) || 0;
-                      setSelectedUser((prev: any) => prev ? {...prev, frozen_balance: newFrozenBalance} : null);
-                    }} 
-                    className="industrial-input font-mono" 
-                  />
-                </div>
-              </div>
-
-              <button disabled={submitting} type="submit" className="w-full mt-4 industrial-button-primary">
+              <button 
+                disabled={submitting} 
+                type="submit" 
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: submitting ? '#334155' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  cursor: submitting ? 'not-allowed' : 'pointer'
+                }}
+              >
                 {submitting ? '保存中...' : '确认修改'}
               </button>
             </form>
@@ -545,61 +1173,117 @@ const AdminUserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Fund Operation Modal */}
+      {/* 上下分弹窗 */}
       {isFundModalOpen && selectedUser && (
-        <div className="fixed inset-0 bg-industrial-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="industrial-card w-full max-w-md p-8 bg-white"
+            style={{
+              background: '#1e293b',
+              borderRadius: '12px',
+              border: '1px solid #334155',
+              width: '100%',
+              maxWidth: '400px'
+            }}
           >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">资金操作 (上下分)</h3>
-              <button onClick={() => setIsFundModalOpen(false)} className="text-industrial-400 hover:text-industrial-800">
-                <ICONS.Plus className="rotate-45" size={24} />
-              </button>
+            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>资金操作 (上下分)</h3>
+              <button onClick={() => setIsFundModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div className="space-y-6">
-              <div className="p-4 bg-industrial-50 rounded-lg border border-industrial-100">
-                <p className="text-[10px] font-black text-industrial-400 uppercase mb-1">当前用户</p>
-                <p className="text-sm font-black text-industrial-800">{selectedUser.username || '未设置'} ({selectedUser.id})</p>
-                <p className="text-xs font-bold text-industrial-600 mt-1">当前余额: ¥{parseFloat(selectedUser.balance).toLocaleString()}</p>
+            <div style={{ padding: '20px' }}>
+              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>当前用户</p>
+                <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{selectedUser.username || '未设置'}</p>
+                <p style={{ fontSize: '11px', color: '#64748b' }}>ID: {selectedUser.id?.substring(0, 8)}...</p>
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #334155' }}>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>当前余额: </span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#22c55e' }}>¥{Number(selectedUser.balance || 0).toLocaleString()}</span>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">操作金额</label>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>操作金额</label>
                 <input 
                   type="number" 
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="请输入金额"
-                  className="industrial-input"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: 'white',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">备注信息</label>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>备注信息</label>
                 <textarea 
                   value={remark}
                   onChange={(e) => setRemark(e.target.value)}
                   placeholder="请输入操作备注"
-                  className="industrial-input h-24 resize-none"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: 'white',
+                    fontSize: '13px',
+                    outline: 'none',
+                    height: '80px',
+                    resize: 'none'
+                  }}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <button 
                   onClick={() => handleFundOperation('RECHARGE')}
-                  className="industrial-button-primary bg-emerald-600 hover:bg-emerald-700"
+                  style={{
+                    padding: '12px',
+                    background: '#22c55e',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
                 >
-                  确认上分
+                  ⬆️ 确认上分
                 </button>
                 <button 
                   onClick={() => handleFundOperation('WITHDRAW')}
-                  className="industrial-button-primary bg-accent-red hover:bg-accent-dark-red"
+                  style={{
+                    padding: '12px',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
                 >
-                  确认下分
+                  ⬇️ 确认下分
                 </button>
               </div>
             </div>

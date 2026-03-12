@@ -45,7 +45,7 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-8 no-scrollbar pb-10">
-        <div className="glass-card p-5 flex items-center gap-4">
+        <div className="galaxy-card p-5 flex items-center gap-4">
           <StockIcon name={stock.name} logoUrl={stock.logoUrl} />
           <div>
             <h3 className="text-sm font-black text-[var(--color-text-primary)]">{stock.name}</h3>
@@ -56,11 +56,11 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
         <div className="flex p-1 bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)]">
            <button 
              onClick={() => setType('TP_SL')}
-             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${type === 'TP_SL' ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)]'}`}
+             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${type === 'TP_SL' ? 'bg-[#DC2626] text-white' : 'text-[var(--color-text-muted)]'}`}
            >止盈止损 (TP/SL)</button>
            <button 
              onClick={() => setType('GRID')}
-             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${type === 'GRID' ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)]'}`}
+             className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${type === 'GRID' ? 'bg-[#DC2626] text-white' : 'text-[var(--color-text-muted)]'}`}
            >网格交易 (Grid)</button>
         </div>
 
@@ -73,9 +73,9 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
                    type="number" 
                    value={stopLoss} 
                    onChange={(e) => setStopLoss(e.target.value)}
-                   className="flex-1 bg-transparent font-mono font-black text-sm text-[#FF6B6B] outline-none"
+                   className="flex-1 bg-transparent font-mono font-black text-sm text-[#059669] outline-none"
                  />
-                 <span className="text-[10px] font-black text-[#FF6B6B]">-5%</span>
+                 <span className="text-[10px] font-black text-[#059669]">-5%</span>
               </div>
             </div>
             <div className="space-y-3">
@@ -85,9 +85,9 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
                    type="number" 
                    value={takeProfit} 
                    onChange={(e) => setTakeProfit(e.target.value)}
-                   className="flex-1 bg-transparent font-mono font-black text-sm text-[#00D4AA] outline-none"
+                   className="flex-1 bg-transparent font-mono font-black text-sm text-[#DC2626] outline-none"
                  />
-                 <span className="text-[10px] font-black text-[#00D4AA]">+10%</span>
+                 <span className="text-[10px] font-black text-[#DC2626]">+10%</span>
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
                 className="w-full bg-[var(--color-surface)] h-14 px-4 rounded-2xl border border-[var(--color-border)] font-mono font-black text-sm outline-none"
               />
             </div>
-            <div className="p-4 bg-[#00D4AA]/5 border border-[#00D4AA]/20 rounded-2xl text-[10px] text-[#00D4AA] leading-relaxed italic">
+            <div className="p-4 bg-[#DC2626]/5 border border-[#DC2626]/20 rounded-2xl text-[10px] text-[#DC2626] leading-relaxed italic">
                “网格交易将在价格震荡时自动执行‘低吸高抛’。请确保账户中有足够的现金和持仓作为网格底仓。”
             </div>
           </div>
@@ -121,7 +121,7 @@ const ConditionalOrderPanel: React.FC<ConditionalOrderPanelProps> = ({ onBack, s
         <div className="pt-6">
            <button 
              onClick={handleSubmit}
-             className="w-full py-5 rounded-3xl bg-[#00D4AA] text-[#0A1628] font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+             className="w-full py-5 rounded-3xl bg-[#DC2626] text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
            >
              <ICONS.Zap size={18} /> 部署条件单
            </button>

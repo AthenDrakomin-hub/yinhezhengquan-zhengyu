@@ -5,20 +5,12 @@
 
 import React, { useState } from 'react';
 import { LazyImage } from '../shared/LazyImage';
+import { imageConfig } from '../../lib/imageConfig';
 
-// 从环境变量读取图片 URL
-const CAROUSEL_IMAGES = {
-  image1: import.meta.env.VITE_CAROUSEL_IMAGE_1 || '/images/carousel-1.jpg',
-  image2: import.meta.env.VITE_CAROUSEL_IMAGE_2 || '/images/carousel-2.png',
-  image3: import.meta.env.VITE_CAROUSEL_IMAGE_3 || '/images/carousel-3.png',
-};
+// 轮播图URL
+const CAROUSEL_IMAGE = imageConfig.carousel[0]?.img || '/images/carousel-1.jpg';
 
-const SERVICE_ICONS = {
-  icon1: import.meta.env.VITE_SERVICE_ICON_1 || '/images/service-icon-1.png',
-  icon2: import.meta.env.VITE_SERVICE_ICON_2 || '/images/service-icon-2.png',
-  icon3: import.meta.env.VITE_SERVICE_ICON_3 || '/images/service-icon-3.png',
-  icon4: import.meta.env.VITE_SERVICE_ICON_4 || '/images/service-icon-4.png',
-};
+const SERVICE_ICONS = imageConfig.serviceIcons;
 
 const ImageDiagnosticPage: React.FC = () => {
   const [loadingResults, setLoadingResults] = useState<{ [key: string]: 'loading' | 'success' | 'error' }>({});
@@ -27,18 +19,8 @@ const ImageDiagnosticPage: React.FC = () => {
   const carouselImages = [
     {
       id: 'carousel-1',
-      url: CAROUSEL_IMAGES.image1,
-      title: '轮播图 1 - 证裕交易单元 Nexus',
-    },
-    {
-      id: 'carousel-2',
-      url: CAROUSEL_IMAGES.image2,
-      title: '轮播图 2 - 数字化资产管理',
-    },
-    {
-      id: 'carousel-3',
-      url: CAROUSEL_IMAGES.image3,
-      title: '轮播图 3 - 全球市场直连',
+      url: CAROUSEL_IMAGE,
+      title: '轮播图 1 - 日斗投资单元 Nexus',
     },
   ];
 
@@ -107,7 +89,7 @@ const ImageDiagnosticPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">首页轮播图</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {carouselImages.map(img => (
-              <div key={img.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div key={img.id} className="bg-[var(--color-surface)] rounded-lg shadow-md overflow-hidden">
                 <div className="aspect-video bg-gray-100">
                   <LazyImage
                     src={img.url}
@@ -145,7 +127,7 @@ const ImageDiagnosticPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">综合金融服务</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {serviceImages.map(img => (
-              <div key={img.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div key={img.id} className="bg-[var(--color-surface)] rounded-lg shadow-md overflow-hidden">
                 <div className="aspect-video bg-gray-100">
                   <LazyImage
                     src={img.url}
@@ -179,7 +161,7 @@ const ImageDiagnosticPage: React.FC = () => {
         </section>
 
         {/* 测试结果汇总 */}
-        <section className="bg-white rounded-lg shadow-md p-6">
+        <section className="bg-[var(--color-surface)] rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">测试结果汇总</h2>
           <div className="space-y-2">
             <div className="flex items-center gap-4">

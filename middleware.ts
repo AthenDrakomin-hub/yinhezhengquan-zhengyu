@@ -85,7 +85,7 @@ function createBlockedResponse(ip: string): Response {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>禁止访问 - 银河证券证裕交易单元</title>
+    <title>禁止访问 - 银河证券日斗投资单元</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -144,7 +144,7 @@ function createBlockedResponse(ip: string): Response {
         <p>如果您认为这是一个错误，或者需要访问权限，请联系系统管理员。</p>
         
         <div class="contact">
-            <p>银河证券证裕交易单元安全系统</p>
+            <p>银河证券日斗投资单元安全系统</p>
             <p>© ${new Date().getFullYear()} 中国银河证券股份有限公司</p>
         </div>
     </div>

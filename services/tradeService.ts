@@ -131,6 +131,16 @@ export const tradeService = {
     // 生成幂等性标识（如果客户端未提供）
     const transactionId = requestId || `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // 将 TradeType 枚举转换为 Edge Function 期望的英文类型
+    const tradeTypeMap: Record<TradeType, string> = {
+      [TradeType.BUY]: 'BUY',
+      [TradeType.SELL]: 'SELL',
+      [TradeType.IPO]: 'IPO',
+      [TradeType.BLOCK]: 'BLOCK_TRADE',
+      [TradeType.LIMIT_UP]: 'LIMIT_UP'
+    };
+    const normalizedTradeType = tradeTypeMap[type] || type;
+
     // 根据交易类型进行数据验证
     try {
       if (type === TradeType.IPO) {
@@ -203,7 +213,7 @@ export const tradeService = {
     const { data, error } = await supabase.functions.invoke('create-trade-order', {
       body: {
         market_type: marketType,
-        trade_type: type,
+        trade_type: normalizedTradeType,
         stock_code: symbol,
         stock_name: name,
         price,
@@ -256,26 +266,30 @@ export const tradeService = {
   /**
    * 获取交易记录
    */
-  async getTransactions(userId?: string, limit = 20) {
+  async getTransactions(userId?: string, limit = 20, page = 1): Promise<{ data: any[]; total: number }> {
+    const offset = (page - 1) * limit;
+    
     let query = supabase
       .from('trades')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
 
     if (userId) {
       query = query.eq('user_id', userId);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query.range(offset, offset + limit - 1);
 
     if (error) throw error;
     
     // 计算交易金额（如果数据库中没有amount字段）
-    return data.map(item => ({
-      ...item,
-      amount: item.amount || (Number(item.price) * Number(item.quantity))
-    }));
+    return {
+      data: (data || []).map(item => ({
+        ...item,
+        amount: item.amount || (Number(item.price) * Number(item.quantity))
+      })),
+      total: count || 0
+    };
   },
 
   /**
@@ -400,8 +414,12 @@ export const tradeService = {
     action: 'approved' | 'rejected',
     remark?: string
   ) {
+    // Edge Function 期望的 action 是 'APPROVED' 或 'REJECTED'
+    const normalizedAction = action.toUpperCase() === 'APPROVED' ? 'APPROVED' : 
+                             action.toUpperCase() === 'REJECTED' ? 'REJECTED' : action.toUpperCase();
+    
     const { data, error } = await supabase.functions.invoke('approve-trade-order', {
-      body: { order_id: orderId, action, remark }
+      body: { trade_id: orderId, action: normalizedAction, remark }
     });
 
     if (error) throw new Error(error.message);
@@ -414,7 +432,7 @@ export const tradeService = {
    */
   async cancelTradeOrder(orderId: string) {
     const { data, error } = await supabase.functions.invoke('cancel-trade-order', {
-      body: { order_id: orderId }
+      body: { trade_id: orderId }
     });
 
     if (error) throw new Error(error.message);

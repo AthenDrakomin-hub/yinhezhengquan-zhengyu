@@ -38,7 +38,7 @@ const ComplianceCenter: React.FC = () => {
 
   return (
     <div className="space-y-4 animate-slide-up">
-       <div className="glass-card p-4 border-[var(--color-border)] shadow-sm space-y-4">
+       <div className="galaxy-card p-4 border-[var(--color-border)] shadow-sm space-y-4">
           <div className="flex justify-between items-center">
              <h3 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">投资者身份信息</h3>
              <span className="text-[10px] font-bold text-[#00D4AA] bg-[#00D4AA]/10 px-2 py-0.5 rounded">已实名认证</span>
@@ -58,7 +58,7 @@ const ComplianceCenter: React.FC = () => {
           </button>
        </div>
 
-       <div className="glass-card p-4 border-[var(--color-border)] shadow-sm">
+       <div className="galaxy-card p-4 border-[var(--color-border)] shadow-sm">
           <h3 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest mb-3">服务工单与纠纷处理</h3>
           {loading ? (
             <div className="text-center py-8 text-[var(--color-text-muted)] text-xs">加载中...</div>

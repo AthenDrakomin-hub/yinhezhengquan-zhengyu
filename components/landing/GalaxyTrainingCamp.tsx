@@ -12,15 +12,17 @@ import {
   FaHandshake,
   FaRocket,
   FaSearch,
+  FaHome,
 } from 'react-icons/fa';
+import { imageConfig } from '../../lib/imageConfig';
 import TrainingCampChat from './TrainingCampChat';
 import WebsiteDisclaimerModal from './WebsiteDisclaimerModal';
 
 // 从环境变量读取图片 URL
 const TRAINING_BG_1 = import.meta.env.VITE_TRAINING_BG_1 || '/images/training-bg-1.png';
-const TRAINING_LOGO = import.meta.env.VITE_TRAINING_LOGO || '/logo.png';
+const TRAINING_LOGO = imageConfig.logo.fullUrl;
 const TRAINING_BG_2 = import.meta.env.VITE_TRAINING_BG_2 || '/images/training-bg-2.png';
-const JOIN_US_BG = import.meta.env.VITE_JOIN_US_BG || 'https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/public/tupian/jiaruwomen-1.png';
+const JOIN_US_BG = imageConfig.training.joinUs;
 
 const GalaxyTrainingCamp: React.FC = () => {
   // 控制网站声明弹窗显示
@@ -160,6 +162,13 @@ const GalaxyTrainingCamp: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
+              <a
+                href="/"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+              >
+                <FaHome className="text-sm" />
+                <span className="text-sm font-medium">返回首页</span>
+              </a>
               <img src={TRAINING_LOGO} alt="银河证券" className="h-10 w-auto" />
               <span className="text-xl font-bold text-[#1F2937]">银河特训营</span>
             </div>
@@ -219,7 +228,7 @@ const GalaxyTrainingCamp: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-5xl mx-auto">
             <img 
-              src="https://rfnrosyfeivcbkimjlwo.supabase.co/storage/v1/object/public/tupian/jigou.png" 
+              src={imageConfig.jigou} 
               alt="联合发起机构" 
               className="w-full h-auto rounded-xl shadow-lg"
               onError={(e) => {

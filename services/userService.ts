@@ -2,6 +2,87 @@ import { supabase } from '../lib/supabase';
 
 export const userService = {
   /**
+   * 获取当前登录用户的资料
+   */
+  async getCurrentUserProfile() {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('用户未登录');
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    return {
+      id: profile.id,
+      email: user.email || profile.email || '',
+      username: profile.username || '',
+      phone: profile.phone || '',
+      real_name: profile.real_name || '',
+      id_card: profile.id_card || '',
+      risk_level: profile.risk_level || 'C3',
+      role: profile.role || 'USER',
+      status: profile.status || 'ACTIVE',
+      avatar_url: profile.avatar_url || '',
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
+    };
+  },
+
+  /**
+   * 更新当前用户资料（客户端使用）
+   */
+  async updateCurrentUserProfile(data: {
+    username?: string;
+    phone?: string;
+    email?: string;
+    nickname?: string;
+  }) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new Error('用户未登录');
+    }
+
+    // 更新 profiles 表
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (data.username !== undefined) updateData.username = data.username;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.nickname !== undefined) updateData.nickname = data.nickname;
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (profileError) throw profileError;
+
+    // 如果需要更新邮箱，调用 Supabase Auth API
+    if (data.email && data.email !== user.email) {
+      const { error: emailError } = await supabase.auth.updateUser({
+        email: data.email
+      });
+      if (emailError) {
+        console.warn('邮箱更新需要验证:', emailError.message);
+        // 邮箱更新需要验证，不抛出错误
+      }
+    }
+
+    return profile;
+  },
+
+  /**
    * 获取所有用户（仅管理员）
    */
   async getAllUsers() {
@@ -388,6 +469,100 @@ export const userService = {
     }
 
     return data && data.length > 0;
+  },
+
+  /**
+   * 获取用户安全设置
+   */
+  async getSecuritySettings() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('user_configs')
+        .select('config_value')
+        .eq('user_id', user.id)
+        .eq('config_type', 'security_settings')
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 表示没有找到记录
+        console.error('获取安全设置失败:', error);
+      }
+
+      return data?.config_value || {
+        twoFactorEnabled: true,
+        lastPasswordChange: new Date().toISOString().split('T')[0]
+      };
+    } catch (error) {
+      console.error('获取安全设置失败:', error);
+      return {
+        twoFactorEnabled: true,
+        lastPasswordChange: new Date().toISOString().split('T')[0]
+      };
+    }
+  },
+
+  /**
+   * 更新用户安全设置
+   */
+  async updateSecuritySettings(settings: { twoFactorEnabled?: boolean }) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('用户未登录');
+    }
+
+    const { error } = await supabase
+      .from('user_configs')
+      .upsert({
+        user_id: user.id,
+        config_type: 'security_settings',
+        config_value: settings,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('更新安全设置失败:', error);
+      throw error;
+    }
+
+    return { success: true };
+  },
+
+  /**
+   * 修改用户密码
+   */
+  async updatePassword(currentPassword: string, newPassword: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('用户未登录');
+    }
+
+    // Supabase 提供的密码更新方法
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      console.error('修改密码失败:', error);
+      throw new Error(error.message || '密码修改失败');
+    }
+
+    // 更新密码修改时间
+    await supabase
+      .from('user_configs')
+      .upsert({
+        user_id: user.id,
+        config_type: 'security_settings',
+        config_value: {
+          lastPasswordChange: new Date().toISOString().split('T')[0]
+        },
+        updated_at: new Date().toISOString()
+      });
+
+    return { success: true };
   }
 };
 

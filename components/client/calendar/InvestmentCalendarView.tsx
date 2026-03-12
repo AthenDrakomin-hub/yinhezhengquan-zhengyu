@@ -95,7 +95,7 @@ const InvestmentCalendarView: React.FC<InvestmentCalendarViewProps> = ({ onBack 
         {/* 市场状态概览 */}
         <div className="grid grid-cols-2 gap-3">
           {['CN', 'HK'].map(m => (
-            <div key={m} className="glass-card p-4 text-center space-y-1">
+            <div key={m} className="galaxy-card p-4 text-center space-y-1">
                <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{m} 市场</p>
                <p className="text-xs font-black text-[#00D4AA]">正常交易</p>
             </div>
@@ -103,7 +103,7 @@ const InvestmentCalendarView: React.FC<InvestmentCalendarViewProps> = ({ onBack 
         </div>
 
         {/* 日历网格 */}
-        <div className="glass-card overflow-hidden">
+        <div className="galaxy-card overflow-hidden">
           <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]/20">
             <button onClick={prevMonth} className="p-2 text-[var(--color-text-muted)]"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m15 18-6-6 6-6"/></svg></button>
             <h2 className="text-sm font-black uppercase tracking-[0.3em]">{year}年 {monthNames[month]}</h2>
@@ -152,7 +152,7 @@ const InvestmentCalendarView: React.FC<InvestmentCalendarViewProps> = ({ onBack 
               .filter(e => e.date.startsWith(`${year}-${(month + 1).toString().padStart(2, '0')}`))
               .sort((a, b) => a.date.localeCompare(b.date))
               .map((event, idx) => (
-                <div key={idx} className="glass-card p-4 flex items-start gap-4">
+                <div key={idx} className="galaxy-card p-4 flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-[var(--color-surface)] flex flex-col items-center justify-center border border-[var(--color-border)]">
                     <span className="text-[9px] font-black text-[var(--color-text-muted)]">{event.date.split('-')[1]}月</span>
                     <span className="text-sm font-black text-[var(--color-text-primary)]">{event.date.split('-')[2]}</span>

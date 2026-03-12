@@ -236,7 +236,7 @@ export const hotStocksService = {
       
       const { data, error } = await supabase
         .from('trades')
-        .select('symbol, name, stock_code, stock_name, price, quantity, user_id')
+        .select('stock_code, stock_name, price, quantity, user_id')
         .gte('created_at', yesterday);
 
       if (error) {

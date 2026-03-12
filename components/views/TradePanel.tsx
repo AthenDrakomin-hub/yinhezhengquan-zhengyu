@@ -68,6 +68,9 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   // ===================== URL参数处理 =====================
   const [searchParams] = useSearchParams();
   const modeFromUrl = searchParams.get('mode');
+  const symbolFromUrl = searchParams.get('symbol');
+  const priceFromUrl = searchParams.get('price');
+  const sideFromUrl = searchParams.get('side');
   
   // ===================== 核心状态 =====================
   const [currentMode, setCurrentMode] = useState<TradeModeKey>(() => {
@@ -91,8 +94,14 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
       sparkline: []
     }
   );
-  const [tradeSide, setTradeSide] = useState<'BUY' | 'SELL'>('BUY');
-  const [price, setPrice] = useState(selectedStock.price.toString());
+  const [tradeSide, setTradeSide] = useState<'BUY' | 'SELL'>(() => {
+    if (sideFromUrl === 'SELL') return 'SELL';
+    return 'BUY';
+  });
+  const [price, setPrice] = useState(() => {
+    if (priceFromUrl) return priceFromUrl;
+    return '1750.00'; // 默认价格，会在股票加载后更新
+  });
   const [quantity, setQuantity] = useState('');
   const [stockList, setStockList] = useState<Stock[]>([]);
   const [showStockSelector, setShowStockSelector] = useState(false);
@@ -188,12 +197,14 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
       setErrorMsg(null);
       const { getMarketList } = await import('../../services/marketService');
       const data = await getMarketList(market);
-      if (data && data.length > 0) {
-        setStockList(data);
+      // 处理返回结果（可能是数组或分页对象）
+      const stocks = Array.isArray(data) ? data : (data as any).stocks || [];
+      if (stocks && stocks.length > 0) {
+        setStockList(stocks);
         // 仅无初始股票时设置默认值
         if (!initialStock) {
-          setSelectedStock(data[0]);
-          setPrice(data[0].price.toString());
+          setSelectedStock(stocks[0]);
+          setPrice(stocks[0].price.toString());
         }
         initRef.current.normalLoaded = true;
       }
@@ -232,8 +243,10 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
       setLimitUpLoading(true);
       const { getMarketList } = await import('../../services/marketService');
       const marketData = await getMarketList('CN');
+      // 处理返回结果（可能是数组或分页对象）
+      const stocks = Array.isArray(marketData) ? marketData : (marketData as any).stocks || [];
       // 过滤涨停个股（涨跌幅≥9.8%）
-      const limitUpStocks = marketData.filter((stock: any) => stock.changePercent >= 9.8).slice(0, 20);
+      const limitUpStocks = stocks.filter((stock: any) => stock.changePercent >= 9.8).slice(0, 20);
       setLimitUpList(limitUpStocks);
       initRef.current.limitUpLoaded = true;
     } catch (err) {
@@ -386,10 +399,29 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     }
   }, [currentMode, loadMarketList, loadIpoList, loadLimitUpList]);
 
-  // 股票切换时同步价格
+  // 股票切换时同步价格（仅当没有URL价格参数时）
   useEffect(() => {
-    setPrice(selectedStock.price.toString());
-  }, [selectedStock]);
+    // 如果URL中有价格参数，优先使用URL价格
+    if (!priceFromUrl) {
+      setPrice(selectedStock.price.toString());
+    }
+  }, [selectedStock, priceFromUrl]);
+
+  // 当股票列表加载完成后，根据URL参数选择股票
+  useEffect(() => {
+    if (symbolFromUrl && stockList.length > 0) {
+      const stockFromUrl = stockList.find(s => s.symbol === symbolFromUrl);
+      if (stockFromUrl) {
+        setSelectedStock(stockFromUrl);
+        // 如果URL中有价格，使用URL价格；否则使用股票当前价格
+        if (priceFromUrl) {
+          setPrice(priceFromUrl);
+        } else {
+          setPrice(stockFromUrl.price.toString());
+        }
+      }
+    }
+  }, [symbolFromUrl, stockList, priceFromUrl]);
 
   // 组件挂载仅执行一次初始化
   useEffect(() => {
@@ -408,38 +440,38 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
         {/* 标的选择 */}
         <div 
           onClick={() => setShowStockSelector(true)}
-          className="glass-card p-6 flex items-center justify-between border-[#00D4AA]/20 rounded-[32px] cursor-pointer hover:border-[#00D4AA] transition-all"
+          className="galaxy-card p-6 flex items-center justify-between cursor-pointer hover:border-[var(--color-primary)] transition-all"
         >
           <div className="flex items-center gap-6">
             <SafeStockIcon name={selectedStock.name} logoUrl={selectedStock.logoUrl} size="lg" />
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-xl font-black">{selectedStock.name}</h4>
+                <h4 className="text-xl font-bold text-[var(--color-text-primary)]">{selectedStock.name}</h4>
                 <SafeIcon.ArrowRight size={14} className="text-[var(--color-text-muted)]" />
               </div>
-              <p className="text-xs text-[var(--color-text-muted)] font-mono font-bold">{selectedStock.symbol}</p>
+              <p className="text-xs text-[var(--color-text-muted)] font-mono font-medium">{selectedStock.symbol}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">可用资金</p>
-            <p className="text-2xl font-black font-mono text-[#00D4AA]">¥{safeAccount.balance.toLocaleString()}</p>
+            <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">可用资金</p>
+            <p className="text-2xl font-bold font-mono text-[var(--color-primary)]">¥{safeAccount.balance.toLocaleString()}</p>
           </div>
         </div>
 
         {/* 买卖方向切换 */}
-        <div className="flex gap-2 bg-[var(--color-bg)] p-1.5 rounded-2xl border border-[var(--color-border)]">
+        <div className="flex gap-2 bg-[var(--color-bg)] p-1.5 rounded-xl border border-[var(--color-border)]">
           <button 
             onClick={() => setTradeSide('BUY')} 
-            className={`flex-1 py-4 rounded-xl font-black text-xs tracking-[0.2em] transition-all uppercase ${
-              tradeSide === 'BUY' ? 'bg-[#00D4AA] text-[#0A1628] shadow-lg' : 'text-[var(--color-text-muted)]'
+            className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${
+              tradeSide === 'BUY' ? 'bg-[var(--color-positive)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
             }`}
           >
             买入
           </button>
           <button 
             onClick={() => setTradeSide('SELL')} 
-            className={`flex-1 py-4 rounded-xl font-black text-xs tracking-[0.2em] transition-all uppercase ${
-              tradeSide === 'SELL' ? 'bg-[#FF6B6B] text-white shadow-lg' : 'text-[var(--color-text-muted)]'
+            className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${
+              tradeSide === 'SELL' ? 'bg-[var(--color-negative)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
             }`}
           >
             卖出
@@ -454,33 +486,33 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
         )}
 
         {/* 价格/数量输入 */}
-        <div className="glass-card p-8 rounded-[40px] flex flex-col gap-8 shadow-2xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="galaxy-card p-6 rounded-xl flex flex-col gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em] px-2">
+              <label className="text-xs font-medium text-[var(--color-text-muted)] px-2">
                 委托价格 (CNY)
               </label>
-              <div className="flex items-center bg-[var(--color-bg)] h-16 rounded-[24px] border border-[var(--color-border)] px-6">
+              <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4 focus-within:border-[var(--color-primary)] transition-all">
                 <input 
                   type="number" 
                   value={price} 
                   onChange={(e) => setPrice(e.target.value)} 
-                  className="flex-1 bg-transparent text-xl font-black font-mono text-[var(--color-text-primary)] outline-none" 
+                  className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none" 
                   step="0.01"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between px-2">
-                <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">委托数量 (股)</label>
-                <span className="text-[10px] font-black text-[#00D4AA] opacity-60">最大: {maxTradeQty.toLocaleString()}</span>
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">委托数量 (股)</label>
+                <span className="text-xs font-medium text-[var(--color-primary)]">最大: {maxTradeQty.toLocaleString()}</span>
               </div>
-              <div className="flex items-center bg-[var(--color-bg)] h-16 rounded-[24px] border border-[var(--color-border)] px-6">
+              <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4 focus-within:border-[var(--color-primary)] transition-all">
                 <input 
                   type="number" 
                   value={quantity} 
                   onChange={(e) => setQuantity(e.target.value)} 
-                  className="flex-1 bg-transparent text-xl font-black font-mono text-[var(--color-text-primary)] outline-none" 
+                  className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none" 
                   placeholder="0"
                   min="100"
                   step="100"
@@ -490,7 +522,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
           </div>
 
           {/* 快捷仓位按钮 */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { label: '1/4', ratio: 0.25 },
               { label: '半仓', ratio: 0.5 },
@@ -500,7 +532,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
               <button
                 key={btn.label}
                 onClick={() => setQuantity(Math.floor(maxTradeQty * btn.ratio).toString())}
-                className="py-3 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-xs font-black hover:border-[#00D4AA] hover:text-[#00D4AA] transition-all"
+                className="py-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs font-medium hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
               >
                 {btn.label}
               </button>
@@ -508,10 +540,10 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
           </div>
 
           {/* 预估金额 */}
-          <div className="p-6 bg-[var(--color-bg)] rounded-[24px] border border-[var(--color-border)] flex justify-between items-center">
+          <div className="p-4 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)] flex justify-between items-center">
             <div>
-              <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">预估成交金额</p>
-              <p className="text-3xl font-black font-mono text-[#00D4AA] mt-1">¥{estimatedAmount}</p>
+              <p className="text-xs font-medium text-[var(--color-text-muted)]">预估成交金额</p>
+              <p className="text-2xl font-bold font-mono text-[var(--color-primary)] mt-1">¥{estimatedAmount}</p>
             </div>
           </div>
 
@@ -548,10 +580,10 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
               );
             }}
             disabled={isSubmitting || !quantity || parseInt(quantity) <= 0}
-            className={`w-full py-6 rounded-[32px] font-black text-sm tracking-[0.4em] uppercase shadow-2xl transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`w-full py-4 rounded-xl font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
               tradeSide === 'BUY' 
-                ? 'bg-[#00D4AA] text-[#0A1628] shadow-[#00D4AA]/20' 
-                : 'bg-[#FF6B6B] text-white shadow-[#FF6B6B]/20'
+                ? 'bg-[var(--color-positive)] text-white hover:opacity-90' 
+                : 'bg-[var(--color-negative)] text-white hover:opacity-90'
             }`}
           >
             {isSubmitting ? '提交中...' : `确认${tradeSide === 'BUY' ? '买入' : '卖出'}`}
@@ -561,42 +593,42 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
 
       {/* 右侧五档盘口 */}
       <div className="md:col-span-4 flex flex-col">
-        <div className="glass-card p-8 rounded-[40px] flex-1 bg-[var(--color-surface)]/20 shadow-xl border-white/5 h-full">
-          <div className="flex flex-col h-full gap-6">
-            <div className="flex justify-between items-center text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-border)] pb-4">
+        <div className="galaxy-card p-6 rounded-xl flex-1 h-full">
+          <div className="flex flex-col h-full gap-4">
+            <div className="flex justify-between items-center text-xs font-medium text-[var(--color-text-muted)] border-b border-[var(--color-border)] pb-3">
               <span>盘口五档</span>
               <span>价格 / 量</span>
             </div>
             
             {/* 卖盘 */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {orderBook.asks.map(ask => (
-                <div key={`ask-${ask.level}`} className="flex justify-between items-center py-2 px-4 rounded-xl hover:bg-[#FF6B6B]/10 cursor-pointer" onClick={() => setPrice(ask.price.toFixed(2))}>
-                  <span className="text-[11px] font-black text-[#FF6B6B] opacity-60 w-8">卖{ask.level}</span>
-                  <span className="text-sm font-mono font-black text-[#FF6B6B] flex-1 text-center">{ask.price.toFixed(2)}</span>
-                  <span className="text-[10px] font-mono text-[var(--color-text-muted)] w-12 text-right">{ask.volume}</span>
+                <div key={`ask-${ask.level}`} className="flex justify-between items-center py-1.5 px-3 rounded-lg hover:bg-[var(--color-negative)]/10 cursor-pointer" onClick={() => setPrice(ask.price.toFixed(2))}>
+                  <span className="text-xs font-medium text-[var(--color-negative)] opacity-70 w-8">卖{ask.level}</span>
+                  <span className="text-sm font-mono font-medium text-[var(--color-negative)] flex-1 text-center">{ask.price.toFixed(2)}</span>
+                  <span className="text-xs font-mono text-[var(--color-text-muted)] w-12 text-right">{ask.volume}</span>
                 </div>
               ))}
             </div>
 
             {/* 最新价 */}
-            <div className="py-6 px-4 flex flex-col items-center bg-[var(--color-bg)] rounded-[24px] border border-[var(--color-border)] my-4">
-              <span className="text-[10px] font-black text-[var(--color-text-muted)] mb-1">最新价</span>
-              <span className="text-2xl font-black font-mono text-[var(--color-text-primary)]">
+            <div className="py-4 px-3 flex flex-col items-center bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+              <span className="text-xs font-medium text-[var(--color-text-muted)] mb-1">最新价</span>
+              <span className="text-xl font-bold font-mono text-[var(--color-text-primary)]">
                 {selectedStock.price.toFixed(2)}
               </span>
-              <span className={`text-xs font-black mt-1 ${selectedStock.change >= 0 ? 'text-[#00D4AA]' : 'text-[#FF6B6B]'}`}>
+              <span className={`text-xs font-medium mt-1 ${selectedStock.change >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>
                 {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change} ({selectedStock.changePercent}%)
               </span>
             </div>
 
             {/* 买盘 */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {orderBook.bids.map(bid => (
-                <div key={`bid-${bid.level}`} className="flex justify-between items-center py-2 px-4 rounded-xl hover:bg-[#00D4AA]/10 cursor-pointer" onClick={() => setPrice(bid.price.toFixed(2))}>
-                  <span className="text-[11px] font-black text-[#00D4AA] opacity-60 w-8">买{bid.level}</span>
-                  <span className="text-sm font-mono font-black text-[#00D4AA] flex-1 text-center">{bid.price.toFixed(2)}</span>
-                  <span className="text-[10px] font-mono text-[var(--color-text-muted)] w-12 text-right">{bid.volume}</span>
+                <div key={`bid-${bid.level}`} className="flex justify-between items-center py-1.5 px-3 rounded-lg hover:bg-[var(--color-positive)]/10 cursor-pointer" onClick={() => setPrice(bid.price.toFixed(2))}>
+                  <span className="text-xs font-medium text-[var(--color-positive)] opacity-70 w-8">买{bid.level}</span>
+                  <span className="text-sm font-mono font-medium text-[var(--color-positive)] flex-1 text-center">{bid.price.toFixed(2)}</span>
+                  <span className="text-xs font-mono text-[var(--color-text-muted)] w-12 text-right">{bid.volume}</span>
                 </div>
               ))}
             </div>
@@ -610,20 +642,20 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   const renderIpoTrade = () => (
     <div className="flex flex-col h-full gap-6">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h3 className="text-lg font-black uppercase tracking-wider">今日可申购新股</h3>
-        <span className="text-xs text-[var(--color-text-muted)] font-black">
+        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">今日可申购新股</h3>
+        <span className="text-xs text-[var(--color-text-muted)] font-medium">
           申购日期：{today} | T日申购 | T+1日配号 | T+2日中签
         </span>
       </div>
 
       {ipoLoading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D4AA]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       ) : ipoList.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-[var(--color-text-muted)]">
           <SafeIcon.Calendar size={48} className="mb-4 opacity-30" />
-          <p className="text-lg font-black">今日暂无可申购新股</p>
+          <p className="text-lg font-medium">今日暂无可申购新股</p>
         </div>
       ) : (
         <div className="overflow-x-auto no-scrollbar">
@@ -650,12 +682,12 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <SafeStockIcon name={ipo.证券简称} size="md" />
-                      <p className="text-base font-black truncate max-w-[120px]">{ipo.证券简称}</p>
+                      <p className="text-base font-medium text-[var(--color-text-primary)] truncate max-w-[120px]">{ipo.证券简称}</p>
                     </div>
                   </td>
                   <td className="py-4 px-4 text-center font-mono text-sm">{ipo.证券代码}</td>
-                  <td className="py-4 px-4 text-center font-mono text-sm font-black text-[#00D4AA]">{ipo.申购代码}</td>
-                  <td className="py-4 px-4 text-center font-mono text-sm font-black">¥{ipo.发行价格?.toFixed(2) || '-'}</td>
+                  <td className="py-4 px-4 text-center font-mono text-sm font-medium text-[var(--color-primary)]">{ipo.申购代码}</td>
+                  <td className="py-4 px-4 text-center font-mono text-sm font-medium">¥{ipo.发行价格?.toFixed(2) || '-'}</td>
                   <td className="py-4 px-4 text-center font-mono text-sm">-</td>
                   <td className="py-4 px-4 text-center font-mono text-sm">{ipo.个人申购上限 || '-'}</td>
                   <td className="py-4 px-4 text-center">
@@ -680,7 +712,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                           );
                         }}
                         disabled={isSubmitting}
-                        className="w-full py-3 rounded-xl bg-[#00D4AA] text-[#0A1628] font-black text-xs uppercase tracking-wider hover:bg-[#00b88f] transition-all disabled:opacity-50"
+                        className="w-full py-2.5 rounded-lg bg-[var(--color-primary)] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
                       >
                         {isSubmitting && selectedIpo?.证券代码 === ipo.证券代码 ? '提交中' : '一键申购'}
                       </button>
@@ -702,35 +734,35 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     const maxQty = Math.floor(safeAccount.balance / blockPrice);
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1">
         <div className="md:col-span-8 flex flex-col gap-6">
           {/* 标的选择 */}
           <div 
             onClick={() => setShowStockSelector(true)}
-            className="glass-card p-6 flex items-center justify-between border-[#00D4AA]/20 rounded-[32px] cursor-pointer hover:border-[#00D4AA] transition-all"
+            className="galaxy-card p-6 flex items-center justify-between cursor-pointer hover:border-[var(--color-primary)] transition-all"
           >
             <div className="flex items-center gap-6">
               <SafeStockIcon name={selectedStock.name} logoUrl={selectedStock.logoUrl} size="lg" />
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xl font-black">{selectedStock.name}</h4>
+                  <h4 className="text-xl font-bold text-[var(--color-text-primary)]">{selectedStock.name}</h4>
                   <SafeIcon.ArrowRight size={14} className="text-[var(--color-text-muted)]" />
                 </div>
-                <p className="text-xs text-[var(--color-text-muted)] font-mono font-bold">{selectedStock.symbol}</p>
+                <p className="text-xs text-[var(--color-text-muted)] font-mono font-medium">{selectedStock.symbol}</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">二级市场现价</p>
-              <p className="text-2xl font-black font-mono text-[var(--color-text-primary)]">¥{selectedStock.price.toFixed(2)}</p>
+              <p className="text-xs font-medium text-[var(--color-text-muted)] mb-1">二级市场现价</p>
+              <p className="text-xl font-bold font-mono text-[var(--color-text-primary)]">¥{selectedStock.price.toFixed(2)}</p>
             </div>
           </div>
 
-          <div className="glass-card p-8 rounded-[40px] flex flex-col gap-8 shadow-2xl">
+          <div className="galaxy-card p-6 rounded-xl flex flex-col gap-6">
             {/* 折价率设置 */}
             <div className="space-y-2">
               <div className="flex justify-between px-2">
-                <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">折价率</label>
-                <span className="text-[10px] font-black text-[#00D4AA]">{(blockDiscount * 100).toFixed(1)}%</span>
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">折价率</label>
+                <span className="text-xs font-medium text-[var(--color-primary)]">{(blockDiscount * 100).toFixed(1)}%</span>
               </div>
               <input 
                 type="range" 
@@ -739,9 +771,9 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                 step="0.01" 
                 value={blockDiscount} 
                 onChange={(e) => setBlockDiscount(parseFloat(e.target.value))} 
-                className="w-full h-2 bg-[var(--color-bg)] rounded-lg appearance-none cursor-pointer accent-[#00D4AA]"
+                className="w-full h-2 bg-[var(--color-bg)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
               />
-              <div className="flex justify-between text-[10px] text-[var(--color-text-muted)] font-black px-2">
+              <div className="flex justify-between text-xs text-[var(--color-text-muted)] font-medium px-2">
                 <span>7折</span>
                 <span>9折</span>
                 <span>平价</span>
@@ -749,31 +781,31 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
             </div>
 
             {/* 价格/数量 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em] px-2">
+                <label className="text-xs font-medium text-[var(--color-text-muted)] px-2">
                   大宗交易成交价
                 </label>
-                <div className="flex items-center bg-[var(--color-bg)] h-16 rounded-[24px] border border-[var(--color-border)] px-6">
+                <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4">
                   <input 
                     type="number" 
                     disabled 
                     value={blockPrice.toFixed(2)} 
-                    className="flex-1 bg-transparent text-xl font-black font-mono text-[var(--color-text-primary)] outline-none opacity-70" 
+                    className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none opacity-70" 
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between px-2">
-                  <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">申报数量 (股)</label>
-                  <span className="text-[10px] font-black text-[#FF6B6B]">最低: 30万股</span>
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">申报数量 (股)</label>
+                  <span className="text-xs font-medium text-[var(--color-warning)]">最低: 30万股</span>
                 </div>
-                <div className="flex items-center bg-[var(--color-bg)] h-16 rounded-[24px] border border-[var(--color-border)] px-6">
+                <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4 focus-within:border-[var(--color-primary)] transition-all">
                   <input 
                     type="number" 
                     value={blockQuantity} 
                     onChange={(e) => setBlockQuantity(e.target.value)} 
-                    className="flex-1 bg-transparent text-xl font-black font-mono text-[var(--color-text-primary)] outline-none" 
+                    className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none" 
                     placeholder="≥300000"
                     min={minQuantity}
                   />
@@ -782,17 +814,17 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
             </div>
 
             {/* 交易规则提示 */}
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl">
-              <p className="text-xs text-yellow-400 font-black leading-relaxed">
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs text-yellow-700 font-medium leading-relaxed">
                 ⚠️ 大宗交易规则：A股单笔申报数量不低于30万股，或交易金额不低于200万元人民币，申报时间为交易日9:30-15:30，收盘后统一撮合。
               </p>
             </div>
 
             {/* 预估金额 */}
-            <div className="p-6 bg-[var(--color-bg)] rounded-[24px] border border-[var(--color-border)] flex justify-between items-center">
+            <div className="p-4 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)] flex justify-between items-center">
               <div>
-                <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">预估交易总金额</p>
-                <p className="text-3xl font-black font-mono text-[#00D4AA] mt-1">
+                <p className="text-xs font-medium text-[var(--color-text-muted)]">预估交易总金额</p>
+                <p className="text-2xl font-bold font-mono text-[var(--color-primary)] mt-1">
                   ¥{(blockPrice * (parseInt(blockQuantity) || 0)).toLocaleString()}
                 </p>
               </div>
@@ -823,7 +855,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                 );
               }}
               disabled={isSubmitting || (parseInt(blockQuantity) || 0) < minQuantity}
-              className="w-full py-6 rounded-[32px] font-black text-sm tracking-[0.4em] uppercase shadow-2xl transition-all active:scale-[0.97] bg-[#00D4AA] text-[#0A1628] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-xl font-bold text-sm transition-all active:scale-[0.98] bg-[var(--color-primary)] text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? '提交中...' : '确认大宗交易申报'}
             </button>
@@ -832,32 +864,32 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
 
         {/* 右侧信息栏 */}
         <div className="md:col-span-4 flex flex-col">
-          <div className="glass-card p-8 rounded-[40px] flex-1 bg-[var(--color-surface)]/20 shadow-xl border-white/5 h-full">
-            <h4 className="text-sm font-black uppercase tracking-wider mb-6 text-center">大宗交易信息</h4>
-            <div className="space-y-6">
-              <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-black uppercase">标的证券</span>
-                <span className="text-sm font-black truncate max-w-[150px]">{selectedStock.name}</span>
+          <div className="galaxy-card p-6 rounded-xl flex-1 h-full">
+            <h4 className="text-sm font-bold mb-4 text-center text-[var(--color-text-primary)]">大宗交易信息</h4>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
+                <span className="text-xs text-[var(--color-text-muted)] font-medium">标的证券</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)] truncate max-w-[150px]">{selectedStock.name}</span>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-black uppercase">证券代码</span>
-                <span className="text-sm font-mono font-black">{selectedStock.symbol}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
+                <span className="text-xs text-[var(--color-text-muted)] font-medium">证券代码</span>
+                <span className="text-sm font-mono font-medium text-[var(--color-text-primary)]">{selectedStock.symbol}</span>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-black uppercase">二级市场现价</span>
-                <span className="text-sm font-mono font-black">¥{selectedStock.price.toFixed(2)}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
+                <span className="text-xs text-[var(--color-text-muted)] font-medium">二级市场现价</span>
+                <span className="text-sm font-mono font-medium text-[var(--color-text-primary)]">¥{selectedStock.price.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-black uppercase">折价率</span>
-                <span className="text-sm font-black text-[#00D4AA]">{((1 - blockDiscount) * 100).toFixed(1)}%</span>
+              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
+                <span className="text-xs text-[var(--color-text-muted)] font-medium">折价率</span>
+                <span className="text-sm font-medium text-[var(--color-primary)]">{((1 - blockDiscount) * 100).toFixed(1)}%</span>
               </div>
-              <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-black uppercase">大宗成交价</span>
-                <span className="text-sm font-mono font-black text-[#00D4AA]">¥{blockPrice.toFixed(2)}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
+                <span className="text-xs text-[var(--color-text-muted)] font-medium">大宗成交价</span>
+                <span className="text-sm font-mono font-medium text-[var(--color-primary)]">¥{blockPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--color-text-muted)] font-black uppercase">最大可买</span>
-                <span className="text-sm font-mono font-black">{maxQty.toLocaleString()}股</span>
+                <span className="text-xs text-[var(--color-text-muted)] font-medium">最大可买</span>
+                <span className="text-sm font-mono font-medium text-[var(--color-text-primary)]">{maxQty.toLocaleString()}股</span>
               </div>
             </div>
           </div>
@@ -870,18 +902,18 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   const renderLimitUpTrade = () => (
     <div className="flex flex-col h-full gap-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-black uppercase tracking-wider">今日涨停个股</h3>
-        <span className="text-xs text-[var(--color-text-muted)] font-black">按涨停价委托，进入排单队列</span>
+        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">今日涨停个股</h3>
+        <span className="text-xs text-[var(--color-text-muted)] font-medium">按涨停价委托，进入排单队列</span>
       </div>
 
       {limitUpLoading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6B6B]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-positive)]"></div>
         </div>
       ) : limitUpList.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-[var(--color-text-muted)]">
           <SafeIcon.TrendingUp size={48} className="mb-4 opacity-30" />
-          <p className="text-lg font-black">暂无涨停个股数据</p>
+          <p className="text-lg font-medium">暂无涨停个股数据</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 overflow-y-auto no-scrollbar">
@@ -891,30 +923,30 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
             return (
               <div 
                 key={stock.symbol} 
-                className="glass-card p-6 rounded-[32px] border border-[#FF6B6B]/30 hover:border-[#FF6B6B] transition-all"
+                className="galaxy-card p-5 rounded-xl border border-[var(--color-positive)]/30 hover:border-[var(--color-positive)] transition-all"
               >
                 <div className="grid grid-cols-12 gap-4 items-center">
                   {/* 个股信息 */}
-                  <div className="col-span-3 flex items-center gap-4">
+                  <div className="col-span-3 flex items-center gap-3">
                     <SafeStockIcon name={stock.name} logoUrl={stock.logoUrl} size="md" />
                     <div>
-                      <h4 className="text-lg font-black truncate">{stock.name}</h4>
+                      <h4 className="text-base font-bold text-[var(--color-text-primary)] truncate">{stock.name}</h4>
                       <p className="text-xs text-[var(--color-text-muted)] font-mono">{stock.symbol}</p>
                     </div>
                   </div>
 
                   {/* 涨停信息 */}
                   <div className="col-span-2 text-center">
-                    <p className="text-xs text-[var(--color-text-muted)] font-black uppercase">涨停价</p>
-                    <p className="text-xl font-black font-mono mt-1 text-[#FF6B6B]">¥{limitUpPrice.toFixed(2)}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] font-medium">涨停价</p>
+                    <p className="text-lg font-bold font-mono mt-1 text-[var(--color-positive)]">¥{limitUpPrice.toFixed(2)}</p>
                   </div>
                   <div className="col-span-2 text-center">
-                    <p className="text-xs text-[var(--color-text-muted)] font-black uppercase">涨跌幅</p>
-                    <p className="text-xl font-black font-mono mt-1 text-[#FF6B6B]">+{stock.changePercent?.toFixed(2)}%</p>
+                    <p className="text-xs text-[var(--color-text-muted)] font-medium">涨跌幅</p>
+                    <p className="text-lg font-bold font-mono mt-1 text-[var(--color-positive)]">+{stock.changePercent?.toFixed(2)}%</p>
                   </div>
                   <div className="col-span-2 text-center">
-                    <p className="text-xs text-[var(--color-text-muted)] font-black uppercase">可买数量</p>
-                    <p className="text-xl font-black font-mono mt-1">{maxQty.toLocaleString()}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] font-medium">可买数量</p>
+                    <p className="text-lg font-bold font-mono mt-1 text-[var(--color-text-primary)]">{maxQty.toLocaleString()}</p>
                   </div>
 
                   {/* 操作按钮 */}
@@ -935,7 +967,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                         );
                       }}
                       disabled={isSubmitting || maxQty <= 0}
-                      className="w-full py-3 rounded-xl bg-[#FF6B6B] text-white font-black text-xs uppercase tracking-wider hover:bg-[#FF5252] transition-all disabled:opacity-50"
+                      className="w-full py-2.5 rounded-lg bg-[var(--color-positive)] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
                     >
                       {isSubmitting ? '提交中...' : '一键打板'}
                     </button>
@@ -952,31 +984,31 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
 
   // 股票选择器弹窗
   const renderStockSelector = () => (
-    <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-xl flex items-center justify-center p-8">
-      <div className="glass-card w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden rounded-[48px] border-[#00D4AA]/30">
-        <div className="p-8 border-b border-[var(--color-border)] flex justify-between items-center shrink-0">
-          <h3 className="text-xl font-black uppercase tracking-[0.2em] text-[#00D4AA]">选择标的</h3>
+    <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="galaxy-card w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden rounded-xl">
+        <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center shrink-0">
+          <h3 className="text-lg font-bold text-[var(--color-primary)]">选择标的</h3>
           <button 
             onClick={() => { setShowStockSelector(false); setSearchTerm(''); }} 
-            className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center"
+            className="w-10 h-10 rounded-full bg-[var(--color-bg)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-all"
           >
-            <SafeIcon.Plus className="rotate-45" size={24} />
+            <SafeIcon.Plus className="rotate-45" size={20} />
           </button>
         </div>
-        <div className="p-8 border-b border-[var(--color-border)] bg-[var(--color-surface)]/20">
+        <div className="p-4 border-b border-[var(--color-border)]">
           <input 
             type="text" 
             placeholder="搜索代码或简称..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-16 bg-[var(--color-bg)] px-8 rounded-2xl border border-[var(--color-border)] text-sm font-black outline-none focus:border-[#00D4AA]"
+            className="w-full h-12 bg-[var(--color-bg)] px-4 rounded-lg border border-[var(--color-border)] text-sm font-medium outline-none focus:border-[var(--color-primary)] transition-all"
             autoFocus
           />
         </div>
         <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
           {loading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D4AA]"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--color-primary)]"></div>
             </div>
           ) : (
             filteredStockList.map(stock => (
@@ -988,16 +1020,16 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                   setShowStockSelector(false);
                   setSearchTerm('');
                 }} 
-                className="flex items-center gap-6 p-6 rounded-[32px] hover:bg-[var(--color-surface)] cursor-pointer group border border-transparent hover:border-[#00D4AA]/20"
+                className="flex items-center gap-4 p-4 rounded-xl hover:bg-[var(--color-surface-hover)] cursor-pointer group border border-transparent hover:border-[var(--color-border)] transition-all"
               >
                 <SafeStockIcon name={stock.name} logoUrl={stock.logoUrl} size="md" />
                 <div className="flex-1">
-                  <h4 className="text-lg font-black">{stock.name}</h4>
-                  <p className="text-[11px] text-[var(--color-text-muted)] font-mono">{stock.symbol}</p>
+                  <h4 className="text-base font-medium text-[var(--color-text-primary)]">{stock.name}</h4>
+                  <p className="text-xs text-[var(--color-text-muted)] font-mono">{stock.symbol}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-mono font-black">{stock.price.toFixed(2)}</p>
-                  <p className={`text-xs font-black ${stock.change >= 0 ? 'text-[#00D4AA]' : 'text-[#FF6B6B]'}`}>
+                  <p className="text-base font-mono font-medium text-[var(--color-text-primary)]">{stock.price.toFixed(2)}</p>
+                  <p className={`text-xs font-medium ${stock.change >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>
                     {stock.changePercent}%
                   </p>
                 </div>
@@ -1011,17 +1043,17 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
 
   // ===================== 主渲染 =====================
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)] animate-slide-up pb-4 pt-4 px-4 gap-6">
+    <div className="flex flex-col h-full bg-[var(--color-bg)] pb-4 pt-4 px-4 gap-6">
       {/* 顶部交易模式切换 */}
-      <div className="flex gap-3 overflow-x-auto no-scrollbar">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {TRADE_MODES.map(mode => (
           <button
             key={mode.key}
             onClick={() => setCurrentMode(mode.key)}
-            className={`whitespace-nowrap px-6 py-2.5 rounded-2xl text-[10px] font-black tracking-widest uppercase transition-all border ${
+            className={`whitespace-nowrap px-5 py-2 rounded-lg text-xs font-medium transition-all border ${
               currentMode === mode.key 
-                ? 'bg-[#00D4AA] text-[#0A1628] border-transparent shadow-xl' 
-                : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:text-[var(--color-text-primary)]'
+                ? 'bg-[var(--color-primary)] text-white border-transparent' 
+                : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-primary)]'
             }`}
           >
             {mode.label}

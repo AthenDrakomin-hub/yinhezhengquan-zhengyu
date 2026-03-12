@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaRobot, FaUser, FaPaperPlane, FaSpinner, FaBell, FaVolumeUp, FaVolumeMute, FaClock } from 'react-icons/fa';
+import { imageConfig } from '../../lib/imageConfig';
 import VisitorInfoModal from './VisitorInfoModal';
 import {
   getGuestId,
@@ -22,7 +23,7 @@ interface ChatMessage extends Message {
 
 type ChatPhase = 'form' | 'queuing' | 'chatting' | 'ended';
 
-const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
+const LOGO_URL = imageConfig.logo.fullUrl;
 const AGENT_AVATAR = import.meta.env.VITE_AGENT_AVATAR_URL || '/avatar-default.png';
 
 const QUICK_QUESTIONS = [
@@ -355,7 +356,7 @@ const OnlineChatView: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-2 py-0.5 text-[11px] font-bold rounded">
-                  证裕交易单元
+                  日斗投资单元
                 </div>
                 <span className="text-xs text-gray-700">中国银河证券</span>
               </div>
@@ -509,7 +510,7 @@ const OnlineChatView: React.FC = () => {
       </div>
 
       <div className="py-2 text-center text-[11px] text-gray-500 flex-shrink-0">
-        中国银河证券·证裕交易单元 版权所有
+        中国银河证券·日斗投资单元 版权所有
       </div>
     </div>
   );

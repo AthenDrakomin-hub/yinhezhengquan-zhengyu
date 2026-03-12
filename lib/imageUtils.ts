@@ -1,22 +1,18 @@
 /**
  * 图片资源工具函数
- * 支持从 Supabase Storage 或环境变量配置获取图片 URL
+ * 从 lib/imageConfig.ts 集中获取图片 URL
  */
 
-interface StorageConfig {
-  baseUrl: string;
-  bucket: string;
-  folder?: string;
-}
+import { imageConfig } from './imageConfig';
 
-/**
- * 获取 Storage 配置
- */
-const getStorageConfig = (): StorageConfig => ({
-  baseUrl: import.meta.env.VITE_SUPABASE_URL || '',
-  bucket: import.meta.env.VITE_STORAGE_BUCKET || 'public',
-  folder: import.meta.env.VITE_STORAGE_FOLDER || 'images',
-});
+// 从 Supabase URL 构建存储 URL，避免硬编码
+const getStorageBaseUrl = (): string => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (supabaseUrl) {
+    return `${supabaseUrl}/storage/v1/object/public/tupian`;
+  }
+  return '/images';
+};
 
 /**
  * 构建完整的 Supabase Storage URL
@@ -27,13 +23,7 @@ const getStorageConfig = (): StorageConfig => ({
  * @example
  * // 基础用法
  * getImageUrl('logo.png')
- * // => https://xxx.supabase.co/storage/v1/object/public/public/images/logo.png
- * 
- * // 指定其他存储桶
- * getImageUrl('avatars/user1.png', { bucket: 'avatars' })
- * 
- * // 带图片优化参数
- * getImageUrl('banner.jpg', { width: 1200, quality: 80 })
+ * // => https://xxx.supabase.co/storage/v1/object/public/tupian/logo.png
  */
 export function getImageUrl(
   path: string,
@@ -46,9 +36,7 @@ export function getImageUrl(
     resize?: 'cover' | 'contain' | 'fill';
   }
 ): string {
-  const config = getStorageConfig();
-  const bucket = options?.bucket || config.bucket;
-  const folder = config.folder ? `${config.folder}/` : '';
+  const STORAGE_BASE_URL = getStorageBaseUrl();
   
   // 如果 path 已经是完整 URL，直接返回
   if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -56,17 +44,18 @@ export function getImageUrl(
   }
   
   // 构建基础 URL
-  const baseUrl = `${config.baseUrl}/storage/v1/object/public/${bucket}/${folder}${path}`;
+  const baseUrl = `${STORAGE_BASE_URL}/${path}`;
   
   // 如果配置了优化参数，使用 render API
   if (options?.width || options?.height || options?.quality) {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const width = options.width || 1200;
     const height = options.height || 630;
     const quality = options.quality || 80;
     const format = options.format || 'webp';
     const resize = options.resize || 'cover';
     
-    return `${config.baseUrl}/storage/v1/render/image/public/${bucket}/${folder}${path}?width=${width}&height=${height}&quality=${quality}&format=${format}&resize=${resize}`;
+    return `${supabaseUrl}/storage/v1/render/image/public/tupian/${path}?width=${width}&height=${height}&quality=${quality}&format=${format}&resize=${resize}`;
   }
   
   return baseUrl;
@@ -87,15 +76,9 @@ export function getImageUrls(
 
 /**
  * 获取 Logo URL
- * 优先从环境变量读取，否则使用 Storage 默认路径
  */
 export function getLogoUrl(): string {
-  // 优先使用环境变量中配置的完整 URL
-  const envLogo = import.meta.env.VITE_LOGO_URL;
-  if (envLogo) return envLogo;
-  
-  // 默认使用 Storage 中的 logo
-  return getImageUrl('logo.png');
+  return imageConfig.logo.main || '/logo.png';
 }
 
 /**
@@ -103,11 +86,7 @@ export function getLogoUrl(): string {
  * @param index Banner 序号（1, 2, 3...）
  */
 export function getBannerUrl(index: number): string {
-  const envKey = `VITE_BANNER_IMAGE_${index}`;
-  const envUrl = import.meta.env[envKey];
-  if (envUrl) return envUrl;
-  
-  return getImageUrl(`banner-${index}.jpg`);
+  return imageConfig.banners[index - 1]?.img || '/images/banner-1.jpg';
 }
 
 /**
@@ -115,42 +94,31 @@ export function getBannerUrl(index: number): string {
  * @param index 轮播图序号（1, 2, 3...）
  */
 export function getCarouselUrl(index: number): string {
-  const envKey = `VITE_CAROUSEL_IMAGE_${index}`;
-  const envUrl = import.meta.env[envKey];
-  if (envUrl) return envUrl;
-  
-  return getImageUrl(`carousel-${index}.jpg`);
+  return imageConfig.carousel[index - 1]?.img || '/images/carousel-1.jpg';
 }
 
 /**
  * 获取服务图标 URL
- * @param name 图标名称
+ * @param key 图标键名
  */
-export function getServiceIconUrl(name: string): string {
-  return getImageUrl(`service-icons/${name}.png`);
+export function getServiceIconUrl(key: keyof typeof imageConfig.serviceIcons): string {
+  return imageConfig.serviceIcons[key] || '/logo.png';
 }
 
 /**
  * 获取头像 URL
- * @param filename 头像文件名
+ * @param type 头像类型
  */
-export function getAvatarUrl(filename: string = 'default'): string {
-  const envAvatar = import.meta.env.VITE_AGENT_AVATAR_URL;
-  if (envAvatar) return envAvatar;
-  
-  return getImageUrl(`avatars/${filename}.png`, { bucket: 'avatars' });
+export function getAvatarUrl(type: 'agent' | 'default' = 'default'): string {
+  return imageConfig.avatars[type] || imageConfig.avatars.default;
 }
 
 /**
  * 获取培训营背景图 URL
- * @param index 背景图序号
+ * @param key 背景图键名
  */
-export function getTrainingBgUrl(index: number): string {
-  const envKey = `VITE_TRAINING_BG_${index}`;
-  const envUrl = import.meta.env[envKey];
-  if (envUrl) return envUrl;
-  
-  return getImageUrl(`training-bg-${index}.jpg`);
+export function getTrainingBgUrl(key: keyof typeof imageConfig.training): string {
+  return imageConfig.training[key] || '/images/bg-1.png';
 }
 
 /**
@@ -165,3 +133,6 @@ export function getImageWithFallback(url: string | undefined, fallback?: string)
   }
   return url;
 }
+
+// 导出 imageConfig 供其他模块使用
+export { imageConfig };

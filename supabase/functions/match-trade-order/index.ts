@@ -158,6 +158,19 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
   const matchPrice = sellOrder.price // 成交价为卖出价（价格优先原则）
   const amount = Number(matchPrice) * matchQty
 
+  // 获取结算规则
+  const { data: settlementRule } = await supabase
+    .from('trade_rules')
+    .select('config')
+    .eq('rule_type', '结算规则')
+    .eq('status', true)
+    .single()
+  
+  // 判断市场类型，A股T+1，港股T+0
+  const marketType = buyOrder.market_type || 'A股'
+  const isT0Market = marketType.includes('港股') || marketType === 'HK_SHARE'
+  const tomorrow = isT0Market ? null : new Date(Date.now() + 86400000).toISOString().split('T')[0]
+
   // 1. 更新买家资产 (解冻并扣除)
   const { data: buyAssets } = await supabase.from('assets').select('*').eq('user_id', buyOrder.user_id).single()
   await supabase.from('assets').update({
@@ -167,30 +180,38 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
 
   // 2. 更新买家持仓
   const { data: buyPos } = await supabase.from('positions').select('*').eq('user_id', buyOrder.user_id).eq('symbol', buyOrder.stock_code).single()
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  
+  // 港股T+0：当日买入可当日卖出，不锁定
+  // A股T+1：当日买入次日可卖，锁定到次日
+  const updateData: any = {
+    quantity: (buyPos?.quantity || 0) + matchQty,
+    available_quantity: (buyPos?.available_quantity || 0) + matchQty,
+    average_price: buyPos ? (Number(buyPos.average_price) * buyPos.quantity + Number(matchPrice) * matchQty) / ((buyPos.quantity || 0) + matchQty) : matchPrice,
+    market_value: ((buyPos?.quantity || 0) + matchQty) * Number(matchPrice)
+  }
+  
+  if (!isT0Market) {
+    updateData.locked_quantity = (buyPos?.locked_quantity || 0) + matchQty
+    updateData.lock_until = tomorrow
+  }
+  
   if (buyPos) {
-    const newQty = buyPos.quantity + matchQty
-    const newAvg = (Number(buyPos.average_price) * buyPos.quantity + Number(matchPrice) * matchQty) / newQty
-    await supabase.from('positions').update({
-      quantity: newQty,
-      available_quantity: buyPos.available_quantity + matchQty,
-      locked_quantity: (buyPos.locked_quantity || 0) + matchQty,
-      lock_until: tomorrow,
-      average_price: newAvg,
-      market_value: newQty * Number(matchPrice)
-    }).eq('id', buyPos.id)
+    await supabase.from('positions').update(updateData).eq('id', buyPos.id)
   } else {
-    await supabase.from('positions').insert({
+    const insertData: any = {
       user_id: buyOrder.user_id,
       symbol: buyOrder.stock_code,
       name: buyOrder.stock_code,
       quantity: matchQty,
       available_quantity: matchQty,
-      locked_quantity: matchQty,
-      lock_until: tomorrow,
       average_price: matchPrice,
       market_value: amount
-    })
+    }
+    if (!isT0Market) {
+      insertData.locked_quantity = matchQty
+      insertData.lock_until = tomorrow
+    }
+    await supabase.from('positions').insert(insertData)
   }
 
   // 3. 更新卖家资产 (增加余额)

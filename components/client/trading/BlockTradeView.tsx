@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { getBlockTradeProducts, type BlockTradeProduct } from '../../../services/blockTradeService';
 import { ICONS } from '../../../lib/constants';
 
-const BlockTradeView: React.FC = () => {
+interface BlockTradeViewProps {
+  onBack?: () => void;
+}
+
+const BlockTradeView: React.FC<BlockTradeViewProps> = ({ onBack }) => {
   const [products, setProducts] = useState<BlockTradeProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<BlockTradeProduct | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,11 +95,21 @@ const BlockTradeView: React.FC = () => {
   return (
     <div className="flex flex-col h-full p-6">
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-black">大宗交易</h1>
-          <p className="text-[var(--color-text-muted)] text-sm mt-1">
-            专业大宗交易通道，享受专属折扣价格
-          </p>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-black">大宗交易</h1>
+            <p className="text-[var(--color-text-muted)] text-sm mt-1">
+              专业大宗交易通道，享受专属折扣价格
+            </p>
+          </div>
         </div>
         <button
           onClick={handleRefresh}
@@ -110,7 +124,7 @@ const BlockTradeView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
         {/* 左侧：产品选择和信息 */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-6 rounded-2xl">
+          <div className="galaxy-card p-6 rounded-2xl">
             <h2 className="text-lg font-black mb-4">交易产品</h2>
             <div className="flex flex-wrap gap-3">
               {products.map(product => (
@@ -139,7 +153,7 @@ const BlockTradeView: React.FC = () => {
           </div>
 
           {selectedProduct && (
-            <div className="glass-card p-6 rounded-2xl">
+            <div className="galaxy-card p-6 rounded-2xl">
               <h2 className="text-lg font-black mb-4">实时行情</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-[var(--color-bg)] p-4 rounded-xl">
@@ -187,7 +201,7 @@ const BlockTradeView: React.FC = () => {
           )}
 
           {error && (
-            <div className="glass-card p-6 rounded-2xl border border-red-500/20 bg-red-500/5">
+            <div className="galaxy-card p-6 rounded-2xl border border-red-500/20 bg-red-500/5">
               <div className="flex items-center gap-3">
                 <ICONS.AlertCircle className="w-5 h-5 text-red-500" />
                 <div>
@@ -201,7 +215,7 @@ const BlockTradeView: React.FC = () => {
 
         {/* 右侧：交易面板 */}
         <div className="space-y-6">
-          <div className="glass-card p-6 rounded-2xl">
+          <div className="galaxy-card p-6 rounded-2xl">
             <h2 className="text-lg font-black mb-4">交易指令</h2>
 
             <div className="space-y-4">
@@ -256,7 +270,7 @@ const BlockTradeView: React.FC = () => {
             </div>
           </div>
 
-          <div className="glass-card p-6 rounded-2xl">
+          <div className="galaxy-card p-6 rounded-2xl">
             <h2 className="text-lg font-black mb-4">交易说明</h2>
             <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
               <li className="flex items-start gap-2">

@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
+    // 使用 SERVICE_ROLE_KEY 直接访问数据库，不需要用户 JWT
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     // 从数据库获取真实新闻数据

@@ -158,7 +158,7 @@ const EducationUpload: React.FC<EducationUploadProps> = ({
   return (
     <div className="space-y-6">
       {/* 封面上传 */}
-      <div className="glass-card p-4 space-y-4">
+      <div className="galaxy-card p-4 space-y-4">
         <h4 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">
           封面图片
         </h4>
@@ -195,7 +195,7 @@ const EducationUpload: React.FC<EducationUploadProps> = ({
       </div>
 
       {/* 视频上传 */}
-      <div className="glass-card p-4 space-y-4">
+      <div className="galaxy-card p-4 space-y-4">
         <h4 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">
           视频文件
         </h4>
@@ -238,7 +238,7 @@ const EducationUpload: React.FC<EducationUploadProps> = ({
       </div>
 
       {/* 文档上传 */}
-      <div className="glass-card p-4 space-y-4">
+      <div className="galaxy-card p-4 space-y-4">
         <h4 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">
           文档资料
         </h4>

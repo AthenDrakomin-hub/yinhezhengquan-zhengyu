@@ -184,7 +184,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
             exit={{ x: 100, opacity: 0 }}
             transition={{ type: 'spring', damping: 25 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md h-[80vh] glass-card rounded-2xl overflow-hidden flex flex-col"
+            className="w-full max-w-md h-[80vh] galaxy-card rounded-2xl overflow-hidden flex flex-col"
           >
             {/* 头部 */}
             <div className="p-6 border-b border-white/10">

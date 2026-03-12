@@ -102,7 +102,7 @@ const FaceUpload: React.FC<FaceUploadProps> = ({
   }, [handleFileSelect]);
 
   return (
-    <div className="glass-card p-6 space-y-6">
+    <div className="galaxy-card p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-black text-[var(--color-text-primary)] uppercase tracking-widest">
           人脸数据采集

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaSync, FaLock, FaUser, FaShieldAlt } from 'react-icons/fa';
 import { supabase } from '@/lib/supabase';
+import { imageConfig } from '../../lib/imageConfig';
+import { useRouteTheme } from '../../contexts/ThemeContext';
 
 interface LoginViewProps {
   onLoginSuccess: (userData?: any) => void;
@@ -21,8 +23,8 @@ const generateCaptcha = (): { code: string; text: string } => {
 // Alert 组件
 const Alert: React.FC<{ message: string; type?: 'error' | 'success' }> = ({ message, type = 'error' }) => {
   const styles = {
-    error: 'bg-red-50 border-red-200 text-red-600',
-    success: 'bg-green-50 border-green-200 text-green-600',
+    error: 'bg-red-500/10 border-red-500/30 text-red-400',
+    success: 'bg-green-500/10 border-green-500/30 text-green-400',
   };
   return (
     <div className={`${styles[type]} border text-sm px-4 py-3 rounded-lg flex items-center gap-2`}>
@@ -47,12 +49,12 @@ interface InputFieldProps {
 
 const InputField: React.FC<InputFieldProps> = ({ id, label, type = 'text', value, onChange, placeholder, error, icon, suffix }) => (
   <div>
-    <label htmlFor={id} className="text-sm font-semibold text-gray-900 block mb-2">
+    <label htmlFor={id} className="text-sm font-semibold text-[var(--color-text-primary)] block mb-2">
       {label}
     </label>
     <div className="relative">
       {icon && (
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
           {icon}
         </div>
       )}
@@ -62,10 +64,10 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type = 'text', value
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full h-12 px-4 ${icon ? 'pl-10' : ''} ${suffix ? 'pr-12' : ''} border-2 rounded-lg text-sm text-gray-900 placeholder:text-gray-400
-          focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10
-          transition-all duration-200
-          ${error ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+        className={`w-full h-12 px-4 ${icon ? 'pl-10' : ''} ${suffix ? 'pr-12' : ''} border-2 rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]
+          focus:outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/20
+          transition-all duration-200 bg-[var(--color-surface)]
+          ${error ? 'border-red-500 bg-red-500/10' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}`}
       />
       {suffix && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -73,7 +75,7 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, type = 'text', value
         </div>
       )}
     </div>
-    {error && <p className="text-red-600 text-xs mt-1.5 font-medium">{error}</p>}
+    {error && <p className="text-red-400 text-xs mt-1.5 font-medium">{error}</p>}
   </div>
 );
 
@@ -93,13 +95,13 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
       onChange={(e) => onChange(e.target.value.toUpperCase())}
       placeholder="验证码"
       maxLength={4}
-      className="flex-1 h-12 px-4 border-2 border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400
-        focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 uppercase tracking-wider font-medium"
+      className="flex-1 h-12 px-4 border-2 border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]
+        focus:outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/20 uppercase tracking-wider font-medium bg-[var(--color-surface)]"
     />
     <div 
-      className="h-12 w-28 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center 
-        font-mono font-bold text-lg tracking-wider text-blue-800 cursor-pointer hover:from-blue-200 hover:to-indigo-200 
-        transition-all duration-200 border-2 border-blue-200"
+      className="h-12 w-28 bg-[var(--color-primary)]/20 rounded-lg flex items-center justify-center 
+        font-mono font-bold text-lg tracking-wider text-[var(--color-primary)] cursor-pointer hover:bg-[var(--color-primary)]/30 
+        transition-all duration-200 border-2 border-[var(--color-primary)]/30"
       onClick={onRefresh}
       title="点击刷新"
     >
@@ -108,7 +110,7 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
     <button
       type="button"
       onClick={onRefresh}
-      className="h-12 w-12 flex items-center justify-center text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+      className="h-12 w-12 flex items-center justify-center text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] hover:bg-[var(--color-primary)]/10 rounded-lg transition-colors"
       aria-label="刷新验证码"
     >
       <FaSync className="text-base" />
@@ -119,7 +121,10 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
 const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) => {
   const navigate = useNavigate();
   
-  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
+  // 使用统一主题管理 - 认证区域使用浅色主题
+  useRouteTheme('auth');
+  
+  const LOGO_URL = imageConfig.logo.fullUrl;
   
   // 表单状态
   const [email, setEmail] = useState('');
@@ -135,7 +140,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
   // 安全信息状态
   const [clientIP, setClientIP] = useState('获取中...');
   const [lastLogin, setLastLogin] = useState('--');
-  const [verifyInfo] = useState('证裕交易单元欢迎您');
+  const [verifyInfo] = useState('日斗投资单元欢迎您');
   
   // 错误状态
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -263,22 +268,22 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex flex-col items-center justify-center p-4 sm:p-6 text-gray-900">
+    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center justify-center p-4 sm:p-6 text-[var(--color-text-primary)]">
       {/* 装饰性背景元素 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200/30 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[var(--color-primary)]/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[var(--color-primary)]/5 rounded-full blur-3xl" />
       </div>
 
       {/* 顶部品牌区 */}
       <div className="relative z-10 w-full max-w-md mb-6 flex flex-col items-center">
         <img src={LOGO_URL} alt="中国银河证券" className="h-14 object-contain mb-2" />
-        <p className="text-gray-500 text-sm">证裕交易单元 · 专业投资平台</p>
+        <p className="text-[var(--color-text-secondary)] text-sm">日斗投资单元 · 专业投资平台</p>
       </div>
 
       {/* 登录卡片 */}
-      <div className="relative z-10 bg-white/80 backdrop-blur-sm w-full max-w-md rounded-2xl shadow-xl border border-white/50 p-6 sm:p-8">
-        <h1 className="text-xl font-bold text-gray-900 text-center mb-6">
+      <div className="relative z-10 bg-[var(--color-surface)] w-full max-w-md rounded-2xl shadow-xl border border-[var(--color-border)] p-6 sm:p-8">
+        <h1 className="text-xl font-bold text-[var(--color-text-primary)] text-center mb-6">
           客户登录
         </h1>
 
@@ -298,19 +303,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
 
           <InputField
             id="password"
-            label="交易密码"
+            label="密码"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={setPassword}
-            placeholder="请输入交易密码"
+            placeholder="请输入密码"
             error={errors.password}
             icon={<FaLock />}
             suffix={
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-gray-400 hover:text-blue-600 transition-colors"
-                aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
@@ -318,31 +322,30 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           />
 
           <div>
-            <label className="text-sm font-semibold text-gray-900 block mb-2">验证码</label>
+            <label className="text-sm font-semibold text-[var(--color-text-primary)] block mb-2">验证码</label>
             <CaptchaBox
               value={captchaInput}
               onChange={setCaptchaInput}
               captchaText={captcha.text}
               onRefresh={refreshCaptcha}
             />
-            {errors.captcha && <p className="text-red-600 text-xs mt-1.5 font-medium">{errors.captcha}</p>}
+            {errors.captcha && <p className="text-red-400 text-xs mt-1.5 font-medium">{errors.captcha}</p>}
           </div>
 
-          {/* 记住账号 */}
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={rememberAccount}
                 onChange={(e) => setRememberAccount(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-2 border-gray-300 focus:ring-blue-500"
+                className="w-4 h-4 rounded border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]/20"
               />
-              <span className="text-sm font-medium text-gray-700">记住客户号</span>
+              <span className="text-sm text-[var(--color-text-secondary)]">记住账号</span>
             </label>
             <button
               type="button"
               onClick={() => navigate('/auth/forgot-password')}
-              className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-sm text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors"
             >
               忘记密码？
             </button>
@@ -351,76 +354,63 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHome }) =
           <button
             type="submit"
             disabled={loading}
-            className={`w-full h-12 rounded-xl text-base font-semibold transition-all duration-200 
-              flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25
-              ${loading 
-                ? 'bg-blue-400 cursor-not-allowed text-white' 
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-xl hover:shadow-blue-500/30'
-              }`}
+            className="w-full h-12 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-semibold rounded-lg 
+              transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 登录中...
               </>
             ) : (
-              '立即登录'
+              '登录'
             )}
           </button>
         </form>
 
-        {/* 快速开户入口 */}
-        <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-          <p className="text-sm text-gray-600 mb-3">还没有账户？</p>
+        {/* 安全提示 */}
+        <div className="mt-6 p-4 bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)]">
+          <div className="flex items-center gap-2 mb-3">
+            <FaShieldAlt className="text-[var(--color-primary)]" />
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">安全信息</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-[var(--color-text-muted)]">登录IP</span>
+              <span className="text-[var(--color-text-secondary)]">{clientIP}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[var(--color-text-muted)]">上次登录</span>
+              <span className="text-[var(--color-text-secondary)]">{lastLogin}</span>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-[var(--color-text-muted)]">{verifyInfo}</div>
+        </div>
+
+        {/* 底部链接 */}
+        <div className="mt-6 flex justify-center gap-4 text-sm">
           <button
-            onClick={() => navigate('/auth/quick-open')}
-            className="text-blue-600 hover:text-blue-700 text-sm font-bold hover:underline"
+            type="button"
+            onClick={onBackToHome}
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
-            立即开户 →
+            返回首页
+          </button>
+          <span className="text-[var(--color-border)]">|</span>
+          <button
+            type="button"
+            onClick={() => navigate('/auth/quick-open')}
+            className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors font-medium"
+          >
+            开通账户
           </button>
         </div>
       </div>
 
-      {/* 安全信息区 */}
-      <div className="relative z-10 w-full max-w-md mt-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-gray-200">
-          <div className="flex items-center gap-2 text-blue-700 mb-3">
-            <FaShieldAlt className="text-base" />
-            <span className="text-sm font-bold">安全提示</span>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">预留验证信息：</span>
-              <span className="text-gray-900 font-medium">{verifyInfo}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">当前IP：</span>
-              <span className="text-gray-900 font-mono font-medium">{clientIP}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">上次登录：</span>
-              <span className="text-gray-900 font-medium">{lastLogin}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 返回首页 */}
-      <div className="relative z-10 mt-4">
-        <button
-          onClick={onBackToHome}
-          className="text-gray-500 hover:text-blue-600 text-sm flex items-center gap-1 transition-colors"
-        >
-          <span>←</span> 返回官网首页
-        </button>
-      </div>
-
-      {/* 版权 */}
-      <div className="relative z-10 mt-6 text-center text-xs text-gray-400">
-        Copyright © 2026 中国银河证券·证裕交易单元 版权所有
+      {/* 底部版权 */}
+      <div className="relative z-10 mt-6 text-center text-xs text-[var(--color-text-muted)]">
+        <p>© 2026 中国银河证券 · 日斗投资单元</p>
+        <p className="mt-1">投资有风险，入市需谨慎</p>
       </div>
     </div>
   );

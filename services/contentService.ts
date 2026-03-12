@@ -194,7 +194,7 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
     const { data, error } = await supabase
       .from('calendar_events')
       .select('*')
-      .order('event_date', { ascending: true });
+      .order('date', { ascending: true });
 
     if (error) throw error;
 
@@ -204,9 +204,9 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
 
     return data.map((event) => ({
       id: event.id,
-      date: event.event_date,
+      date: event.date,
       title: event.title,
-      type: event.event_type || 'OTHER',
+      type: event.type || 'OTHER',
       time: event.time || undefined,
       markets: event.markets || undefined,
     }));
@@ -217,24 +217,28 @@ export const getCalendarEvents = async (): Promise<CalendarEvent[]> => {
 };
 
 export const createCalendarEvent = async (event: {
-  event_date: string;
+  date: string;
   title: string;
-  event_type?: string;
-  description?: string;
+  type?: string;
+  time?: string;
+  markets?: string[];
 }) => {
   const { error } = await supabase.from('calendar_events').insert({
-    event_date: event.event_date,
+    date: event.date,
     title: event.title,
-    event_type: event.event_type || 'OTHER',
-    description: event.description,
+    type: event.type || 'OTHER',
+    time: event.time,
+    markets: event.markets,
   });
   if (error) throw error;
 };
 
 export const updateCalendarEvent = async (id: string, event: Partial<{
-  event_date: string;
+  date: string;
   title: string;
-  event_type: string;
+  type: string;
+  time: string;
+  markets: string[];
 }>) => {
   const { error } = await supabase
     .from('calendar_events')

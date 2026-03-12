@@ -58,7 +58,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
             key={p}
             onClick={() => setPeriod(p)}
             className={`flex-1 py-1.5 rounded-lg text-[9px] font-black transition-all ${
-              period === p ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+              period === p ? 'bg-[#DC2626] text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
             }`}
           >
             {p}
@@ -67,7 +67,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
       </div>
 
       {/* Main Chart Area */}
-      <div className="glass-card relative h-72 w-full p-4 overflow-hidden group">
+      <div className="galaxy-card relative h-72 w-full p-4 overflow-hidden group">
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
           {/* Grid Lines */}
           {[0, 25, 50, 75, 100].map(val => (
@@ -79,11 +79,11 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
             <>
               <path
                 d={`M 0 ${getY(data[0].price * 1.02)} ${data.map((d, i) => `L ${getX(i)} ${getY(d.price * 1.02)}`).join(' ')}`}
-                fill="none" stroke="#00D4AA" strokeWidth="0.3" strokeOpacity="0.2"
+                fill="none" stroke="#DC2626" strokeWidth="0.3" strokeOpacity="0.2"
               />
               <path
                 d={`M 0 ${getY(data[0].price * 0.98)} ${data.map((d, i) => `L ${getX(i)} ${getY(d.price * 0.98)}`).join(' ')}`}
-                fill="none" stroke="#00D4AA" strokeWidth="0.3" strokeOpacity="0.2"
+                fill="none" stroke="#DC2626" strokeWidth="0.3" strokeOpacity="0.2"
               />
             </>
           )}
@@ -101,7 +101,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
           <path
             d={`M 0 ${getY(data[0].price)} ${data.map((d, i) => `L ${getX(i)} ${getY(d.price)}`).join(' ')}`}
             fill="none"
-            stroke={changePercent >= 0 ? '#00D4AA' : '#FF6B6B'}
+            stroke={changePercent >= 0 ? '#DC2626' : '#059669'}
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -116,7 +116,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
               y={100 - (d.vol / 1000) * 20}
               width="0.8"
               height={(d.vol / 1000) * 20}
-              fill={i > 0 && data[i].price >= data[i-1].price ? '#00D4AA' : '#FF6B6B'}
+              fill={i > 0 && data[i].price >= data[i-1].price ? '#DC2626' : '#059669'}
               opacity="0.3"
             />
           ))}
@@ -125,11 +125,11 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
         {/* Legend */}
         <div className="absolute top-2 left-4 flex gap-4 text-[8px] font-mono font-bold text-[var(--color-text-muted)]">
           <div className="flex items-center gap-1">
-            <span className="w-2 h-0.5 bg-[#00D4AA]" />
+            <span className="w-2 h-0.5 bg-[#DC2626]" />
             MA5: {data[data.length-1].price.toFixed(2)}
           </div>
           {activeIndicators.has('BOLL') && (
-            <div className="flex items-center gap-1 text-[#00D4AA] opacity-60">
+            <div className="flex items-center gap-1 text-[#DC2626] opacity-60">
               BOLL MID: {(data[data.length-1].price * 1.002).toFixed(2)}
             </div>
           )}
@@ -144,7 +144,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
             onClick={() => toggleIndicator(ind)}
             className={`px-3 py-1.5 rounded-lg text-[9px] font-black border transition-all ${
               activeIndicators.has(ind) 
-                ? 'bg-[#00D4AA]/10 border-[#00D4AA] text-[#00D4AA]' 
+                ? 'bg-[#DC2626]/10 border-[#DC2626] text-[#DC2626]' 
                 : 'border-[var(--color-border)] text-[var(--color-text-muted)]'
             }`}
           >
@@ -167,18 +167,18 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ symbol, basePrice, 
 
       {/* Secondary Indicator Chart (MACD/RSI Placeholder) */}
       {(activeIndicators.has('MACD') || activeIndicators.has('RSI')) && (
-        <div className="glass-card h-24 p-2 relative overflow-hidden">
+        <div className="galaxy-card h-24 p-2 relative overflow-hidden">
           <div className="absolute top-1 left-2 text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
             {activeIndicators.has('MACD') ? 'MACD (12, 26, 9)' : 'RSI (14)'}
           </div>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full opacity-60">
              <path 
                d={`M 0 50 ${Array.from({length: 40}).map((_, i) => `L ${(i/39)*100} ${50 + Math.sin(i*0.5)*20}`).join(' ')}`} 
-               fill="none" stroke="#00D4AA" strokeWidth="1" 
+               fill="none" stroke="#DC2626" strokeWidth="1" 
              />
              <path 
                d={`M 0 50 ${Array.from({length: 40}).map((_, i) => `L ${(i/39)*100} ${50 + Math.cos(i*0.5)*15}`).join(' ')}`} 
-               fill="none" stroke="#FF6B6B" strokeWidth="1" 
+               fill="none" stroke="#059669" strokeWidth="1" 
              />
           </svg>
         </div>

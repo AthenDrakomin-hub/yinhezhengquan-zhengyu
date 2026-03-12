@@ -26,6 +26,15 @@ export default defineConfig(({ mode }) => {
             target: 'https://hq.sinajs.cn',
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api\/stock/, ''),
+            headers: {
+              'Referer': 'https://finance.sina.com.cn',
+            }
+          },
+          // 东方财富快讯 API 代理
+          '/api/eastmoney': {
+            target: 'https://np-listapi.eastmoney.com',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/eastmoney/, ''),
           }
         }
       },

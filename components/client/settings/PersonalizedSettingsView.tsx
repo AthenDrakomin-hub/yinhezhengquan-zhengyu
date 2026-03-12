@@ -50,7 +50,7 @@ const PersonalizedSettingsView: React.FC = () => {
         {/* Language Selection */}
         <section className="space-y-3">
           <h3 className="px-2 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">系统语言</h3>
-          <div className="glass-card divide-y divide-[var(--color-border)] overflow-hidden">
+          <div className="galaxy-card divide-y divide-[var(--color-border)] overflow-hidden">
             {[
               { id: 'zh-CN', label: '简体中文' },
               { id: 'zh-HK', label: '繁體中文 (香港)' },
@@ -73,7 +73,7 @@ const PersonalizedSettingsView: React.FC = () => {
         {/* Font Size Selection */}
         <section className="space-y-3">
           <h3 className="px-2 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">行情字体大小</h3>
-          <div className="glass-card flex p-1 gap-1">
+          <div className="galaxy-card flex p-1 gap-1">
             <button 
               onClick={() => updateAndSaveSettings({ fontSize: 'standard' })}
               className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.fontSize === 'standard' ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)]'}`}
@@ -93,10 +93,10 @@ const PersonalizedSettingsView: React.FC = () => {
         {/* Interaction Settings */}
         <section className="space-y-3">
           <h3 className="px-2 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">交互反馈</h3>
-          <div className="glass-card overflow-hidden">
+          <div className="galaxy-card overflow-hidden">
             <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
               <div className="space-y-0.5">
-                <p className="text-xs font-bold text-[var(--color-text-primary)]">触感反馈 (Haptic)</p>
+                <p className="text-xs font-bold text-[var(--color-text-primary)]">触感反馈</p>
                 <p className="text-[9px] text-[var(--color-text-muted)]">按钮点击及报单成功时伴有轻微物理振动</p>
               </div>
               <div 

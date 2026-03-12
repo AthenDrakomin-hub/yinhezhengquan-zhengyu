@@ -17,7 +17,7 @@ const UnauthorizedView: React.FC = () => {
             <ICONS.AlertTriangle size={32} className="text-amber-400" />
           </div>
           <h1 className="text-2xl font-black text-white mb-2">访问权限不足</h1>
-          <p className="text-slate-400 text-sm">银河证券·证裕交易单元</p>
+          <p className="text-slate-400 text-sm">银河证券·日斗投资单元</p>
         </div>
 
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-6 text-sm">

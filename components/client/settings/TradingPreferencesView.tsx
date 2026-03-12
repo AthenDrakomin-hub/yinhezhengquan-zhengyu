@@ -57,7 +57,7 @@ const TradingPreferencesView: React.FC = () => {
         {/* Fast Order Section */}
         <section className="space-y-3">
           <h3 className="px-2 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">自动化与效率</h3>
-          <div className="glass-card overflow-hidden">
+          <div className="galaxy-card overflow-hidden">
             <div className="p-4 border-b border-[var(--color-border)] space-y-3">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -95,17 +95,17 @@ const TradingPreferencesView: React.FC = () => {
               <div 
                 key={strategy}
                 onClick={() => updateAndSaveSettings({ defaultStrategy: strategy })}
-                className={`glass-card p-4 flex items-center justify-between cursor-pointer border-2 transition-all ${
+                className={`galaxy-card p-4 flex items-center justify-between cursor-pointer border-2 transition-all ${
                   settings.defaultStrategy === strategy ? 'border-[#00D4AA] bg-[#00D4AA]/5' : 'border-transparent hover:border-[var(--color-border)]'
                 }`}
               >
                 <div className="space-y-1">
                   <p className="text-xs font-bold text-[var(--color-text-primary)]">{strategy}</p>
                   <p className="text-[8px] text-[var(--color-text-muted)] uppercase tracking-widest font-mono">
-                    {strategy === OrderStrategy.NORMAL ? 'STANDARD EXECUTION' : 
-                     strategy === OrderStrategy.GRID ? 'ALGORITHMIC REBALANCING' : 
-                     strategy === OrderStrategy.TP_SL ? 'PROTECTIVE TRIGGER' : 
-                     'ADVANCED LOGIC'}
+                    {strategy === OrderStrategy.NORMAL ? '标准执行' : 
+                     strategy === OrderStrategy.GRID ? '算法再平衡' : 
+                     strategy === OrderStrategy.TP_SL ? '保护触发' : 
+                     '高级逻辑'}
                   </p>
                 </div>
                 {settings.defaultStrategy === strategy && (
@@ -124,7 +124,7 @@ const TradingPreferencesView: React.FC = () => {
             <h3 className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">衍生品默认杠杆</h3>
             <span className="text-xs font-black text-[#00D4AA] font-mono">{settings.defaultLeverage}x</span>
           </div>
-          <div className="glass-card p-6 space-y-6">
+          <div className="galaxy-card p-6 space-y-6">
             <div className="flex justify-between gap-1">
               {leverageOptions.map((lv) => (
                 <button 
@@ -150,7 +150,7 @@ const TradingPreferencesView: React.FC = () => {
 
         <div className="pt-4 flex flex-col items-center gap-2">
            <ICONS.Shield size={24} className="text-[var(--color-text-muted)] opacity-20" />
-           <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">Galaxy Nexus Security Protocol v3.0</p>
+           <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">银河证券安全协议 v3.0</p>
         </div>
       </div>
     </div>

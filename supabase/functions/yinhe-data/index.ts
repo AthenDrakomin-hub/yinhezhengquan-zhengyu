@@ -1,7 +1,13 @@
 /**
- * 银禾数据 API Edge Function
- * 代理银禾数据 API，统一处理和缓存
- * 文档: https://yinhedata.com/interface/index.html
+ * 银和数据 API Edge Function
+ * 银和数据是免费的公开API，无需API Key
+ * 文档: https://yinhedata.com/DataDocs/index.html
+ * 
+ * 支持的数据类型：
+ * - 实时行情：/stock/realtime
+ * - 60分钟K线：/stock/kline/60m
+ * - 3秒高频tick：/stock/tick
+ * - 五档行情：/stock/orderbook
  * 
  * 部署: supabase functions deploy yinhe-data
  */
@@ -15,14 +21,14 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-// 银禾数据 API 基础配置
-const YINHE_BASE_URL = 'https://api.yinhedata.com/v1';
-const YINHE_API_KEY = Deno.env.get('YINHE_API_KEY') || '';
+// 银和数据公开API基础URL（免费，无需API Key）
+const YINHE_BASE_URL = 'https://api.yinhedata.com';
 
 // 响应包装器
-const successResponse = (data: unknown) => ({
+const successResponse = (data: unknown, source: string = 'yinhe') => ({
   success: true,
   data,
+  source,
   timestamp: new Date().toISOString(),
 });
 
@@ -33,229 +39,434 @@ const errorResponse = (message: string, code: number = 500) => ({
   timestamp: new Date().toISOString(),
 });
 
-// 通用 fetch 封装
-async function fetchYinheAPI(endpoint: string, params?: Record<string, string>) {
-  const url = new URL(`${YINHE_BASE_URL}${endpoint}`);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) url.searchParams.append(key, value);
-    });
-  }
+// ==================== 银和数据API调用 ====================
+
+/**
+ * 获取实时行情
+ * 文档: https://yinhedata.com/DataDocs/index.html
+ */
+async function getRealtimeQuote(symbol: string) {
+  // 银和数据实时行情接口
+  const url = `${YINHE_BASE_URL}/stock/realtime?code=${symbol}`;
   
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     headers: {
-      'Authorization': `Bearer ${YINHE_API_KEY}`,
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
   });
   
   if (!response.ok) {
-    throw new Error(`API 请求失败: ${response.status}`);
+    throw new Error(`获取实时行情失败: ${response.status}`);
   }
   
   return await response.json();
 }
 
-// 路由处理器
-const handlers: Record<string, (req: Request, url: URL) => Promise<Response>> = {
-  // 健康检查
-  '/health': async () => {
-    return new Response(JSON.stringify({
-      status: 'healthy',
-      service: 'yinhe-data',
-      apiKeyConfigured: !!YINHE_API_KEY,
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  },
-
-  // 获取股票行情列表
-  '/api/quotes': async (req, url) => {
-    const symbols = url.searchParams.get('symbols');
-    const data = await fetchYinheAPI('/quotes', { symbols: symbols || undefined });
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取单只股票行情
-  '/api/quote/:symbol': async (req, url) => {
-    const pathParts = url.pathname.split('/');
-    const symbol = pathParts[pathParts.length - 1];
-    const data = await fetchYinheAPI(`/quote/${symbol}`);
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取涨停股票列表
-  '/api/limit-up': async () => {
-    const data = await fetchYinheAPI('/market/limit-up');
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取跌停股票列表
-  '/api/limit-down': async () => {
-    const data = await fetchYinheAPI('/market/limit-down');
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取新股申购列表
-  '/api/ipo': async () => {
-    const data = await fetchYinheAPI('/ipo/list');
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取K线数据
-  '/api/kline/:symbol': async (req, url) => {
-    const pathParts = url.pathname.split('/');
-    const symbol = pathParts[pathParts.length - 1];
-    const period = url.searchParams.get('period') || 'day';
-    const limit = url.searchParams.get('limit') || '100';
-    const data = await fetchYinheAPI(`/kline/${symbol}`, { period, limit });
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取资金流向
-  '/api/money-flow/:symbol': async (req, url) => {
-    const pathParts = url.pathname.split('/');
-    const symbol = pathParts[pathParts.length - 1];
-    const data = await fetchYinheAPI(`/money-flow/${symbol}`);
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取龙虎榜数据
-  '/api/dragon-tiger': async (req, url) => {
-    const date = url.searchParams.get('date');
-    const data = await fetchYinheAPI('/market/dragon-tiger', { date: date || undefined });
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取股票列表
-  '/api/stock-list': async (req, url) => {
-    const market = url.searchParams.get('market');
-    const data = await fetchYinheAPI('/stocks/list', { market: market || undefined });
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取财务数据
-  '/api/financial/:symbol': async (req, url) => {
-    const pathParts = url.pathname.split('/');
-    const symbol = pathParts[pathParts.length - 1];
-    const data = await fetchYinheAPI(`/financial/${symbol}`);
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取板块行情
-  '/api/sectors': async () => {
-    const data = await fetchYinheAPI('/sectors');
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 获取概念板块
-  '/api/concepts': async () => {
-    const data = await fetchYinheAPI('/concepts');
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-
-  // 搜索股票
-  '/api/search': async (req, url) => {
-    const keyword = url.searchParams.get('keyword');
-    if (!keyword) {
-      return new Response(JSON.stringify(errorResponse('缺少 keyword 参数', 400)), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const data = await fetchYinheAPI('/search', { keyword });
-    return new Response(JSON.stringify(successResponse(data)), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
-};
-
-// 路由匹配
-function matchRoute(path: string): { handler: keyof typeof handlers; params?: Record<string, string> } | null {
-  // 精确匹配
-  if (handlers[path]) {
-    return { handler: path as keyof typeof handlers };
+/**
+ * 获取批量实时行情
+ */
+async function getBatchQuotes(symbols: string[]) {
+  const codes = symbols.join(',');
+  const url = `${YINHE_BASE_URL}/stock/realtime?codes=${codes}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取批量行情失败: ${response.status}`);
   }
-
-  // 动态路由匹配
-  const patterns = [
-    { pattern: /^\/api\/quote\/(.+)$/, handler: '/api/quote/:symbol' },
-    { pattern: /^\/api\/kline\/(.+)$/, handler: '/api/kline/:symbol' },
-    { pattern: /^\/api\/money-flow\/(.+)$/, handler: '/api/money-flow/:symbol' },
-    { pattern: /^\/api\/financial\/(.+)$/, handler: '/api/financial/:symbol' },
-  ];
-
-  for (const { pattern, handler } of patterns) {
-    const match = path.match(pattern);
-    if (match) {
-      return { handler: handler as keyof typeof handlers, params: { symbol: match[1] } };
-    }
-  }
-
-  return null;
+  
+  return await response.json();
 }
 
-// 主处理函数
-serve(async (req: Request) => {
-  // 处理 CORS 预检请求
+/**
+ * 获取K线数据
+ * period: 1m, 5m, 15m, 30m, 60m, day, week, month
+ */
+async function getKline(symbol: string, period: string = 'day', limit: number = 100) {
+  const url = `${YINHE_BASE_URL}/stock/kline?code=${symbol}&period=${period}&limit=${limit}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取K线数据失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取五档行情
+ */
+async function getOrderbook(symbol: string) {
+  const url = `${YINHE_BASE_URL}/stock/orderbook?code=${symbol}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取五档行情失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取Tick数据（3秒高频）
+ */
+async function getTickData(symbol: string, date?: string) {
+  const dateParam = date || new Date().toISOString().split('T')[0];
+  const url = `${YINHE_BASE_URL}/stock/tick?code=${symbol}&date=${dateParam}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取Tick数据失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取资金流向
+ */
+async function getMoneyFlow(symbol: string) {
+  const url = `${YINHE_BASE_URL}/stock/moneyflow?code=${symbol}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取资金流向失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取股票列表
+ * market: sh(上海), sz(深圳)
+ */
+async function getStockList(market: string = 'all') {
+  const url = `${YINHE_BASE_URL}/stock/list?market=${market}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取股票列表失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取涨停股票
+ */
+async function getLimitUp() {
+  const url = `${YINHE_BASE_URL}/stock/limitup`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取涨停股票失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取跌停股票
+ */
+async function getLimitDown() {
+  const url = `${YINHE_BASE_URL}/stock/limitdown`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取跌停股票失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取新股申购列表
+ */
+async function getIPOList() {
+  const url = `${YINHE_BASE_URL}/ipo/list`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取新股列表失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取龙虎榜数据
+ */
+async function getDragonTiger(date?: string) {
+  const dateParam = date || new Date().toISOString().split('T')[0];
+  const url = `${YINHE_BASE_URL}/market/dragontiger?date=${dateParam}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取龙虎榜失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+/**
+ * 获取板块行情
+ */
+async function getSectors() {
+  const url = `${YINHE_BASE_URL}/market/sectors`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`获取板块行情失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+// ==================== 路由处理器 ====================
+
+serve(async (req) => {
+  // 处理 OPTIONS 预检请求
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   const url = new URL(req.url);
-  const path = url.pathname;
+  const path = url.pathname.replace('/functions/v1/yinhe-data', '');
+  const method = req.method;
 
   try {
-    // 检查 API Key 配置
-    if (!YINHE_API_KEY) {
-      return new Response(JSON.stringify(errorResponse('YINHE_API_KEY 未配置')), {
-        status: 500,
+    // 健康检查
+    if (path === '/health' || path === '/') {
+      return new Response(JSON.stringify({
+        status: 'healthy',
+        service: 'yinhe-data',
+        message: '银和数据API代理服务运行正常',
+        apiType: '免费公开API，无需API Key',
+        endpoints: [
+          'GET /quote?code=股票代码 - 获取实时行情',
+          'GET /quotes?codes=代码1,代码2 - 批量获取行情',
+          'GET /kline?code=股票代码&period=周期&limit=数量 - 获取K线',
+          'GET /orderbook?code=股票代码 - 获取五档行情',
+          'GET /tick?code=股票代码&date=日期 - 获取3秒高频Tick',
+          'GET /moneyflow?code=股票代码 - 获取资金流向',
+          'GET /stocklist?market=市场 - 获取股票列表',
+          'GET /limitup - 获取涨停股',
+          'GET /limitdown - 获取跌停股',
+          'GET /ipo - 获取新股申购',
+          'GET /dragontiger?date=日期 - 获取龙虎榜',
+          'GET /sectors - 获取板块行情',
+        ],
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // 获取单只股票实时行情
+    if (path === '/quote' && method === 'GET') {
+      const code = url.searchParams.get('code');
+      if (!code) {
+        return new Response(JSON.stringify(errorResponse('缺少 code 参数', 400)), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const data = await getRealtimeQuote(code);
+      return new Response(JSON.stringify(successResponse(data)), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // 匹配路由
-    const routeMatch = matchRoute(path);
-    
-    if (routeMatch) {
-      const handler = handlers[routeMatch.handler];
-      if (handler) {
-        return await handler(req, url);
+    // 批量获取行情
+    if (path === '/quotes' && method === 'GET') {
+      const codes = url.searchParams.get('codes');
+      if (!codes) {
+        return new Response(JSON.stringify(errorResponse('缺少 codes 参数', 400)), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
+      const data = await getBatchQuotes(codes.split(','));
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // 404 处理
-    return new Response(JSON.stringify(errorResponse('接口不存在', 404)), {
+    // 获取K线数据
+    if (path === '/kline' && method === 'GET') {
+      const code = url.searchParams.get('code');
+      const period = url.searchParams.get('period') || 'day';
+      const limit = parseInt(url.searchParams.get('limit') || '100');
+      
+      if (!code) {
+        return new Response(JSON.stringify(errorResponse('缺少 code 参数', 400)), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const data = await getKline(code, period, limit);
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取五档行情
+    if (path === '/orderbook' && method === 'GET') {
+      const code = url.searchParams.get('code');
+      if (!code) {
+        return new Response(JSON.stringify(errorResponse('缺少 code 参数', 400)), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const data = await getOrderbook(code);
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取Tick数据（3秒高频）
+    if (path === '/tick' && method === 'GET') {
+      const code = url.searchParams.get('code');
+      const date = url.searchParams.get('date');
+      
+      if (!code) {
+        return new Response(JSON.stringify(errorResponse('缺少 code 参数', 400)), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const data = await getTickData(code, date || undefined);
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取资金流向
+    if (path === '/moneyflow' && method === 'GET') {
+      const code = url.searchParams.get('code');
+      if (!code) {
+        return new Response(JSON.stringify(errorResponse('缺少 code 参数', 400)), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const data = await getMoneyFlow(code);
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取股票列表
+    if (path === '/stocklist' && method === 'GET') {
+      const market = url.searchParams.get('market') || 'all';
+      const data = await getStockList(market);
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取涨停股票
+    if (path === '/limitup' && method === 'GET') {
+      const data = await getLimitUp();
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取跌停股票
+    if (path === '/limitdown' && method === 'GET') {
+      const data = await getLimitDown();
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取新股申购
+    if (path === '/ipo' && method === 'GET') {
+      const data = await getIPOList();
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取龙虎榜
+    if (path === '/dragontiger' && method === 'GET') {
+      const date = url.searchParams.get('date');
+      const data = await getDragonTiger(date || undefined);
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 获取板块行情
+    if (path === '/sectors' && method === 'GET') {
+      const data = await getSectors();
+      return new Response(JSON.stringify(successResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 未知路由
+    return new Response(JSON.stringify(errorResponse('未知的API路径', 404)), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
-    console.error('处理请求时出错:', error);
-    return new Response(JSON.stringify(errorResponse(error instanceof Error ? error.message : '内部服务器错误')), {
+  } catch (error: any) {
+    console.error('银和数据API调用错误:', error);
+    return new Response(JSON.stringify(errorResponse(error.message || '服务器内部错误', 500)), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

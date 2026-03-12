@@ -1,12 +1,14 @@
 import React, { lazy, Suspense, createContext, useContext, useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme, useRouteTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { soundLibrary } from '../lib/sound';
 import Layout from '../components/core/Layout';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import type { UserAccount, Stock } from '../lib/types';
 import { TradeType } from '../lib/types';
+import { tradeService } from '../services/tradeService';
 
 // 懒加载客户端组件
 const Dashboard = lazy(() => import('../components/views/Dashboard'));
@@ -35,6 +37,7 @@ const SecuritySettings = lazy(() => import('../components/client/settings/Securi
 const AboutSettings = lazy(() => import('../components/client/settings/AboutSettings'));
 const EducationCenterView = lazy(() => import('../components/client/education/EducationCenterView'));
 const NewsDetailView = lazy(() => import('../components/client/news/NewsDetailView'));
+const StockDetailView = lazy(() => import('../components/client/market/StockDetailView'));
 
 // 诊断工具
 const ImageDiagnosticPage = lazy(() => import('../components/client/ImageDiagnosticPage'));
@@ -95,6 +98,23 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('*')
         .eq('user_id', user.id);
 
+      // 获取当前价格（从市场数据）
+      const stockSymbols = (positions || []).map(p => p.symbol || p.stock_code);
+      let stockPrices: Record<string, number> = {};
+      
+      if (stockSymbols.length > 0) {
+        try {
+          const { frontendMarketService } = await import('../services/frontendMarketService');
+          const market = stockSymbols[0].startsWith('00') || stockSymbols[0].startsWith('60') ? 'CN' : 'HK';
+          const stocks = await frontendMarketService.getBatchStocks(stockSymbols, market);
+          stocks.forEach((s: { symbol: string; price: number }) => {
+            stockPrices[s.symbol] = s.price;
+          });
+        } catch (e) {
+          console.warn('获取实时价格失败，使用数据库价格');
+        }
+      }
+
       // 获取最近交易
       const { data: trades } = await supabase
         .from('trades')
@@ -117,19 +137,30 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
         username: user.user_metadata?.username || user.email?.split('@')[0] || '用户',
         status: 'ACTIVE',
         balance: assets?.available_balance || 0,
-        holdings: (positions || []).map(p => ({
-          symbol: p.symbol || p.stock_code,
-          name: p.name || p.stock_name,
-          quantity: Number(p.quantity),
-          availableQuantity: Number(p.available_quantity),
-          averagePrice: Number(p.average_price),
-          avgPrice: Number(p.average_price),
-          currentPrice: Number(p.current_price || p.average_price),
-          marketValue: Number(p.quantity) * Number(p.current_price || p.average_price),
-          profit: 0,
-          profitRate: 0,
-          category: 'STOCK' as const,
-        })),
+        holdings: (positions || []).map(p => {
+          const symbol = p.symbol || p.stock_code;
+          const currentPrice = stockPrices[symbol] || Number(p.current_price || p.average_price);
+          const avgPrice = Number(p.average_price);
+          const quantity = Number(p.quantity);
+          const cost = avgPrice * quantity;
+          const marketValue = currentPrice * quantity;
+          const profit = marketValue - cost;
+          const profitRate = cost > 0 ? (profit / cost) * 100 : 0;
+          
+          return {
+            symbol,
+            name: p.name || p.stock_name,
+            quantity,
+            availableQuantity: Number(p.available_quantity),
+            averagePrice: avgPrice,
+            avgPrice,
+            currentPrice,
+            marketValue,
+            profit,
+            profitRate,
+            category: 'STOCK' as const,
+          };
+        }),
         transactions: (trades || []).map(t => ({
           id: t.id,
           type: t.trade_type as any,
@@ -188,35 +219,10 @@ const defaultStock: Stock = {
 const ClientRoutes: React.FC = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    // 从 localStorage 读取主题设置，默认为深色
-    const saved = localStorage.getItem('theme');
-    return saved ? saved === 'dark' : true;
-  });
-
-  // 切换主题
-  const toggleTheme = () => {
-    setIsDarkMode(prev => {
-      const newMode = !prev;
-      localStorage.setItem('theme', newMode ? 'dark' : 'light');
-      // 切换 body class
-      if (newMode) {
-        document.body.classList.remove('light-mode');
-      } else {
-        document.body.classList.add('light-mode');
-      }
-      return newMode;
-    });
-  };
-
-  // 初始化时应用主题
-  useEffect(() => {
-    if (!isDarkMode) {
-      document.body.classList.add('light-mode');
-    } else {
-      document.body.classList.remove('light-mode');
-    }
-  }, [isDarkMode]);
+  
+  // 使用统一主题管理 - 客户端区域默认浅色，用户可切换
+  const { theme, isDarkMode, toggleTheme } = useTheme();
+  useRouteTheme('client');
 
   const handleLogout = async () => {
     await signOut();
@@ -244,7 +250,8 @@ const ClientRoutes: React.FC = () => {
             >
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<DashboardWrapper />} />
-              <Route path="market" element={<MarketView onSelectStock={(symbol) => navigate(`/client/trade?symbol=${symbol}`)} />} />
+              <Route path="market" element={<MarketView onSelectStock={(symbol) => navigate(`/client/stock/${symbol}`)} />} />
+              <Route path="stock/:symbol" element={<StockDetailView />} />
               <Route path="trade" element={<TradePanelWrapper />} />
               <Route path="profile" element={<ProfileViewWrapper />} />
               
@@ -386,156 +393,41 @@ const TradePanelWrapper: React.FC = () => {
     }
 
     try {
-      const tradeType = type === TradeType.BUY ? 'BUY' : 
-                        type === TradeType.SELL ? 'SELL' : 
-                        type === TradeType.IPO ? 'IPO' : 
-                        type === TradeType.BLOCK ? 'BLOCK' : 'LIMIT_UP';
-      
-      const amount = price * quantity;
-      
-      // 1. 创建交易记录
-      const { data: tradeData, error: tradeError } = await supabase
-        .from('trades')
-        .insert({
-          user_id: user.id,
-          stock_code: symbol,
-          stock_name: name,
-          trade_type: tradeType,
-          quantity: quantity,
-          price: price,
-          amount: amount,
-          status: 'PENDING',
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      // 使用 tradeService 调用 Edge Function
+      const result = await tradeService.executeTrade({
+        userId: user.id,
+        type,
+        symbol,
+        name,
+        price,
+        quantity,
+        logoUrl,
+        marketType: type === TradeType.SELL ? 'A_SHARE' : 'A_SHARE', // 默认A股
+      });
 
-      if (tradeError) {
-        console.error('创建交易记录失败:', tradeError);
-        alert('交易提交失败: ' + tradeError.message);
+      if (result && result.success) {
+        // 刷新用户账户数据
+        await refresh();
+        
+        // 播放交易成功音效
+        soundLibrary.playSend();
+        
+        // 显示结果
+        if (result.status === 'PENDING_APPROVAL') {
+          alert('订单已提交，等待管理员审核');
+        } else {
+          alert('订单已进入撮合池');
+        }
+        return true;
+      } else if (result && result.error) {
+        alert('交易失败: ' + result.error);
         return false;
       }
-
-      // 2. 更新用户资产（扣除资金或添加持仓）
-      if (type === TradeType.BUY || type === TradeType.IPO || type === TradeType.BLOCK || type === TradeType.LIMIT_UP) {
-        // 买入：扣除可用资金
-        const { error: assetError } = await supabase.rpc('deduct_balance', {
-          p_user_id: user.id,
-          p_amount: amount
-        });
-        
-        if (assetError) {
-          console.error('扣除资金失败:', assetError);
-          // 回滚交易状态
-          await supabase.from('trades').update({ status: 'FAILED' }).eq('id', tradeData.id);
-          alert('资金不足或扣除失败');
-          return false;
-        }
-
-        // 添加或更新持仓
-        const { data: existingPosition } = await supabase
-          .from('positions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('stock_code', symbol)
-          .single();
-
-        if (existingPosition) {
-          // 更新现有持仓
-          const newQuantity = Number(existingPosition.quantity) + quantity;
-          const newAvgPrice = (Number(existingPosition.average_price) * Number(existingPosition.quantity) + amount) / newQuantity;
-          
-          const { error: updateError } = await supabase
-            .from('positions')
-            .update({
-              quantity: newQuantity,
-              available_quantity: Number(existingPosition.available_quantity) + quantity,
-              average_price: newAvgPrice,
-              current_price: price,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existingPosition.id);
-
-          if (updateError) {
-            console.error('更新持仓失败:', updateError);
-          }
-        } else {
-          // 创建新持仓
-          const { error: positionError } = await supabase
-            .from('positions')
-            .insert({
-              user_id: user.id,
-              stock_code: symbol,
-              stock_name: name,
-              quantity: quantity,
-              available_quantity: quantity,
-              average_price: price,
-              current_price: price,
-              logo_url: logoUrl,
-              created_at: new Date().toISOString(),
-            });
-
-          if (positionError) {
-            console.error('创建持仓失败:', positionError);
-          }
-        }
-      } else if (type === TradeType.SELL) {
-        // 卖出：增加资金，减少持仓
-        const { error: assetError } = await supabase.rpc('add_balance', {
-          p_user_id: user.id,
-          p_amount: amount
-        });
-        
-        if (assetError) {
-          console.error('增加资金失败:', assetError);
-        }
-
-        // 减少持仓
-        const { data: existingPosition } = await supabase
-          .from('positions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('stock_code', symbol)
-          .single();
-
-        if (existingPosition) {
-          const newQuantity = Number(existingPosition.quantity) - quantity;
-          if (newQuantity <= 0) {
-            // 删除持仓
-            await supabase.from('positions').delete().eq('id', existingPosition.id);
-          } else {
-            // 更新持仓
-            await supabase
-              .from('positions')
-              .update({
-                quantity: newQuantity,
-                available_quantity: Math.max(0, Number(existingPosition.available_quantity) - quantity),
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', existingPosition.id);
-          }
-        }
-      }
-
-      // 3. 更新交易状态为成功
-      await supabase
-        .from('trades')
-        .update({ 
-          status: 'SUCCESS',
-          executed_at: new Date().toISOString()
-        })
-        .eq('id', tradeData.id);
-
-      // 4. 刷新用户账户数据
-      await refresh();
-      
-      // 5. 播放交易成功音效
-      soundLibrary.playSend();
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('交易执行异常:', error);
-      alert('交易执行失败，请重试');
+      alert('交易执行失败: ' + (error.message || '请重试'));
       return false;
     }
   };

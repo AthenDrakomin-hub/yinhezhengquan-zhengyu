@@ -3,6 +3,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ICONS } from '../../lib/constants';
+import { imageConfig } from '../../lib/imageConfig';
 import { supabase } from '../../lib/supabase';
 
 // Zod 验证模式
@@ -32,7 +33,7 @@ const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onBack, onCompl
     },
   });
 
-  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
+  const LOGO_URL = imageConfig.logo.fullUrl;
 
   const handleSendResetLink = async (data: ForgotPasswordFormData) => {
     setLoading(true);
@@ -196,7 +197,7 @@ const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onBack, onCompl
         {/* 页脚信息 */}
         <div className="fixed bottom-4 left-0 right-0 text-center z-10 pointer-events-none">
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest pointer-events-auto">
-           证券 · 证裕交易系统 | 密码重置服务
+           证券 · 日斗投资系统 | 密码重置服务
           </p>
         </div>
       </div>

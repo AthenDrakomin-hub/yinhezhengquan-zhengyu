@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaSync, FaShieldAlt, FaMobileAlt, FaCheckCircle } from 'react-icons/fa';
 import { supabase } from '@/lib/supabase';
 import { generateTOTPSecret, verifyTOTP } from '@/lib/totp';
+import { useRouteTheme } from '../../contexts/ThemeContext';
+import { imageConfig } from '../../lib/imageConfig';
 
 interface AdminLoginViewProps {
   onLoginSuccess: (userData: Record<string, any>) => void;
@@ -21,9 +23,9 @@ const generateCaptcha = (): { code: string; text: string } => {
 // Alert 组件
 const Alert: React.FC<{ message: string; type?: 'error' | 'success' | 'info' }> = ({ message, type = 'error' }) => {
   const styles = {
-    error: 'bg-red-50 border-red-200 text-red-600',
-    success: 'bg-green-50 border-green-200 text-green-600',
-    info: 'bg-blue-50 border-blue-200 text-blue-600',
+    error: 'bg-red-500/10 border-red-500/30 text-red-400',
+    success: 'bg-green-500/10 border-green-500/30 text-green-400',
+    info: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
   };
   return (
     <div role="alert" className={`${styles[type]} border text-sm px-4 py-3 rounded flex items-center gap-2`}>
@@ -45,11 +47,11 @@ interface FormFieldProps {
 
 const FormField: React.FC<FormFieldProps> = ({ id, label, children, error }) => (
   <div>
-    <label htmlFor={id} className="text-sm font-medium text-gray-700 block mb-1.5">
+    <label htmlFor={id} className="text-sm font-medium text-[var(--color-text-primary)] block mb-1.5">
       {label}
     </label>
     {children}
-    {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
+    {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
   </div>
 );
 
@@ -72,10 +74,10 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
       placeholder="验证码"
       maxLength={4}
       disabled={disabled}
-      className="w-24 h-10 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 uppercase tracking-wider disabled:bg-gray-100 disabled:cursor-not-allowed"
+      className="w-24 h-10 px-3 border border-[var(--color-border)] rounded text-sm bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
     />
     <div 
-      className="h-10 w-20 bg-gray-100 rounded flex items-center justify-center font-mono font-bold text-lg tracking-wider text-gray-800 cursor-pointer hover:bg-gray-200 transition-colors"
+      className="h-10 w-20 bg-[var(--color-primary)]/20 rounded flex items-center justify-center font-mono font-bold text-lg tracking-wider text-[var(--color-primary)] cursor-pointer hover:bg-[var(--color-primary)]/30 transition-colors"
       onClick={onRefresh}
       title="点击刷新验证码"
     >
@@ -84,7 +86,7 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
     <button
       type="button"
       onClick={onRefresh}
-      className="text-blue-600 hover:text-blue-700 text-xs flex items-center gap-1"
+      className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] text-xs flex items-center gap-1"
       aria-label="刷新验证码"
     >
       <FaSync className="text-xs" />
@@ -96,7 +98,10 @@ const CaptchaBox: React.FC<CaptchaBoxProps> = ({ value, onChange, captchaText, o
 const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
   
-  const LOGO_URL = import.meta.env.VITE_ADMIN_LOGO_URL || import.meta.env.VITE_LOGO_URL || '/logo.png';
+  // 使用统一主题管理 - 管理端使用浅色主题（当前强制浅色基准）
+  useRouteTheme('admin');
+  
+  const LOGO_URL = imageConfig.logo.fullUrl;
   
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -341,7 +346,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
           placeholder="请输入登录邮箱"
           disabled={isLocked || loading}
           autoFocus
-          className="w-full h-10 px-3 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="w-full h-10 px-3 border border-[var(--color-border)] rounded text-sm bg-[var(--color-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </FormField>
 
@@ -355,13 +360,13 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
             onChange={handleChange}
             placeholder="请输入密码"
             disabled={isLocked || loading}
-            className="w-full h-10 px-3 pr-20 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full h-10 px-3 pr-20 border border-[var(--color-border)] rounded text-sm bg-[var(--color-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-[var(--color-text-muted)]">
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="hover:text-blue-600"
+              className="hover:text-[var(--color-primary)]"
               aria-label={showPassword ? '隐藏密码' : '显示密码'}
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
@@ -372,7 +377,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
           <button
             type="button"
             onClick={() => navigate('/auth/forgot-password')}
-            className="text-xs text-blue-600 hover:underline"
+            className="text-xs text-[var(--color-primary)] hover:underline"
           >
             忘记密码?
           </button>
@@ -393,10 +398,10 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
         type="submit"
         disabled={loading || isLocked}
         aria-disabled={loading || isLocked}
-        className={`w-full h-11 rounded text-base font-semibold transition-colors mt-2 flex items-center justify-center gap-2 ${
+        className={`w-full h-11 rounded text-base font-semibold transition-all mt-2 flex items-center justify-center gap-2 ${
           loading || isLocked
-            ? 'bg-blue-600 opacity-50 cursor-not-allowed text-white'
-            : 'bg-blue-600 hover:bg-blue-700 text-white'
+            ? 'bg-[var(--color-primary)] opacity-50 cursor-not-allowed text-white'
+            : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
         }`}
       >
         {loading ? (
@@ -423,15 +428,15 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
       {error && <Alert message={error} />}
 
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
-          <FaMobileAlt className="text-blue-600 text-xl" />
+        <div className="inline-flex items-center justify-center w-12 h-12 bg-[var(--color-primary)]/20 rounded-full mb-3">
+          <FaMobileAlt className="text-[var(--color-primary)] text-xl" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900">绑定动态口令</h3>
-        <p className="text-sm text-gray-500 mt-1">首次登录，请完成安全绑定</p>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">绑定动态口令</h3>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">首次登录，请完成安全绑定</p>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4">
-        <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
+      <div className="bg-[var(--color-surface-hover)] rounded-lg p-4">
+        <ol className="text-sm text-[var(--color-text-secondary)] space-y-2 list-decimal list-inside">
           <li>下载并安装 <strong>Google Authenticator</strong> 或 <strong>微软 Authenticator</strong></li>
           <li>打开 APP，点击"添加账户"→"扫描二维码"</li>
           <li>扫描下方二维码</li>
@@ -444,8 +449,8 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
           <div className="bg-white p-3 rounded-lg shadow-sm border">
             <img src={qrCodeUrl} alt="TOTP QR Code" className="w-40 h-40" />
           </div>
-          <p className="text-xs text-gray-400 mt-2">无法扫码？手动输入密钥：</p>
-          <code className="text-xs bg-gray-100 px-2 py-1 rounded mt-1 select-all">{totpSecret}</code>
+          <p className="text-xs text-[var(--color-text-muted)] mt-2">无法扫码？手动输入密钥：</p>
+          <code className="text-xs bg-[var(--color-surface-hover)] px-2 py-1 rounded mt-1 select-all">{totpSecret}</code>
         </div>
       )}
 
@@ -459,17 +464,17 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
             placeholder="000000"
             maxLength={6}
             autoFocus
-            className="w-full h-11 px-3 border border-gray-200 rounded text-base focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 tracking-[0.5em] text-center font-mono"
+            className="w-full h-11 px-3 border border-[var(--color-border)] rounded text-base bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 tracking-[0.5em] text-center font-mono"
           />
         </FormField>
 
         <button
           type="submit"
           disabled={loading || bindingOtp.length !== 6}
-          className={`w-full h-11 rounded text-base font-semibold transition-colors flex items-center justify-center gap-2 ${
+          className={`w-full h-11 rounded text-base font-semibold transition-all flex items-center justify-center gap-2 ${
             loading || bindingOtp.length !== 6
-              ? 'bg-blue-600 opacity-50 cursor-not-allowed text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-[var(--color-primary)] opacity-50 cursor-not-allowed text-white'
+              : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
           }`}
         >
           {loading ? '验证中...' : '确认绑定'}
@@ -478,7 +483,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
 
       <button
         onClick={handleBackToLogin}
-        className="w-full text-gray-500 hover:text-gray-700 text-sm py-2"
+        className="w-full text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-sm py-2"
       >
         ← 返回重新登录
       </button>
@@ -491,11 +496,11 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
       {error && <Alert message={error} />}
 
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
-          <FaShieldAlt className="text-green-600 text-xl" />
+        <div className="inline-flex items-center justify-center w-12 h-12 bg-green-500/20 rounded-full mb-3">
+          <FaShieldAlt className="text-green-500 text-xl" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900">动态口令验证</h3>
-        <p className="text-sm text-gray-500 mt-1">请输入 Google Authenticator 中的 6 位数字</p>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">动态口令验证</h3>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">请输入 Google Authenticator 中的 6 位数字</p>
       </div>
 
       <form onSubmit={handleVerifyTOTP} className="space-y-4">
@@ -509,17 +514,17 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
             placeholder="000000"
             maxLength={6}
             autoFocus
-            className="w-full h-14 px-3 border border-gray-200 rounded text-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 tracking-[0.5em] text-center font-mono"
+            className="w-full h-14 px-3 border border-[var(--color-border)] rounded text-lg bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 tracking-[0.5em] text-center font-mono"
           />
         </FormField>
 
         <button
           type="submit"
           disabled={loading || formData.otp.length !== 6}
-          className={`w-full h-11 rounded text-base font-semibold transition-colors flex items-center justify-center gap-2 ${
+          className={`w-full h-11 rounded text-base font-semibold transition-all flex items-center justify-center gap-2 ${
             loading || formData.otp.length !== 6
-              ? 'bg-blue-600 opacity-50 cursor-not-allowed text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-[var(--color-primary)] opacity-50 cursor-not-allowed text-white'
+              : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'
           }`}
         >
           {loading ? (
@@ -542,11 +547,11 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
       <div className="text-center space-y-2">
         <button
           onClick={handleBackToLogin}
-          className="text-gray-500 hover:text-gray-700 text-sm"
+          className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-sm"
         >
           ← 使用其他账号登录
         </button>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-[var(--color-text-muted)]">
           无法获取动态口令？请联系 IT 支持重置
         </p>
       </div>
@@ -554,17 +559,17 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 sm:p-6 text-gray-900">
+    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center justify-center p-4 sm:p-6 text-[var(--color-text-primary)]">
       {/* 顶部品牌区 */}
       <div className="w-full max-w-md mb-6 flex justify-center">
         <img src={LOGO_URL} alt="中国银河证券" className="h-12 object-contain" />
       </div>
 
       {/* 登录卡片 */}
-      <div className="bg-white w-full max-w-md rounded-lg shadow-lg p-6 sm:p-8">
+      <div className="bg-[var(--color-surface)] w-full max-w-md rounded-lg shadow-lg border border-[var(--color-border)] p-6 sm:p-8">
         {step === 'login' && (
           <>
-            <h1 className="text-lg font-semibold text-gray-900 text-center mb-6">
+            <h1 className="text-lg font-semibold text-[var(--color-text-primary)] text-center mb-6">
               员工登录 (内部专用)
             </h1>
             {renderLoginForm()}
@@ -576,7 +581,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
 
       {/* 底部信息 */}
       {step === 'login' && (
-        <div className="w-full max-w-md mt-6 space-y-1.5 text-xs text-gray-500 text-center">
+        <div className="w-full max-w-md mt-6 space-y-1.5 text-xs text-[var(--color-text-muted)] text-center">
           <div className="flex items-center justify-center gap-1.5">
             <span>🔒</span>
             <span>安全提示：本系统仅限授权人员访问</span>
@@ -596,15 +601,15 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
         <div className="mt-4 text-center">
           <button
             onClick={() => navigate('/')}
-            className="text-gray-500 hover:text-blue-600 text-sm flex items-center gap-1 mx-auto transition-colors"
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] text-sm flex items-center gap-1 mx-auto transition-colors"
           >
             <span>←</span> 返回官网首页
           </button>
         </div>
       )}
 
-      <div className="mt-4 text-center text-xs text-gray-400">
-        Copyright © 2026 中国银河证券·证裕交易单元 版权所有
+      <div className="mt-4 text-center text-xs text-[var(--color-text-muted)]">
+        Copyright © 2026 中国银河证券·日斗投资单元 版权所有
       </div>
     </div>
   );

@@ -69,7 +69,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
           {account.holdings.map((holding: Holding) => (
             <div 
               key={holding.symbol} 
-              className={`glass-card p-5 animate-slide-up hover:border-[#00D4AA]/40 transition-all cursor-pointer group relative ${
+              className={`galaxy-card p-5 animate-slide-up hover:border-[var(--color-primary)]/40 transition-all cursor-pointer group relative ${
                 holding.isForcedSell ? 'border-red-500/50 bg-red-500/5' : ''
               }`}
             >
@@ -99,10 +99,10 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-black font-mono ${(holding.profit || 0) >= 0 ? 'text-[#00D4AA]' : 'text-[#FF6B6B]'}`}>
+                  <p className={`text-sm font-black font-mono ${(holding.profit || 0) >= 0 ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
                     {(holding.profit || 0) >= 0 ? '+' : ''}{(holding.profit || 0).toLocaleString()}
                   </p>
-                  <p className={`text-[10px] font-bold font-mono opacity-80 ${(holding.profit || 0) >= 0 ? 'text-[#00D4AA]' : 'text-[#FF6B6B]'}`}>
+                  <p className={`text-[10px] font-bold font-mono opacity-80 ${(holding.profit || 0) >= 0 ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
                     {(holding.profitRate || 0) >= 0 ? '+' : ''}{(holding.profitRate || 0).toFixed(2)}%
                   </p>
                 </div>
@@ -129,7 +129,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
                 </div>
                 <div className="space-y-1 text-right">
                   <p className="text-[8px] text-[var(--color-text-muted)] font-black uppercase tracking-tighter">最新现价</p>
-                  <p className={`text-xs font-black font-mono ${holding.currentPrice >= holding.averagePrice ? 'text-[#00D4AA]' : 'text-[#FF6B6B]'}`}>
+                  <p className={`text-xs font-black font-mono ${holding.currentPrice >= holding.averagePrice ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
                     {holding.currentPrice.toFixed(3)}
                   </p>
                 </div>

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useRouteTheme } from '../contexts/ThemeContext';
 import AdminLayout from '../components/admin/AdminLayout';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 
@@ -7,7 +8,7 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
 const AdminDashboard = lazy(() => import('../components/admin/AdminDashboard'));
 const AdminUserManagement = lazy(() => import('../components/admin/AdminUserManagement'));
 const AdminTradeManagement = lazy(() => import('../components/admin/AdminTradeManagement'));
-const AdminRuleManagement = lazy(() => import('../components/admin/AdminRuleManagement'));
+const TradeRulesManagement = lazy(() => import('../components/admin/TradeRulesManagement'));
 const AdminMatchIntervention = lazy(() => import('../components/admin/AdminMatchIntervention'));
 const AdminContentManagement = lazy(() => import('../components/admin/AdminContentManagement'));
 const AdminReports = lazy(() => import('../components/admin/AdminReports'));
@@ -20,13 +21,17 @@ const AdminTicketDetail = lazy(() => import('../components/admin/AdminTicketDeta
 const AdminAuditLogs = lazy(() => import('../components/admin/AdminAuditLogs'));
 const AdminDataExport = lazy(() => import('../components/admin/AdminDataExport'));
 
+// 使用 CSS 变量的加载指示器
 const LoadingSpinner = () => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0f172a' }}>
-    <div style={{ width: '48px', height: '48px', border: '3px solid #334155', borderTopColor: '#ef4444', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+  <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
+    <div className="w-12 h-12 border-3 border-[var(--color-border)] border-t-[var(--color-primary)] rounded-full animate-spin"></div>
   </div>
 );
 
 const AdminRoutes: React.FC = () => {
+  // 使用统一主题管理 - 管理端区域使用浅色主题（当前强制浅色基准）
+  useRouteTheme('admin');
+  
   return (
     <ErrorBoundary>
       <Suspense fallback={<LoadingSpinner />}>
@@ -37,7 +42,7 @@ const AdminRoutes: React.FC = () => {
             <Route path="users" element={<AdminUserManagement />} />
             <Route path="trades" element={<AdminTradeManagement />} />
             <Route path="match" element={<AdminMatchIntervention />} />
-            <Route path="rules" element={<AdminRuleManagement />} />
+            <Route path="rules" element={<TradeRulesManagement />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="tickets/:ticketId" element={<AdminTicketDetail />} />
             <Route path="content" element={<AdminContentManagement />} />

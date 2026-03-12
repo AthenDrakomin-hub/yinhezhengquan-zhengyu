@@ -136,7 +136,7 @@ const LimitUpMonitor: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="bg-[var(--color-surface)] rounded-lg shadow-lg overflow-hidden">
       {/* 标题栏 */}
       <div className="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -161,7 +161,7 @@ const LimitUpMonitor: React.FC<Props> = ({
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center space-x-2 bg-[var(--color-surface)]/20 hover:bg-[var(--color-surface)]/30 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>刷新</span>
@@ -212,7 +212,7 @@ const LimitUpMonitor: React.FC<Props> = ({
                 {stocks.map((stock, index) => (
                   <tr
                     key={stock.symbol}
-                    className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                    className={`border-b border-gray-100 hover:bg-[var(--color-surface-hover)] transition-colors ${
                       index === 0 ? 'bg-red-50' : ''
                     }`}
                   >

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { FaArrowLeft, FaCamera, FaUser, FaCheck, FaCheckCircle, FaShieldAlt, FaMobileAlt, FaIdCard, FaChartPie, FaBriefcase, FaFileSignature, FaSpinner, FaPen } from 'react-icons/fa';
 import { supabase } from '@/lib/supabase';
+import { imageConfig } from '../../lib/imageConfig';
 import { FaceVerificationResult } from '@/utils/face';
 import AccountOpeningAgreement, { AgreementData } from './AccountOpeningAgreement';
 
@@ -716,7 +717,7 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
     },
   });
 
-  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
+  const LOGO_URL = imageConfig.logo.fullUrl;
 
   const handleSendOtp = async (phone: string) => {
     const formattedPhone = phone.startsWith('+') ? phone : `+86${phone}`;

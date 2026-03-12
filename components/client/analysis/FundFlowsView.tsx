@@ -13,9 +13,10 @@ interface FundFlow {
 
 interface FundFlowsViewProps {
   userId: string;
+  onBack?: () => void;
 }
 
-const FundFlowsView: React.FC<FundFlowsViewProps> = ({ userId }) => {
+const FundFlowsView: React.FC<FundFlowsViewProps> = ({ userId, onBack }) => {
   const [flows, setFlows] = useState<FundFlow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,8 +48,18 @@ const FundFlowsView: React.FC<FundFlowsViewProps> = ({ userId }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-bold">资金流水</h3>
-      <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+        )}
+        <h3 className="text-lg font-bold">资金流水</h3>
+      </div>
+      <div className="galaxy-card rounded-2xl overflow-hidden">
         <table className="w-full">
           <thead className="bg-[var(--color-surface)]">
             <tr>
@@ -64,7 +75,7 @@ const FundFlowsView: React.FC<FundFlowsViewProps> = ({ userId }) => {
               <tr key={flow.id} className="border-t border-[var(--color-border)]">
                 <td className="p-4 text-sm">{new Date(flow.created_at).toLocaleString()}</td>
                 <td className="p-4 text-sm">{getFlowTypeText(flow.flow_type)}</td>
-                <td className={`p-4 text-sm text-right font-mono ${flow.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <td className={`p-4 text-sm text-right font-mono ${flow.amount > 0 ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
                   {flow.amount > 0 ? '+' : ''}{flow.amount.toFixed(2)}
                 </td>
                 <td className="p-4 text-sm text-right font-mono">{flow.balance_after.toFixed(2)}</td>

@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { getIPOList } from '../../../services/ipoService';
 import { ICONS } from '../../../lib/constants';
 
-const IPOView: React.FC = () => {
+interface IPOViewProps {
+  onBack?: () => void;
+}
+
+const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
   const [ipoList, setIpoList] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'LISTED' | 'UPCOMING' | 'CANCELLED' | 'ONGOING'>('ALL');
   const [loading, setLoading] = useState<boolean>(true);
@@ -102,9 +106,27 @@ const IPOView: React.FC = () => {
   return React.createElement('div', { className: 'flex flex-col h-full p-6' },
     // 顶部栏
     React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-      React.createElement('div', null,
-        React.createElement('h1', { className: 'text-2xl font-black' }, '新股申购'),
-        React.createElement('p', { className: 'text-[var(--color-text-muted)] text-sm mt-1' }, '从Supabase数据库获取A股新股发行信息，支持一键申购')
+      React.createElement('div', { className: 'flex items-center gap-4' },
+        onBack && React.createElement('button', {
+          onClick: onBack,
+          className: 'w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-all'
+        },
+          React.createElement('svg', {
+            xmlns: 'http://www.w3.org/2000/svg',
+            width: '20',
+            height: '20',
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: '2.5',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round'
+          }, React.createElement('path', { d: 'm15 18-6-6 6-6' }))
+        ),
+        React.createElement('div', null,
+          React.createElement('h1', { className: 'text-2xl font-black' }, '新股申购'),
+          React.createElement('p', { className: 'text-[var(--color-text-muted)] text-sm mt-1' }, '从Supabase数据库获取A股新股发行信息，支持一键申购')
+        )
       ),
       React.createElement('div', { className: 'flex items-center gap-3' },
         // 筛选按钮

@@ -11,9 +11,9 @@ const AdminCalendar: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    event_date: '',
+    date: '',
     title: '',
-    event_type: '',
+    type: '',
     description: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -37,7 +37,7 @@ const AdminCalendar: React.FC = () => {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.event_date || !formData.title || !formData.event_type) {
+    if (!formData.date || !formData.title || !formData.type) {
       alert('请填写日期、标题和类型');
       return;
     }
@@ -57,7 +57,7 @@ const AdminCalendar: React.FC = () => {
   const handleUpdateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) return;
-    if (!formData.event_date || !formData.title || !formData.event_type) {
+    if (!formData.date || !formData.title || !formData.type) {
       alert('请填写日期、标题和类型');
       return;
     }
@@ -95,9 +95,9 @@ const AdminCalendar: React.FC = () => {
           </button>
           <button className="industrial-button-primary" onClick={() => {
             setFormData({
-              event_date: '',
+              date: '',
               title: '',
-              event_type: '',
+              type: '',
               description: '',
             });
             setIsCreateModalOpen(true);
@@ -140,9 +140,9 @@ const AdminCalendar: React.FC = () => {
                         onClick={() => {
                           setSelectedEvent(event);
                           setFormData({
-                            event_date: event.date,
+                            date: event.date,
                             title: event.title,
-                            event_type: event.type || 'OTHER',
+                            type: event.type || 'OTHER',
                             description: '',
                           });
                           setIsEditModalOpen(true);
@@ -189,11 +189,11 @@ const AdminCalendar: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">日期</label>
-                  <input required type="date" value={formData.event_date} onChange={e => setFormData({...formData, event_date: e.target.value})} className="industrial-input" />
+                  <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="industrial-input" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">类型</label>
-                  <input required type="text" value={formData.event_type} onChange={e => setFormData({...formData, event_type: e.target.value})} className="industrial-input" placeholder="例如：宏观、财报、活动" />
+                  <input required type="text" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="industrial-input" placeholder="例如：宏观、财报、活动" />
                 </div>
               </div>
               <div>
@@ -232,11 +232,11 @@ const AdminCalendar: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">日期</label>
-                  <input required type="date" value={formData.event_date} onChange={e => setFormData({...formData, event_date: e.target.value})} className="industrial-input" />
+                  <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="industrial-input" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-industrial-400 uppercase mb-2">类型</label>
-                  <input required type="text" value={formData.event_type} onChange={e => setFormData({...formData, event_type: e.target.value})} className="industrial-input" placeholder="例如：宏观、财报、活动" />
+                  <input required type="text" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="industrial-input" placeholder="例如：宏观、财报、活动" />
                 </div>
               </div>
               <div>

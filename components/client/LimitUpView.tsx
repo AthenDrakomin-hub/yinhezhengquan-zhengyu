@@ -53,7 +53,7 @@ const LimitUpView: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900">
       {/* 页面标题 */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-[var(--color-surface)] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -71,7 +71,7 @@ const LimitUpView: React.FC = () => {
             </div>
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center space-x-2 bg-[var(--color-surface-hover)] hover:bg-[var(--color-surface-active)] text-gray-700 px-4 py-2 rounded-lg transition-colors"
             >
               <Settings className="w-4 h-4" />
               <span>设置</span>
@@ -83,7 +83,7 @@ const LimitUpView: React.FC = () => {
       {/* 设置面板 */}
       {showSettings && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-[var(--color-surface)] rounded-lg shadow-md p-6">
             <div className="flex items-center space-x-2 mb-4">
               <Settings className="w-5 h-5 text-gray-600" />
               <h2 className="text-lg font-semibold text-gray-900">监控设置</h2>
@@ -182,7 +182,7 @@ const LimitUpView: React.FC = () => {
 
       {/* 页脚信息 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-[var(--color-surface)] rounded-lg shadow-md p-6">
           <div className="flex items-center space-x-2 mb-3">
             <Filter className="w-5 h-5 text-gray-600" />
             <h3 className="text-sm font-semibold text-gray-900">说明</h3>

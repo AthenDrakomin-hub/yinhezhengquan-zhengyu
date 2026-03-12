@@ -50,25 +50,34 @@ export const adminService = {
     startDate?: string;
     endDate?: string;
     limit?: number;
-  }) {
+    offset?: number;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: any[]; total: number }> {
     try {
+      const pageSize = filters?.pageSize || filters?.limit || 20;
+      const offset = filters?.offset !== undefined 
+        ? filters.offset 
+        : filters?.page !== undefined 
+          ? (filters.page - 1) * pageSize 
+          : 0;
+
       let query = supabase
         .from('admin_operation_logs')
-        .select('*, admin:profiles!admin_id(username)')
+        .select('*, admin:profiles!admin_id(username)', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (filters?.adminId) query = query.eq('admin_id', filters.adminId);
-      if (filters?.operateType) query = query.eq('operate_type', filters.operateType);
+      if (filters?.operateType) query = query.eq('operation_type', filters.operateType);
       if (filters?.startDate) query = query.gte('created_at', filters.startDate);
       if (filters?.endDate) query = query.lte('created_at', filters.endDate);
-      if (filters?.limit) query = query.limit(filters.limit);
 
-      const { data, error } = await query;
+      const { data, error, count } = await query.range(offset, offset + pageSize - 1);
       if (error) throw error;
-      return data || [];
+      return { data: data || [], total: count || 0 };
     } catch (error) {
       logger.error('查询审计日志失败:', error);
-      return [];
+      return { data: [], total: 0 };
     }
   },
 

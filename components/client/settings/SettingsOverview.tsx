@@ -74,7 +74,7 @@ const SettingsOverview: React.FC = () => {
       {/* 快速状态概览 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {quickStats.map((stat) => (
-          <div key={stat.label} className="glass-card p-4 text-center">
+          <div key={stat.label} className="galaxy-card p-4 text-center">
             <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-2">{stat.label}</p>
             <p className={`text-lg font-black ${stat.color}`}>{stat.value}</p>
           </div>
@@ -91,7 +91,7 @@ const SettingsOverview: React.FC = () => {
               <button
                 key={card.id}
                 onClick={() => navigate(card.path)}
-                className="glass-card p-5 text-left hover:border-[#00D4AA]/30 transition-all group"
+                className="galaxy-card p-5 text-left hover:border-[var(--color-primary)]/30 transition-all group"
               >
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[#00D4AA]/10 group-hover:border-[#00D4AA]/30 transition-all">
@@ -117,7 +117,7 @@ const SettingsOverview: React.FC = () => {
       {/* 快捷操作区域 */}
       <div className="space-y-3">
         <h3 className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] px-1">快捷操作</h3>
-        <div className="glass-card p-4 space-y-3">
+        <div className="galaxy-card p-4 space-y-3">
           <button 
             onClick={() => navigate('/client/settings/about')}
             className="w-full p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-between hover:border-[#00D4AA]/30 transition-all group"
@@ -159,7 +159,7 @@ const SettingsOverview: React.FC = () => {
           <div>
             <p className="text-xs font-black text-[#00D4AA] uppercase tracking-widest mb-1">安全提示</p>
             <p className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed">
-              建议您定期更换密码并开启双重验证，以保护账户安全。银河证券证裕单元采用银行级加密技术保护您的资产和交易数据。
+              建议您定期更换密码并开启双重验证，以保护账户安全。银河证券日斗单元采用银行级加密技术保护您的资产和交易数据。
             </p>
           </div>
         </div>

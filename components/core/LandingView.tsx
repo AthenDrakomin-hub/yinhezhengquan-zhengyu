@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ICONS } from '../../lib/constants';
+import { imageConfig } from '../../lib/imageConfig';
 import { LazyImage } from '../shared/LazyImage';
 import AccessibilityPanel from '../landing/AccessibilityPanel';
 import WebsiteDisclaimerModal from '../landing/WebsiteDisclaimerModal';
@@ -19,37 +20,25 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate(); // 添加导航钩子
 
-  const LOGO_URL = import.meta.env.VITE_LOGO_URL || '/logo.png';
-  const CAROUSEL_IMAGES = {
-    image1: import.meta.env.VITE_CAROUSEL_IMAGE_1 || '/images/carousel-1.jpg',
-    image2: import.meta.env.VITE_CAROUSEL_IMAGE_2 || '/images/carousel-2.png',
-    image3: import.meta.env.VITE_CAROUSEL_IMAGE_3 || '/images/carousel-3.png',
-  };
-  const BACKGROUND_IMAGES = {
-    bg1: import.meta.env.VITE_BACKGROUND_IMAGE_1 || '/images/bg-1.png',
-    bg2: import.meta.env.VITE_BACKGROUND_IMAGE_2 || '/images/bg-2.png',
-  };
-  const SERVICE_ICONS = {
-    icon1: import.meta.env.VITE_SERVICE_ICON_1 || '/images/service-icon-1.png',
-    icon2: import.meta.env.VITE_SERVICE_ICON_2 || '/images/service-icon-2.png',
-    icon3: import.meta.env.VITE_SERVICE_ICON_3 || '/images/service-icon-3.png',
-    icon4: import.meta.env.VITE_SERVICE_ICON_4 || '/images/service-icon-4.png',
-  };
+  const LOGO_URL = imageConfig.logo.fullUrl;
+  const CAROUSEL_IMAGE = imageConfig.carousel[0]?.img || '/images/carousel-1.jpg';
+  const BACKGROUND_IMAGES = imageConfig.backgrounds;
+  const SERVICE_ICONS = imageConfig.serviceIcons;
   const QR_PLACEHOLDER = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.zhengyutouzi.com/";
   
   const slides = [
     {
-      image: CAROUSEL_IMAGES.image1,
-      title: "证裕交易单元 Nexus",
+      image: CAROUSEL_IMAGE,
+      title: "日斗投资单元 Nexus",
       subtitle: "极速、稳定、合规的数字化底座"
     },
     {
-      image: CAROUSEL_IMAGES.image2,
+      image: CAROUSEL_IMAGE,
       title: "数字化资产管理",
       subtitle: "赋能机构与专业投资者"
     },
     {
-      image: CAROUSEL_IMAGES.image3,
+      image: CAROUSEL_IMAGE,
       title: "全球市场直连",
       subtitle: "多维度的投资组合管理体验"
     }
@@ -84,7 +73,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
       <nav className="h-20 px-4 md:px-12 flex justify-between items-center bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 shadow-sm">
         <div className="flex items-center gap-8 lg:gap-12">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="中国银河证券 证裕交易单元" className="h-10 md:h-12 object-contain" />
+            <img src={LOGO_URL} alt="中国银河证券 日斗投资单元" className="h-10 md:h-12 object-contain" />
           </div>
           <div className="flex items-center gap-8">
             {['首页', '服务中心', '开户申请', '进入平台'].map(item => (
@@ -507,12 +496,12 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
               <ul className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
                 {[
                   { text: '人员公示', url: 'https://www.chinastock.com.cn/newsite/online/personnelAnnc.html' },
-                  { text: '营业网点', url: 'https://www.chinastock.com.cn/newsite/online/branch.html' },
-                  { text: '投资者教育', url: 'https://www.chinastock.com.cn/newsite/online/investorEducation.html' },
-                  { text: '银河交易终端应急措施公告', url: 'https://www.chinastock.com.cn/newsite/online/emergency.html' },
-                  { text: '反洗钱', url: 'https://www.chinastock.com.cn/newsite/online/antiMoneyLaundering.html' },
-                  { text: '投诉与建议', url: 'https://www.chinastock.com.cn/newsite/online/complaint.html' },
-                  { text: '非法仿冒机构信息公示', url: 'https://www.chinastock.com.cn/newsite/online/counterfeit.html' }
+                  { text: '营业网点', url: 'https://www.chinastock.com.cn/newsite/online/branchNetwork.html' },
+                  { text: '投资者教育', url: 'https://edu.chinastock.com.cn/' },
+                  { text: '银河交易终端应急措施公告', url: 'https://www.chinastock.com.cn/newsite/online/downloadCenter.html' },
+                  { text: '反洗钱', url: 'https://edu.chinastock.com.cn/yhwz/tzzjy/tzzbh_tjhd_zt.jsp?nodeName=TJ_TZZBH_TJHD_ZTXC_FXQ' },
+                  { text: '投诉与建议', url: 'https://www.chinastock.com.cn/newsite/online/leavemsg.html' },
+                  { text: '非法仿冒机构信息公示', url: 'https://www.sac.net.cn/wlzf/hmd/' }
                 ].map(item => (
                   <li key={item.text} className="hover:text-white cursor-pointer transition-colors">
                     <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-white">{item.text}</a>

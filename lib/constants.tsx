@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Stock, TradeType, Holding, ResearchReport, SupportTicket, EducationTopic, MarketHoliday, Banner, AssetSnapshot, CalendarEvent } from './types';
+import { imageConfig } from './imageConfig';
 import {
   Search,
   ChevronLeft,
@@ -56,18 +57,18 @@ export const MOCK_ASSET_HISTORY: AssetSnapshot[] = [];
 export const BANNER_MOCK: Banner[] = [
   { 
     id: 'b1', 
-    title: '银河证券·证裕单元 26 周年庆', 
+    title: '银河证券·日斗单元 26 周年庆', 
     desc: '深度解析：2000-2026 见证专业价值的数字化转型', 
-    img: import.meta.env.VITE_BANNER_IMAGE_1 || '/images/banner-1.jpg',
+    img: imageConfig.banners[0]?.img || '/images/banner-1.jpg',
     category: '年度品牌',
     date: '2025-03-27',
-    content: '在 2026 年全球资产配置的新坐标下，中国银河证券研究部认为，数字化转型正迈入以“证裕交易单元”为核心的 2.0 阶段。',
+    content: '在 2026 年全球资产配置的新坐标下，中国银河证券研究部认为，数字化转型正迈入以“日斗投资单元”为核心的 2.0 阶段。',
   },
   { 
     id: 'b2', 
-    title: '证裕单元 Nexus 核心系统升级', 
+    title: '日斗单元 Nexus 核心系统升级', 
     desc: '集成极速行情内核，开启毫秒级算法对冲新时代', 
-    img: import.meta.env.VITE_BANNER_IMAGE_2 || '/images/banner-2.jpg',
+    img: imageConfig.banners[1]?.img || '/images/banner-2.jpg',
     category: '科技赋能',
     date: '2025-03-25',
     content: '本次升级实现了底层交易引擎与 AI 大模型的直连。这是中国银河证券向“AI-Native”数字化券商转型的关键里程碑。',
@@ -79,7 +80,7 @@ export const BANNER_MOCK: Banner[] = [
     img: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=1000',
     category: '市场深度',
     date: '2025-03-20',
-    content: '随着互联互通机制的深化，银河证券证裕单元深度拆解了银行、公用事业及资源类标的的溢价回归路径。',
+    content: '随着互联互通机制的深化，银河证券日斗单元深度拆解了银行、公用事业及资源类标的的溢价回归路径。',
     relatedSymbol: '00700'
   }
 ];

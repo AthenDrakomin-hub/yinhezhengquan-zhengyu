@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminProvider } from './contexts/AdminContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './components/common/Toast';
 import NetworkStatusBar from './components/shared/NetworkStatusBar';
 import PublicRoutes from './routes/PublicRoutes';
 import AuthRoutes from './routes/AuthRoutes';
@@ -23,10 +25,10 @@ const OptimizedAppContent: React.FC = () => {
     <>
       <NetworkStatusBar />
       <Routes>
-        {/* 公共路由 - 浅色主题 */}
+        {/* 公共路由 */}
         <Route path="/*" element={<PublicRoutes />} />
         
-        {/* 认证路由 - 深色主题 */}
+        {/* 认证路由 */}
         <Route path="/auth/*" element={<AuthRoutes />} />
         
         {/* 管理端登录页面 */}
@@ -63,9 +65,13 @@ const OptimizedApp: React.FC = () => {
   return (
     <AuthProvider>
       <AdminProvider>
-        <BrowserRouter>
-          <OptimizedAppContent />
-        </BrowserRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <OptimizedAppContent />
+            </BrowserRouter>
+          </ToastProvider>
+        </ThemeProvider>
       </AdminProvider>
     </AuthProvider>
   );

@@ -122,26 +122,10 @@ const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
       return;
     }
     
-    // Windows 客户端使用 fetch + blob 方式下载（解决跨域）
+    // Windows 客户端直接打开下载链接（GitHub Releases 需要 CORS 豁免）
     if (pkg.platform === 'windows') {
-      try {
-        const response = await fetch(pkg.downloadUrl);
-        if (!response.ok) {
-          throw new Error(`下载失败: ${response.status}`);
-        }
-        const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = '银河证券·证裕交易单元_Setup_1.0.0.exe';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(blobUrl);
-      } catch (error) {
-        console.error('下载失败:', error);
-        alert('下载失败，请稍后重试');
-      }
+      // 直接打开新窗口下载，避免 CORS 问题
+      window.open(pkg.downloadUrl, '_blank');
       setDownloading(null);
       return;
     }
@@ -160,7 +144,7 @@ const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
   return (
     <div className="min-h-full animate-slide-up">
       {/* 头部 */}
-      <div className="glass-card m-4 mb-0 p-6 border-[var(--color-border)]">
+      <div className="galaxy-card m-4 mb-0 p-6 border-[var(--color-border)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {onBack && (
@@ -173,7 +157,7 @@ const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
             )}
             <div>
               <h1 className="text-xl font-black text-[var(--color-text-primary)]">服务中心</h1>
-              <p className="text-sm text-[var(--color-text-muted)] mt-1">下载银河证券证裕交易客户端</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-1">下载银河证券日斗投资客户端</p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
@@ -192,7 +176,7 @@ const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
           return (
             <div
               key={pkg.id}
-              className={`glass-card border-[var(--color-border)] overflow-hidden transition-all duration-300 hover:border-[var(--color-primary)]/30 ${
+              className={`galaxy-card border-[var(--color-border)] overflow-hidden transition-all duration-300 hover:border-[var(--color-primary)]/30 ${
                 selectedPlatform === pkg.id ? 'ring-2 ring-[var(--color-primary)]/50' : ''
               }`}
             >
@@ -287,7 +271,7 @@ const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
 
       {/* 帮助说明 */}
       <div className="p-4">
-        <div className="glass-card border-[var(--color-border)] p-6">
+        <div className="galaxy-card border-[var(--color-border)] p-6">
           <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
             <HelpCircle size={20} className="text-[var(--color-primary)]" />
             安装帮助
@@ -330,7 +314,7 @@ const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
 
       {/* 版本历史 */}
       <div className="p-4 pt-0">
-        <div className="glass-card border-[var(--color-border)] p-6">
+        <div className="galaxy-card border-[var(--color-border)] p-6">
           <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
             <History size={20} className="text-[var(--color-primary)]" />
             更新日志

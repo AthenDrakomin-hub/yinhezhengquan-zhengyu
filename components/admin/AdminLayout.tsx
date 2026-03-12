@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ICONS } from '@/lib/constants';
 import { useAdmin } from '../../contexts/AdminContext';
+import { useRouteTheme } from '../../contexts/ThemeContext';
 
 const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { adminLevel, loading } = useAdmin();
+  
+  // 使用统一主题管理 - 管理端使用浅色主题（当前强制浅色基准）
+  useRouteTheme('admin');
   
   const [connectionStatus, setConnectionStatus] = useState<string>('检查中...');
   const [isConnectionOk, setIsConnectionOk] = useState<boolean | null>(null);
@@ -38,9 +42,9 @@ const AdminLayout: React.FC = () => {
   // 加载中
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0f172a' }}>
-        <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+      <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)]">
+        <div className="text-center">
+          <div className="text-5xl mb-4">⏳</div>
           <div>加载中...</div>
         </div>
       </div>
@@ -72,39 +76,29 @@ const AdminLayout: React.FC = () => {
   });
 
   return (
-    <div className="admin-dark" style={{ display: 'flex', height: '100vh', background: '#0f172a', color: 'white' }}>
+    <div className="flex h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)]">
       {/* Sidebar */}
-      <aside style={{ width: '256px', background: '#1e293b', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '24px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '32px', height: '32px', background: '#ef4444', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>ZY</div>
+      <aside className="w-64 bg-[var(--color-surface)] flex flex-col border-r border-[var(--color-border)]">
+        <div className="p-6 border-b border-[var(--color-border)] flex items-center gap-3">
+          <div className="w-8 h-8 bg-[var(--color-accent)] rounded flex items-center justify-center font-bold text-white">ZY</div>
           <div>
-            <h1 style={{ fontSize: '14px', fontWeight: 'bold' }}>银河证券</h1>
-            <p style={{ fontSize: '10px', color: '#94a3b8' }}>管理系统</p>
+            <h1 className="text-sm font-bold">银河证券</h1>
+            <p className="text-[10px] text-[var(--color-text-muted)]">管理系统</p>
           </div>
         </div>
         
-        <nav style={{ flex: 1, padding: '16px' }}>
+        <nav className="flex-1 p-4">
           {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <button
                 key={item.id}
                 onClick={() => navigate(item.path)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  background: isActive ? '#ef4444' : 'transparent',
-                  color: isActive ? 'white' : '#94a3b8',
-                  border: 'none',
-                  cursor: 'pointer',
-                  marginBottom: '4px'
-                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium mb-1 transition-all
+                  ${isActive 
+                    ? 'bg-[var(--color-accent)] text-white' 
+                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]'
+                  }`}
               >
                 <item.icon size={18} />
                 {item.label}
@@ -113,30 +107,17 @@ const AdminLayout: React.FC = () => {
           })}
         </nav>
 
-        <div style={{ padding: '16px', borderTop: '1px solid #334155' }}>
+        <div className="p-4 border-t border-[var(--color-border)]">
           {import.meta.env.DEV && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '10px', padding: '8px', borderRadius: '4px', background: '#334155', marginBottom: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isConnectionOk ? '#22c55e' : '#ef4444' }}></div>
-              <span>DB: {connectionStatus}</span>
+            <div className="flex items-center justify-center gap-2 text-[10px] p-2 rounded bg-[var(--color-surface-hover)] mb-2">
+              <div className={`w-2 h-2 rounded-full ${isConnectionOk ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-[var(--color-text-muted)]">DB: {connectionStatus}</span>
             </div>
           )}
           
           <button 
             onClick={() => navigate('/')}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              background: 'transparent',
-              color: '#94a3b8',
-              border: 'none',
-              cursor: 'pointer'
-            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)] transition-all"
           >
             ← 返回客户端
           </button>
@@ -144,24 +125,24 @@ const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <header style={{ height: '64px', background: '#1e293b', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-16 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex items-center justify-between px-8">
+          <h2 className="text-lg font-bold">
             {menuItems.find(m => m.path === location.pathname)?.label || '管理后台'}
           </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '12px', fontWeight: 'bold' }}>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-xs font-medium">
                 {adminLevel === 'super_admin' ? '超级管理员' : '管理员'}
               </p>
             </div>
-            <div style={{ width: '40px', height: '40px', background: '#334155', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ICONS.User size={20} />
+            <div className="w-10 h-10 bg-[var(--color-surface-hover)] rounded-full flex items-center justify-center">
+              <ICONS.User size={20} className="text-[var(--color-text-muted)]" />
             </div>
           </div>
         </header>
         
-        <div style={{ flex: 1, overflow: 'auto', padding: '32px' }}>
+        <div className="flex-1 overflow-auto p-8">
           <Outlet />
         </div>
       </main>

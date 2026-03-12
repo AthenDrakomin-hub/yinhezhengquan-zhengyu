@@ -319,7 +319,7 @@ export const chatService = {
           status: 'IN_PROGRESS',
           lastUpdate: '2025-03-26',
           userId: 'user-id-001',
-          username: '证裕用户',
+          username: '日斗用户',
           email: 'user@zhengyu.com',
           lastMessageAt: '2025-03-26T10:10:00Z',
           unreadCountUser: 0,

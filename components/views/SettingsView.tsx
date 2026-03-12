@@ -90,7 +90,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => navigate(item.path)}
+                onClick={() => navigate(`/client/settings/${item.path}`.replace(/\/$/, ''))}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
                   isActive(item.path)
                     ? 'bg-[#00D4AA]/10 text-[#00D4AA] border border-[#00D4AA]/20'
@@ -111,12 +111,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase">主题</span>
-                <div 
+                <button 
                   onClick={toggleTheme}
-                  className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${isDarkMode ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
+                  className={`w-12 h-6 rounded-full p-1 transition-colors cursor-pointer border-2 ${isDarkMode ? 'bg-[#00D4AA] border-[#00D4AA]' : 'bg-gray-200 border-gray-300'} active:scale-95`}
+                  title={isDarkMode ? '切换到浅色模式' : '切换到深色模式'}
                 >
-                  <div className={`w-3 h-3 bg-white rounded-full transition-transform ${isDarkMode ? 'translate-x-5' : 'translate-x-0'}`} />
-                </div>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
               </div>
             </div>
           </div>
@@ -149,7 +150,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
       <div className="p-4 border-t border-[var(--color-border)] text-center">
         <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em]">
           Galaxy Securities Nexus v2.10 <br/>
-          © 2026 Galaxy Financial Technology
+          © 2026 中国银河证券
         </p>
       </div>
     </div>

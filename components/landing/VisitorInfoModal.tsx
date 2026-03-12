@@ -165,7 +165,7 @@ const VisitorInfoModal: React.FC<VisitorInfoModalProps> = ({ isOpen, onSubmit, o
 
         {/* 底部 */}
         <div className="px-6 py-3 bg-gray-50 text-center text-xs text-gray-500">
-          中国银河证券 · 证裕交易单元
+          中国银河证券 · 日斗投资单元
         </div>
       </div>
     </div>

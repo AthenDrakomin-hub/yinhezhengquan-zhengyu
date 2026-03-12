@@ -14,31 +14,61 @@ interface RecentTrade {
   username?: string;
 }
 
+interface StatsData {
+  onlineUsers: number;
+  todayVolume: number;
+  activeAccounts: number;
+  pendingTickets: number;
+  todayTrades: number;
+  totalPositions: number;
+}
+
 const AdminDashboard: React.FC = () => {
-  const [stats, setStats] = useState({
-    onlineUsers: '0',
-    todayVolume: '¥0',
-    activeAccounts: '0',
-    pendingTickets: '0',
+  const [stats, setStats] = useState<StatsData>({
+    onlineUsers: 0,
+    todayVolume: 0,
+    activeAccounts: 0,
+    pendingTickets: 0,
+    todayTrades: 0,
+    totalPositions: 0,
   });
   const [chartData, setChartData] = useState<any[]>([]);
   const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 获取账户数
-        const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        setLoading(true);
         
-        // 获取今日交易额
+        // 获取账户数
+        const { count: accountCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        
+        // 获取今日数据
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        
         const { data: todayTrades } = await supabase
           .from('trades')
           .select('price, quantity')
           .gte('created_at', today.toISOString());
         
-        const volume = todayTrades?.reduce((sum, t) => sum + (Number(t.price) * Number(t.quantity)), 0) || 0;
+        const todayVolume = todayTrades?.reduce((sum, t) => sum + (Number(t.price) * Number(t.quantity)), 0) || 0;
+        const todayTradesCount = todayTrades?.length || 0;
+
+        // 获取持仓数
+        const { count: positionCount } = await supabase
+          .from('positions')
+          .select('*', { count: 'exact', head: true })
+          .gt('quantity', 0);
+
+        // 获取待处理工单数
+        const { count: ticketCount } = await supabase
+          .from('support_tickets')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['OPEN', 'IN_PROGRESS']);
 
         // 获取近7日数据
         const sevenDaysAgo = new Date();
@@ -70,23 +100,15 @@ const AdminDashboard: React.FC = () => {
           volume: dailyData[name].volume
         })));
 
+        // 使用真实数据（在线用户数暂时用活跃账户数代替，因为没有实时连接追踪）
         setStats({
-          onlineUsers: Math.floor(Math.random() * 50 + 10).toString(),
-          todayVolume: `¥${volume.toLocaleString()}`,
-          activeAccounts: (count || 0).toString(),
-          pendingTickets: '0',
+          onlineUsers: Math.min(accountCount || 0, 10), // 暂时显示较小值，实际需要 WebSocket 追踪
+          todayVolume: todayVolume,
+          activeAccounts: accountCount || 0,
+          pendingTickets: ticketCount || 0,
+          todayTrades: todayTradesCount,
+          totalPositions: positionCount || 0,
         });
-
-        // 获取待处理工单数
-        const { count: ticketCount } = await supabase
-          .from('support_tickets')
-          .select('*', { count: 'exact', head: true })
-          .in('status', ['open', 'pending']);
-        
-        setStats(prev => ({
-          ...prev,
-          pendingTickets: (ticketCount || 0).toString(),
-        }));
 
         // 获取最新交易
         const { data: trades } = await supabase
@@ -98,11 +120,13 @@ const AdminDashboard: React.FC = () => {
         if (trades) setRecentTrades(trades as RecentTrade[]);
       } catch (error) {
         console.error('Fetch error:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchData, 60000); // 改为1分钟刷新一次
     return () => clearInterval(interval);
   }, []);
 
@@ -141,10 +165,10 @@ const AdminDashboard: React.FC = () => {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         {[
-          { label: '在线用户', value: stats.onlineUsers, icon: '👥', color: '#3b82f6' },
-          { label: '今日交易额', value: stats.todayVolume, icon: '💰', color: '#22c55e' },
-          { label: '活跃账户', value: stats.activeAccounts, icon: '👤', color: '#f97316' },
-          { label: '待处理工单', value: stats.pendingTickets, icon: '🎫', color: '#ef4444' },
+          { label: '活跃账户', value: stats.activeAccounts.toLocaleString(), icon: '👤', color: '#3b82f6', desc: '注册用户总数' },
+          { label: '今日交易额', value: `¥${stats.todayVolume.toLocaleString()}`, icon: '💰', color: '#22c55e', desc: `${stats.todayTrades} 笔交易` },
+          { label: '持仓账户', value: stats.totalPositions.toLocaleString(), icon: '📊', color: '#f97316', desc: '有持仓的用户数' },
+          { label: '待处理工单', value: stats.pendingTickets.toLocaleString(), icon: '🎫', color: '#ef4444', desc: '需要处理的工单' },
         ].map((stat, i) => (
           <div key={i} style={{
             background: '#1e293b',
@@ -158,6 +182,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>{stat.label}</p>
             <h3 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{stat.value}</h3>
+            <p style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>{stat.desc}</p>
           </div>
         ))}
       </div>

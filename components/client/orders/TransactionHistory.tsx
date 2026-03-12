@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TradeType } from '../../../lib/types';
 import { tradeService } from '../../../services/tradeService';
 import { ICONS } from '../../../lib/constants';
+import Pagination, { usePagination } from '../../shared/Pagination';
 
 interface Transaction {
   id: string;
@@ -30,8 +31,29 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const pagination = usePagination(limit);
+
+  // 加载交易记录
+  const loadTransactions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { data, total } = await tradeService.getTransactions(userId, pagination.pageSize, pagination.page);
+      setTransactions(data || []);
+      pagination.setTotal(total);
+    } catch (err: any) {
+      console.error('加载交易记录失败:', err);
+      setError('加载交易记录失败，请稍后重试');
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, pagination.page, pagination.pageSize]);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
 
   // 撤单
   const handleCancel = async (tradeId: string) => {
@@ -39,10 +61,8 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     
     try {
       setCancelling(tradeId);
-      // 使用 tradeService.cancelTradeOrder 调用 Edge Function
       const result = await tradeService.cancelTradeOrder(tradeId);
       
-      // 根据 Edge Function 返回的数据显示消息
       if (result && result.success) {
         const refundMsg = result.refundAmount ? `，退款金额：¥${result.refundAmount.toFixed(2)}` : '';
         alert(`撤单成功${refundMsg}`);
@@ -57,25 +77,14 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     }
   };
 
-  // 加载交易记录
-  const loadTransactions = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await tradeService.getTransactions(userId, limit);
-      setTransactions(data || []);
-    } catch (err: any) {
-      console.error('加载交易记录失败:', err);
-      setError('加载交易记录失败，请稍后重试');
-      setTransactions([]);
-    } finally {
-      setLoading(false);
-    }
+  // 分页处理
+  const handlePageChange = (page: number) => {
+    pagination.setPage(page);
   };
 
-  useEffect(() => {
-    loadTransactions();
-  }, [userId, limit]);
+  const handlePageSizeChange = (size: number) => {
+    pagination.setPageSize(size);
+  };
 
   // 获取交易类型显示文本
   const getTradeTypeText = (type: TradeType) => {
@@ -263,7 +272,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
       </div>
 
       <div className="flex-1 overflow-auto">
-        <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="galaxy-card rounded-2xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-[var(--color-surface)] border-b border-[var(--color-border)]">
               <tr>
@@ -319,15 +328,20 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
               ))}
             </tbody>
           </table>
-        </div>
-
-        {!showAll && transactions.length >= limit && (
-          <div className="mt-4 text-center">
-            <p className="text-sm text-[var(--color-text-muted)]">
-              仅显示最近 {limit} 条记录
-            </p>
+          
+          {/* 分页组件 */}
+          <div className="border-t border-[var(--color-border)] px-4">
+            <Pagination
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.total}
+              pageSize={pagination.pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+            />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

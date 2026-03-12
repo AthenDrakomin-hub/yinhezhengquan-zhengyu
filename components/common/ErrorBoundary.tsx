@@ -93,7 +93,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       // 默认的降级 UI
       return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] p-4">
-          <div className="max-w-md w-full glass-card p-8 text-center space-y-6">
+          <div className="max-w-md w-full galaxy-card p-8 text-center space-y-6">
             <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
               <ICONS.AlertTriangle size={32} />
             </div>

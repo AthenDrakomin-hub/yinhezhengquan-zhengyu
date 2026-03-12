@@ -72,14 +72,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
       ) : (
       <>
       {/* 顶部用户信息卡片 */}
-      <div className="glass-card m-4 mb-0 p-6 border-[var(--color-border)] bg-gradient-to-br from-[#00D4AA]/10 to-[#00D4AA]/5 relative overflow-hidden">
+      <div className="galaxy-card m-4 mb-0 p-6 border-[var(--color-border)] bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-primary)]/5 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#00D4AA]/5 rounded-full -translate-y-16 translate-x-16" />
         
         <div className="flex items-center gap-4 mb-6 relative z-10">
           <StockIcon name={account.username} size="xl" className="ring-4 ring-white/20" />
           <div className="flex-1">
             <h2 className="text-xl font-black text-[var(--color-text-primary)] mb-1">{account.username}</h2>
-            <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">证裕 ID: {account.id}</p>
+            <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">日斗 ID: {account.id}</p>
           </div>
           <button 
             onClick={() => setShowAssets(!showAssets)}
@@ -98,7 +98,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
           </div>
           <div className="space-y-2 min-w-0">
             <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter truncate">持仓市值</p>
-            <p className="text-lg sm:text-2xl font-black font-mono text-[#00D4AA] truncate" title={showAssets ? `¥${account.holdings.reduce((sum, h) => sum + (h.marketValue || h.quantity * h.currentPrice), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}>
+            <p className="text-lg sm:text-2xl font-black font-mono text-[#DC2626] truncate" title={showAssets ? `¥${account.holdings.reduce((sum, h) => sum + (h.marketValue || h.quantity * h.currentPrice), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}>
               {showAssets ? `¥${account.holdings.reduce((sum, h) => sum + (h.marketValue || h.quantity * h.currentPrice), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}
             </p>
           </div>
@@ -121,7 +121,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
       <div className="flex-1 p-4 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
           {/* 左侧导航菜单 */}
-          <div className="lg:col-span-3 xl:col-span-2 glass-card p-4 overflow-y-auto no-scrollbar">
+          <div className="lg:col-span-3 xl:col-span-2 galaxy-card p-4 overflow-y-auto no-scrollbar">
             <div className="space-y-1">
               {navItems.map((item) => (
                 <button
@@ -208,7 +208,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
           </div>
 
           {/* 右侧内容区域 */}
-          <div className="lg:col-span-9 xl:col-span-10 glass-card overflow-hidden">
+          <div className="lg:col-span-9 xl:col-span-10 galaxy-card overflow-hidden">
             <div className="h-full overflow-y-auto p-6 no-scrollbar">
               <Outlet context={{ account, isDarkMode, toggleTheme, onOpenAnalysis, onOpenConditional }} />
             </div>

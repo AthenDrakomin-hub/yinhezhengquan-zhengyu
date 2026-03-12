@@ -1,9 +1,9 @@
 // Service Worker 配置
-// 版本：1.0.0
+// 版本：2.0.0 - 强制清除旧缓存，修复主题问题
 // 功能：离线缓存、资源预加载、后台同步
 
-const CACHE_NAME = 'zhengyu-trade-v1.0.0';
-const RUNTIME_CACHE = 'zhengyu-trade-runtime';
+const CACHE_NAME = 'zhengyu-trade-v2.0.0';
+const RUNTIME_CACHE = 'zhengyu-trade-runtime-v2';
 
 // 需要预缓存的核心资源
 const PRECACHE_URLS = [
@@ -23,6 +23,14 @@ const PRECACHE_URLS = [
 const CACHEABLE_EXTENSIONS = [
   '.js', '.css', '.json', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'
 ];
+
+// 处理 SKIP_WAITING 消息，立即激活新的 Service Worker
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[Service Worker] 收到 SKIP_WAITING 消息，立即激活');
+    self.skipWaiting();
+  }
+});
 
 // Service Worker 安装事件
 self.addEventListener('install', (event) => {
@@ -57,15 +65,13 @@ self.addEventListener('activate', (event) => {
       // 立即控制所有客户端
       self.clients.claim(),
       
-      // 清理旧缓存
+      // 清理所有旧缓存（强制刷新）
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            // 保留当前版本的缓存
-            if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
-              console.log('[Service Worker] 清理旧缓存:', cacheName);
-              return caches.delete(cacheName);
-            }
+            // 清除所有旧版本缓存
+            console.log('[Service Worker] 清理缓存:', cacheName);
+            return caches.delete(cacheName);
           })
         );
       })
@@ -181,7 +187,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('证裕交易单元', options)
+    self.registration.showNotification('日斗投资单元', options)
   );
 });
 

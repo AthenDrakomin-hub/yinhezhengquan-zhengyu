@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ICONS } from '@/lib/constants';
 import { tradeService } from '@/services/tradeService';
+import Pagination from '@/components/shared/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 // 交易详情类型
 interface TradeDetail {
@@ -34,6 +37,9 @@ const AdminTradeManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [tradeTypeFilter, setTradeTypeFilter] = useState<string>('ALL');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  
+  // 分页
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -49,32 +55,8 @@ const AdminTradeManagement: React.FC = () => {
         const history = await tradeService.getApprovalHistory(100);
         data = history?.filter((item: any) => item.approval_status === 'REJECTED') || [];
       } else {
-        data = await tradeService.getTransactions(undefined, 100) || [];
-      }
-      
-      // 应用搜索筛选
-      if (searchTerm) {
-        data = data.filter((t: any) => 
-          t.stock_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          t.stock_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          t.user_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          t.id?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-      
-      // 应用交易类型筛选
-      if (tradeTypeFilter !== 'ALL') {
-        data = data.filter((t: any) => t.trade_type === tradeTypeFilter);
-      }
-      
-      // 应用日期范围筛选
-      if (dateRange.start) {
-        data = data.filter((t: any) => new Date(t.created_at) >= new Date(dateRange.start));
-      }
-      if (dateRange.end) {
-        const endDate = new Date(dateRange.end);
-        endDate.setHours(23, 59, 59);
-        data = data.filter((t: any) => new Date(t.created_at) <= endDate);
+        const result = await tradeService.getTransactions(undefined, 100);
+        data = result.data || [];
       }
       
       setTrades(data);
@@ -88,6 +70,48 @@ const AdminTradeManagement: React.FC = () => {
   useEffect(() => {
     fetchOrders();
   }, [filter]);
+
+  // 应用筛选
+  const filteredTrades = trades.filter((t: any) => {
+    // 搜索筛选
+    if (searchTerm) {
+      const matchesSearch = 
+        t.stock_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.stock_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.user_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.id?.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!matchesSearch) return false;
+    }
+    
+    // 交易类型筛选
+    if (tradeTypeFilter !== 'ALL' && t.trade_type !== tradeTypeFilter) {
+      return false;
+    }
+    
+    // 日期范围筛选
+    if (dateRange.start && new Date(t.created_at) < new Date(dateRange.start)) {
+      return false;
+    }
+    if (dateRange.end) {
+      const endDate = new Date(dateRange.end);
+      endDate.setHours(23, 59, 59);
+      if (new Date(t.created_at) > endDate) return false;
+    }
+    
+    return true;
+  });
+
+  // 分页计算
+  const totalPages = Math.ceil(filteredTrades.length / ITEMS_PER_PAGE);
+  const paginatedTrades = filteredTrades.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // 筛选条件变化时重置页码
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, tradeTypeFilter, dateRange, filter]);
 
   // 处理审批操作
   const handleApprove = async (orderId: string, action: 'approved' | 'rejected') => {
@@ -103,103 +127,111 @@ const AdminTradeManagement: React.FC = () => {
     }
   };
 
-  // 打开详情弹窗
-  const openDetailModal = (trade: TradeDetail) => {
-    setSelectedTrade(trade);
-    setIsDetailModalOpen(true);
+  // 获取交易类型信息
+  const getTradeTypeInfo = (type: string) => {
+    const map: Record<string, { text: string; color: string }> = {
+      'BUY': { text: '买入', color: '#ef4444' },
+      'SELL': { text: '卖出', color: '#22c55e' },
+      'IPO': { text: '新股申购', color: '#3b82f6' },
+      'BLOCK_TRADE': { text: '大宗交易', color: '#a855f7' },
+      'LIMIT_UP': { text: '涨停打板', color: '#f97316' }
+    };
+    return map[type] || { text: type, color: '#64748b' };
   };
 
-  // 获取交易类型文本
-  const getTradeTypeText = (type: string) => {
-    const map: Record<string, string> = {
-      'BUY': '买入',
-      'SELL': '卖出',
-      'IPO': '新股申购',
-      'BLOCK_TRADE': '大宗交易',
-      'LIMIT_UP': '涨停打板'
+  // 获取审批状态信息
+  const getApprovalStatusInfo = (status: string) => {
+    const map: Record<string, { text: string; color: string }> = {
+      'APPROVED': { text: '已通过', color: '#22c55e' },
+      'REJECTED': { text: '已拒绝', color: '#ef4444' },
+      'PENDING': { text: '待审批', color: '#f97316' },
+      'NOT_REQUIRED': { text: '无需审批', color: '#64748b' }
     };
-    return map[type] || type;
-  };
-
-  // 获取交易类型颜色
-  const getTradeTypeColor = (type: string) => {
-    const map: Record<string, string> = {
-      'BUY': 'bg-red-50 text-red-600',
-      'SELL': 'bg-emerald-50 text-emerald-600',
-      'IPO': 'bg-blue-50 text-blue-600',
-      'BLOCK_TRADE': 'bg-purple-50 text-purple-600',
-      'LIMIT_UP': 'bg-orange-50 text-orange-600'
-    };
-    return map[type] || 'bg-gray-50 text-gray-600';
-  };
-
-  // 获取审批状态文本
-  const getApprovalStatusText = (status: string) => {
-    const map: Record<string, string> = {
-      'APPROVED': '已通过',
-      'REJECTED': '已拒绝',
-      'PENDING': '待审批',
-      'NOT_REQUIRED': '无需审批'
-    };
-    return map[status] || status;
-  };
-
-  // 获取审批状态颜色
-  const getApprovalStatusColor = (status: string) => {
-    const map: Record<string, string> = {
-      'APPROVED': 'bg-emerald-50 text-emerald-600',
-      'REJECTED': 'bg-red-50 text-red-600',
-      'PENDING': 'bg-orange-50 text-orange-600',
-      'NOT_REQUIRED': 'bg-industrial-100 text-industrial-400'
-    };
-    return map[status] || 'bg-gray-50 text-gray-600';
+    return map[status] || { text: status, color: '#64748b' };
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-sm font-black text-industrial-800 uppercase tracking-widest">交易管理</h3>
-        <div className="flex gap-2">
-          <button className="industrial-button-primary h-10" onClick={fetchOrders}>
-            <ICONS.Market size={16} className={loading ? 'animate-spin' : ''} /> 刷新数据
-          </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* 头部 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>交易管理</h3>
+          <p style={{ fontSize: '12px', color: '#94a3b8' }}>审批和管理所有交易订单</p>
         </div>
+        <button 
+          onClick={fetchOrders}
+          style={{
+            padding: '8px 16px',
+            background: '#334155',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          {loading ? '⏳' : '🔄'} 刷新数据
+        </button>
       </div>
 
       {/* 筛选标签 */}
-      <div className="flex border-b border-industrial-200">
+      <div style={{ display: 'flex', borderBottom: '1px solid #334155' }}>
         {[
-          { key: 'pending', label: '待审批' },
-          { key: 'approved', label: '已通过' },
-          { key: 'rejected', label: '已拒绝' },
-          { key: 'all', label: '全部' }
+          { key: 'pending', label: '待审批', count: trades.filter(t => t.approval_status === 'PENDING').length },
+          { key: 'approved', label: '已通过', count: trades.filter(t => t.approval_status === 'APPROVED').length },
+          { key: 'rejected', label: '已拒绝', count: trades.filter(t => t.approval_status === 'REJECTED').length },
+          { key: 'all', label: '全部', count: trades.length }
         ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key as any)}
-            className={`px-4 py-2 text-xs font-black uppercase tracking-widest ${
-              filter === tab.key
-                ? 'text-industrial-800 border-b-2 border-industrial-800'
-                : 'text-industrial-400 hover:text-industrial-600'
-            }`}
+            style={{
+              padding: '12px 20px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: filter === tab.key ? '2px solid #ef4444' : '2px solid transparent',
+              color: filter === tab.key ? 'white' : '#94a3b8',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
           >
-            {tab.label}
+            {tab.label} {tab.count > 0 && `(${tab.count})`}
           </button>
         ))}
       </div>
 
       {/* 高级筛选 */}
-      <div className="industrial-card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div style={{
+        background: '#1e293b',
+        borderRadius: '12px',
+        padding: '16px',
+        border: '1px solid #334155'
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
           {/* 搜索框 */}
-          <div className="relative">
-            <ICONS.Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-industrial-400" />
+          <div style={{ gridColumn: 'span 2', position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>🔍</span>
             <input
               type="text"
-              placeholder="搜索代码/名称/用户..."
+              placeholder="搜索代码/名称/用户/订单ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="industrial-input pl-10 w-full"
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 36px',
+                background: '#0f172a',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '13px',
+                outline: 'none'
+              }}
             />
           </div>
           
@@ -207,7 +239,16 @@ const AdminTradeManagement: React.FC = () => {
           <select
             value={tradeTypeFilter}
             onChange={(e) => setTradeTypeFilter(e.target.value)}
-            className="industrial-input"
+            style={{
+              padding: '10px 12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '13px',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
           >
             <option value="ALL">全部类型</option>
             <option value="BUY">买入</option>
@@ -217,258 +258,294 @@ const AdminTradeManagement: React.FC = () => {
             <option value="LIMIT_UP">涨停打板</option>
           </select>
           
-          {/* 开始日期 */}
+          {/* 日期范围 */}
           <input
             type="date"
             value={dateRange.start}
-            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-            className="industrial-input"
-            placeholder="开始日期"
+            onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+            style={{
+              padding: '10px 12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '13px',
+              outline: 'none'
+            }}
           />
-          
-          {/* 结束日期 */}
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              className="industrial-input flex-1"
-              placeholder="结束日期"
-            />
-            <button
-              onClick={fetchOrders}
-              className="px-4 py-2 bg-industrial-900 text-white text-xs font-bold rounded hover:bg-industrial-800"
-            >
-              查询
-            </button>
-          </div>
+          <input
+            type="date"
+            value={dateRange.end}
+            onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+            style={{
+              padding: '10px 12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
         </div>
         
-        {/* 筛选结果统计 */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-industrial-100">
-          <span className="text-xs text-industrial-400">
-            筛选结果: <span className="font-black text-industrial-800">{trades.length}</span> 条记录
-          </span>
-          {(searchTerm || tradeTypeFilter !== 'ALL' || dateRange.start || dateRange.end) && (
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setTradeTypeFilter('ALL');
-                setDateRange({ start: '', end: '' });
-                fetchOrders();
-              }}
-              className="text-xs text-blue-600 font-bold hover:underline"
-            >
-              清除筛选
-            </button>
-          )}
+        <div style={{ marginTop: '12px', fontSize: '12px', color: '#94a3b8' }}>
+          筛选结果: <span style={{ color: 'white', fontWeight: 'bold' }}>{filteredTrades.length}</span> 条记录
         </div>
       </div>
 
-      {/* 订单列表 */}
-      <div className="industrial-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+      {/* 交易列表 */}
+      <div style={{
+        background: '#1e293b',
+        borderRadius: '12px',
+        border: '1px solid #334155',
+        overflow: 'hidden'
+      }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
-              <tr className="bg-industrial-50 border-b border-industrial-200">
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">订单ID</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">用户ID</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">标的</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">类型</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">价格/数量</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">总额</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">时间</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">审批状态</th>
-                <th className="px-6 py-4 text-[10px] font-black text-industrial-400 uppercase tracking-widest">操作</th>
+              <tr style={{ background: '#0f172a' }}>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>订单ID</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>股票信息</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>交易类型</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>价格/数量</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>金额</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>审批状态</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>时间</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155', textAlign: 'right' }}>操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-industrial-100">
+            <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">加载中...</td></tr>
-              ) : trades.length === 0 ? (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-xs font-bold text-industrial-400">暂无数据</td></tr>
-              ) : (
-                trades.map((trade) => (
-                  <tr key={trade.id} className="hover:bg-industrial-50 transition-colors cursor-pointer" onClick={() => openDetailModal(trade)}>
-                    <td className="px-6 py-4 text-xs font-black text-industrial-800 truncate max-w-[100px]">{trade.id}</td>
-                    <td className="px-6 py-4 text-xs font-bold text-industrial-600 truncate max-w-[100px]">{trade.user_id}</td>
-                    <td className="px-6 py-4">
-                      <p className="text-xs font-black text-industrial-800">{trade.stock_name}</p>
-                      <p className="text-[9px] font-bold text-industrial-400 font-mono">{trade.stock_code}</p>
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    加载中...
+                  </td>
+                </tr>
+              ) : paginatedTrades.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    暂无数据
+                  </td>
+                </tr>
+              ) : paginatedTrades.map((trade) => {
+                const typeInfo = getTradeTypeInfo(trade.trade_type);
+                const statusInfo = getApprovalStatusInfo(trade.approval_status);
+                
+                return (
+                  <tr key={trade.id} style={{ borderBottom: '1px solid #334155' }}>
+                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
+                      {trade.id?.substring(0, 8)}...
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded ${getTradeTypeColor(trade.trade_type)}`}>
-                        {getTradeTypeText(trade.trade_type)}
+                    <td style={{ padding: '14px 16px' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>{trade.stock_name || trade.stock_code}</p>
+                      <p style={{ fontSize: '11px', color: '#64748b' }}>{trade.stock_code}</p>
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        background: typeInfo.color + '20',
+                        color: typeInfo.color
+                      }}>
+                        {typeInfo.text}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-xs font-black text-industrial-800">¥{Number(trade.price).toFixed(2)}</p>
-                      <p className="text-[9px] font-bold text-industrial-400">{trade.quantity} 股</p>
+                    <td style={{ padding: '14px 16px' }}>
+                      <p style={{ fontSize: '12px', color: 'white' }}>¥{Number(trade.price).toFixed(2)}</p>
+                      <p style={{ fontSize: '11px', color: '#64748b' }}>{trade.quantity}股</p>
                     </td>
-                    <td className="px-6 py-4 text-xs font-black text-industrial-900">¥{trade.amount.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-[10px] text-industrial-400 font-bold">
-                      {new Date(trade.created_at).toLocaleString()}
+                    <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 'bold', color: 'white' }}>
+                      ¥{(trade.price * trade.quantity).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded ${getApprovalStatusColor(trade.approval_status)}`}>
-                        {getApprovalStatusText(trade.approval_status)}
+                    <td style={{ padding: '14px 16px' }}>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        background: statusInfo.color + '20',
+                        color: statusInfo.color
+                      }}>
+                        {statusInfo.text}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => openDetailModal(trade)}
-                          className="text-[10px] font-black text-blue-600 uppercase hover:underline"
-                        >
-                          详情
-                        </button>
-                        {trade.approval_status === 'PENDING' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(trade.id, 'approved')}
-                              className="text-[10px] font-black text-emerald-600 uppercase hover:underline"
-                            >
-                              通过
-                            </button>
-                            <button
-                              onClick={() => handleApprove(trade.id, 'rejected')}
-                              className="text-[10px] font-black text-red-600 uppercase hover:underline"
-                            >
-                              拒绝
-                            </button>
-                          </>
-                        )}
-                      </div>
+                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#64748b' }}>
+                      {new Date(trade.created_at).toLocaleString('zh-CN')}
+                    </td>
+                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedTrade(trade);
+                          setIsDetailModalOpen(true);
+                        }}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          color: '#3b82f6',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        查看
+                      </button>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>
+        
+        {/* 分页 */}
+        {filteredTrades.length > ITEMS_PER_PAGE && (
+          <div style={{ padding: '16px', borderTop: '1px solid #334155' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredTrades.length}
+              pageSize={ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
-      {/* 交易详情弹窗 */}
-      <AnimatePresence>
-        {isDetailModalOpen && selectedTrade && (
-          <div className="fixed inset-0 bg-industrial-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="industrial-card w-full max-w-2xl p-8 bg-white max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-black text-industrial-800 uppercase tracking-tight">交易详情</h3>
-                <button
-                  onClick={() => { setIsDetailModalOpen(false); setSelectedTrade(null); }}
-                  className="text-industrial-400 hover:text-industrial-800"
-                >
-                  <ICONS.Plus className="rotate-45" size={24} />
-                </button>
+      {/* 详情弹窗 */}
+      {isDetailModalOpen && selectedTrade && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              background: '#1e293b',
+              borderRadius: '12px',
+              border: '1px solid #334155',
+              width: '100%',
+              maxWidth: '560px'
+            }}
+          >
+            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>交易详情</h3>
+              <button onClick={() => setIsDetailModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>订单ID</p>
+                  <p style={{ fontSize: '12px', color: 'white', fontFamily: 'monospace' }}>{selectedTrade.id}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>用户ID</p>
+                  <p style={{ fontSize: '12px', color: 'white', fontFamily: 'monospace' }}>{selectedTrade.user_id?.substring(0, 16)}...</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>股票代码</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedTrade.stock_code}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>股票名称</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedTrade.stock_name || '-'}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>交易类型</p>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: getTradeTypeInfo(selectedTrade.trade_type).color
+                  }}>
+                    {getTradeTypeInfo(selectedTrade.trade_type).text}
+                  </span>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>审批状态</p>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: getApprovalStatusInfo(selectedTrade.approval_status).color
+                  }}>
+                    {getApprovalStatusInfo(selectedTrade.approval_status).text}
+                  </span>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>委托价格</p>
+                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>¥{Number(selectedTrade.price).toFixed(2)}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>委托数量</p>
+                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{selectedTrade.quantity} 股</p>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>委托金额</p>
+                  <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#ef4444' }}>¥{(selectedTrade.price * selectedTrade.quantity).toLocaleString()}</p>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>创建时间</p>
+                  <p style={{ fontSize: '12px', color: 'white' }}>{new Date(selectedTrade.created_at).toLocaleString('zh-CN')}</p>
+                </div>
+                {selectedTrade.remark && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>备注</p>
+                    <p style={{ fontSize: '12px', color: 'white' }}>{selectedTrade.remark}</p>
+                  </div>
+                )}
               </div>
 
-              {/* 基本信息 */}
-              <div className="grid grid-cols-2 gap-6 mb-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">订单ID</label>
-                    <p className="text-sm font-bold text-industrial-800 font-mono">{selectedTrade.id}</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">用户ID</label>
-                    <p className="text-sm font-bold text-industrial-800 font-mono">{selectedTrade.user_id}</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">交易类型</label>
-                    <p>
-                      <span className={`text-[10px] font-black px-2 py-1 rounded ${getTradeTypeColor(selectedTrade.trade_type)}`}>
-                        {getTradeTypeText(selectedTrade.trade_type)}
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">审批状态</label>
-                    <p>
-                      <span className={`text-[10px] font-black px-2 py-1 rounded ${getApprovalStatusColor(selectedTrade.approval_status)}`}>
-                        {getApprovalStatusText(selectedTrade.approval_status)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">标的</label>
-                    <p className="text-sm font-bold text-industrial-800">{selectedTrade.stock_name} ({selectedTrade.stock_code})</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">价格</label>
-                    <p className="text-sm font-bold text-industrial-800 font-mono">¥{Number(selectedTrade.price).toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">数量</label>
-                    <p className="text-sm font-bold text-industrial-800">{selectedTrade.quantity.toLocaleString()} 股</p>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-industrial-400 uppercase">总额</label>
-                    <p className="text-lg font-black text-industrial-800">¥{selectedTrade.amount.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 时间信息 */}
-              <div className="bg-industrial-50 rounded-lg p-4 mb-6">
-                <h4 className="text-xs font-black text-industrial-800 uppercase mb-3">时间信息</h4>
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <span className="text-industrial-400">创建时间:</span>
-                    <span className="ml-2 font-bold text-industrial-800">{new Date(selectedTrade.created_at).toLocaleString()}</span>
-                  </div>
-                  {selectedTrade.approved_at && (
-                    <div>
-                      <span className="text-industrial-400">审批时间:</span>
-                      <span className="ml-2 font-bold text-industrial-800">{new Date(selectedTrade.approved_at).toLocaleString()}</span>
-                    </div>
-                  )}
-                  {selectedTrade.approved_by && (
-                    <div>
-                      <span className="text-industrial-400">审批人:</span>
-                      <span className="ml-2 font-bold text-industrial-800">{selectedTrade.approved_by}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 备注 */}
-              {selectedTrade.remark && (
-                <div className="bg-industrial-50 rounded-lg p-4 mb-6">
-                  <h4 className="text-xs font-black text-industrial-800 uppercase mb-2">备注</h4>
-                  <p className="text-sm text-industrial-600">{selectedTrade.remark}</p>
-                </div>
-              )}
-
-              {/* 操作按钮 */}
+              {/* 审批按钮 */}
               {selectedTrade.approval_status === 'PENDING' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                   <button
                     onClick={() => handleApprove(selectedTrade.id, 'approved')}
-                    className="industrial-button-primary bg-emerald-600 hover:bg-emerald-700 py-3"
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: '#22c55e',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
                   >
-                    批准通过
+                    ✓ 通过审批
                   </button>
                   <button
                     onClick={() => handleApprove(selectedTrade.id, 'rejected')}
-                    className="industrial-button-primary bg-red-600 hover:bg-red-700 py-3"
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      background: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
                   >
-                    拒绝订单
+                    ✕ 拒绝订单
                   </button>
                 </div>
               )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

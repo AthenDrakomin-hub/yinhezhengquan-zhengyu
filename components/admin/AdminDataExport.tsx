@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { adminService } from '../../services/adminService';
 import { ICONS } from '../../lib/constants';
 import { supabase } from '@/lib/supabase';
+import Pagination, { usePagination } from '../shared/Pagination';
 
 // 数据类型
 type ExportType = 'users' | 'orders' | 'trades' | 'positions' | 'audit_logs';
@@ -20,6 +21,8 @@ const AdminDataExport: React.FC = () => {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const pagination = usePagination(20);
   
   // 高级筛选
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -102,22 +105,25 @@ const AdminDataExport: React.FC = () => {
   };
 
   // 查询数据
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     setLoading(true);
     try {
-      let query: any = {};
+      const offset = (pagination.page - 1) * pagination.pageSize;
+      const pageSize = pagination.pageSize;
+      let filtered: any[] = [];
+      let total = 0;
 
       // 构建查询条件
       switch (exportType) {
         case 'users':
-          query = buildUserQuery();
-          const { data: usersData, error: usersError } = await supabase
+          const { data: usersData, error: usersError, count: usersCount } = await supabase
             .from('profiles')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
-            .limit(500);
+            .range(offset, offset + pageSize - 1);
           if (!usersError && usersData) {
-            let filtered = usersData;
+            filtered = usersData;
+            total = usersCount || 0;
             if (keyword) {
               filtered = filtered.filter((u: any) => 
                 u.username?.toLowerCase().includes(keyword.toLowerCase()) ||
@@ -125,18 +131,18 @@ const AdminDataExport: React.FC = () => {
                 u.email?.toLowerCase().includes(keyword.toLowerCase())
               );
             }
-            setResults(filtered);
           }
           break;
 
         case 'orders':
-          const { data: ordersData, error: ordersError } = await supabase
+          const { data: ordersData, error: ordersError, count: ordersCount } = await supabase
             .from('trades')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
-            .limit(500);
+            .range(offset, offset + pageSize - 1);
           if (!ordersError && ordersData) {
-            let filtered = ordersData;
+            filtered = ordersData;
+            total = ordersCount || 0;
             if (keyword) {
               filtered = filtered.filter((o: any) => 
                 o.stock_code?.toLowerCase().includes(keyword.toLowerCase())
@@ -148,45 +154,50 @@ const AdminDataExport: React.FC = () => {
                 return date >= new Date(dateRange.start) && date <= new Date(dateRange.end);
               });
             }
-            setResults(filtered);
           }
           break;
 
         case 'trades':
-          const { data: tradesData, error: tradesError } = await supabase
+          const { data: tradesData, error: tradesError, count: tradesCount } = await supabase
             .from('trades')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
-            .limit(500);
+            .range(offset, offset + pageSize - 1);
           if (!tradesError && tradesData) {
-            setResults(tradesData);
+            filtered = tradesData;
+            total = tradesCount || 0;
           }
           break;
 
         case 'positions':
-          const { data: positionsData, error: positionsError } = await supabase
+          const { data: positionsData, error: positionsError, count: positionsCount } = await supabase
             .from('positions')
-            .select('*')
+            .select('*', { count: 'exact' })
             .gt('quantity', 0)
             .order('created_at', { ascending: false })
-            .limit(500);
+            .range(offset, offset + pageSize - 1);
           if (!positionsError && positionsData) {
-            setResults(positionsData);
+            filtered = positionsData;
+            total = positionsCount || 0;
           }
           break;
 
         case 'audit_logs':
-          const { data: logsData, error: logsError } = await supabase
+          const { data: logsData, error: logsError, count: logsCount } = await supabase
             .from('admin_operation_logs')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
-            .limit(500);
+            .range(offset, offset + pageSize - 1);
           if (!logsError && logsData) {
-            setResults(logsData);
+            filtered = logsData;
+            total = logsCount || 0;
           }
           break;
       }
 
+      setResults(filtered);
+      setTotalCount(total);
+      pagination.setTotal(total);
       // 重置选择
       setSelectedRows(new Set());
     } catch (error) {
@@ -194,6 +205,25 @@ const AdminDataExport: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [exportType, keyword, dateRange, pagination.page, pagination.pageSize]);
+
+  // 当分页变化时重新查询
+  useEffect(() => {
+    handleSearch();
+  }, [handleSearch]);
+
+  // 当导出类型变化时重置分页
+  useEffect(() => {
+    pagination.setPage(1);
+  }, [exportType]);
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    pagination.setPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    pagination.setPageSize(size);
   };
 
   // 构建用户查询
@@ -503,6 +533,21 @@ const AdminDataExport: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            
+            {/* 分页组件 */}
+            {results.length > 0 && (
+              <div className="border-t border-[var(--color-border)] px-4 bg-[var(--color-surface)]">
+                <Pagination
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.total}
+                  pageSize={pagination.pageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                  loading={loading}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
