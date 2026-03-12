@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import { TradeType, UserAccount, Stock } from '../../lib/types';
 import { IPOData } from '../../services/adapters/sinaIPOAdapter';
+import { marketApi } from '../../services/marketApi';
 
 // ===================== 【必看】组件导入容错 =====================
 // 如果ICONS/StockIcon报错，直接注释掉对应行，代码会自动降级显示
@@ -29,17 +30,50 @@ interface TradeIPOData {
   发行价格: number;
   市盈率?: number;
   个人申购上限: number;
+  市场: string; // SH: 上海, SZ: 深圳
+  状态: 'ONGOING' | 'UPCOMING' | 'LISTED' | 'CANCELLED'; // 申购状态
+  申购日期?: string; // 申购日期
+  上市日期?: string; // 上市日期
 }
 
-// 适配器函数：将 SinaIPOAdapter 返回的数据转换为 TradePanel 期望的格式
-function convertIpoData(ipoList: IPOData[]): TradeIPOData[] {
+/**
+ * 根据股票代码判断申购单位
+ * - 沪市主板（60开头）：1000股
+ * - 深市主板（00开头）：500股
+ * - 创业板（30开头）：500股
+ * - 科创板（688开头）：500股
+ */
+function getIPOUnit(symbol: string): number {
+  if (symbol.startsWith('688')) return 500; // 科创板
+  if (symbol.startsWith('60')) return 1000; // 沪市主板
+  if (symbol.startsWith('00') || symbol.startsWith('30')) return 500; // 深市主板、创业板
+  return 500; // 默认
+}
+
+/**
+ * 判断新股是否可申购
+ * - ONGOING: 申购中，可申购
+ * - UPCOMING: 待申购，不可申购
+ * - LISTED: 已上市，不可申购
+ * - CANCELLED: 已取消，不可申购
+ */
+function canSubscribe(status: string): boolean {
+  return status === 'ONGOING';
+}
+
+// 适配器函数：将数据库返回的数据转换为 TradePanel 期望的格式
+function convertIpoData(ipoList: any[]): TradeIPOData[] {
   return ipoList.map(ipo => ({
     证券代码: ipo.symbol,
-    申购代码: ipo.symbol, // 申购代码通常与股票代码相同
+    申购代码: ipo.subscription_code || ipo.symbol,
     证券简称: ipo.name,
-    发行价格: ipo.issuePrice,
-    市盈率: ipo.peRatio || undefined, // 使用适配器提供的市盈率，如果有的话
-    个人申购上限: Math.floor(1000000 / (ipo.issuePrice || 1)), // 临时计算：100万资金对应的股数（万股）
+    发行价格: ipo.ipo_price || 0,
+    市盈率: ipo.pe_ratio || undefined,
+    个人申购上限: Math.floor(1000000 / (ipo.ipo_price || 1)), // 临时计算
+    市场: ipo.market || 'SZ',
+    状态: ipo.status || 'UPCOMING',
+    申购日期: ipo.issue_date,
+    上市日期: ipo.listing_date,
   }));
 }
 
@@ -173,9 +207,8 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   useEffect(() => {
     const fetchOrderBook = async () => {
       try {
-        const { frontendMarketService } = await import('../../services/frontendMarketService');
         const market = selectedStock.symbol.length === 5 ? 'HK' : 'CN';
-        const data = await frontendMarketService.getOrderBook(selectedStock.symbol, market);
+        const data = await marketApi.getOrderBook(selectedStock.symbol, market);
         if (data) {
           setOrderBookData(data);
         }
@@ -233,8 +266,6 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   // ===================== 接口方法（useCallback包裹，稳定无循环）=====================
   // 加载市场股票列表
   const loadMarketList = useCallback(async (market: 'CN' | 'HK') => {
-    // 防止重复加载
-    if (initRef.current.normalLoaded && market === selectedStock.market) return;
     try {
       setLoading(true);
       setErrorMsg(null);
@@ -249,7 +280,6 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
           setSelectedStock(stocks[0]);
           setPrice(stocks[0].price.toString());
         }
-        initRef.current.normalLoaded = true;
       }
     } catch (err) {
       console.error(`加载${market}股票列表失败:`, err);
@@ -257,18 +287,23 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     } finally {
       setLoading(false);
     }
-  }, [initialStock, selectedStock.market]);
+  }, [initialStock]);
 
   // 加载新股列表
   const loadIpoList = useCallback(async () => {
     if (initRef.current.ipoLoaded) return;
     try {
       setIpoLoading(true);
-      const { fetchSinaIPOData } = await import('../../services/adapters/sinaIPOAdapter');
-      const data: IPOData[] = await fetchSinaIPOData();
-      //为 TradePanel 期望的格式
+      // 使用 ipoService 从数据库获取数据
+      const { getIPOList } = await import('../../services/ipoService');
+      // 获取申购中和待申购的新股
+      const [ongoingData, upcomingData] = await Promise.all([
+        getIPOList('ONGOING'),
+        getIPOList('UPCOMING'),
+      ]);
+      const data = [...ongoingData, ...upcomingData];
+      // 转换为 TradePanel 期望的格式
       const convertedData = convertIpoData(data);
-      // 仅保留当日可申购的新股（这里简化处理，显示所有数据）
       setIpoList(convertedData);
       if (convertedData.length > 0) setSelectedIpo(convertedData[0]);
       initRef.current.ipoLoaded = true;
@@ -309,7 +344,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
   }, []);
 
   // 交易输入验证
-  const validateTradeInput = (price: number, quantity: number, tradeType: TradeType) => {
+  const validateTradeInput = (price: number, quantity: number, tradeType: TradeType, symbol?: string) => {
     const errors: string[] = [];
     
     // 基础数值验证
@@ -337,13 +372,18 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     
     // 交易类型特定验证
     if (tradeType === TradeType.IPO) {
-      // 新股申购验证
-      if (quantity < 500) {
-        errors.push('新股申购数量不得少于500股');
+      // 新股申购验证 - 只检查最小申购单位，不需要整数倍
+      // 实际申购：中签即全仓配额，无需额外限制
+      const unit = symbol ? getIPOUnit(symbol) : 500; // 默认500股
+      const marketName = symbol?.startsWith('60') ? '沪市主板' : 
+                         symbol?.startsWith('688') ? '科创板' :
+                         symbol?.startsWith('00') ? '深市主板' :
+                         symbol?.startsWith('30') ? '创业板' : '市场';
+      
+      if (quantity < unit) {
+        errors.push(`${marketName}新股申购数量不得少于${unit}股`);
       }
-      if (quantity % 500 !== 0) {
-        errors.push('新股申购数量必须为500的整数倍');
-      }
+      // 移除整数倍验证 - 新股申购按实际配额，无需整数倍限制
     } else if (tradeType === TradeType.BLOCK) {
       // 大宗交易验证
       if (quantity < 100000) {
@@ -379,8 +419,8 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     quantity: number,
     logoUrl?: string
   ) => {
-    // 输入验证
-    const validationErrors = validateTradeInput(price, quantity, tradeType);
+    // 输入验证 - 传入 symbol 用于判断申购单位
+    const validationErrors = validateTradeInput(price, quantity, tradeType, symbol);
     if (validationErrors.length > 0) {
       alert(`输入验证失败: ${validationErrors.join(', ')}`);
       return false;
@@ -758,11 +798,23 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                 <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">发行价格</th>
                 <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">发行市盈率</th>
                 <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">申购上限(万股)</th>
+                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">状态</th>
                 <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">操作</th>
               </tr>
             </thead>
             <tbody>
-              {ipoList.map(ipo => (
+              {ipoList.map(ipo => {
+                // 判断是否可申购
+                const canApply = canSubscribe(ipo.状态);
+                // 获取申购单位
+                const unit = getIPOUnit(ipo.证券代码);
+                // 计算市场名称
+                const marketName = ipo.证券代码.startsWith('60') ? '沪市主板' : 
+                                   ipo.证券代码.startsWith('688') ? '科创板' :
+                                   ipo.证券代码.startsWith('00') ? '深市主板' :
+                                   ipo.证券代码.startsWith('30') ? '创业板' : ipo.市场;
+                
+                return (
                 <tr 
                   key={ipo.证券代码} 
                   className={`border-b border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-all ${
@@ -772,44 +824,73 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <SafeStockIcon name={ipo.证券简称} size="md" />
-                      <p className="text-base font-medium text-[var(--color-text-primary)] truncate max-w-[120px]">{ipo.证券简称}</p>
+                      <div>
+                        <p className="text-base font-medium text-[var(--color-text-primary)] truncate max-w-[120px]">{ipo.证券简称}</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{marketName}</p>
+                      </div>
                     </div>
                   </td>
                   <td className="py-4 px-4 text-center font-mono text-sm">{ipo.证券代码}</td>
                   <td className="py-4 px-4 text-center font-mono text-sm font-medium text-[var(--color-primary)]">{ipo.申购代码}</td>
                   <td className="py-4 px-4 text-center font-mono text-sm font-medium">¥{ipo.发行价格?.toFixed(2) || '-'}</td>
-                  <td className="py-4 px-4 text-center font-mono text-sm">-</td>
+                  <td className="py-4 px-4 text-center font-mono text-sm">{ipo.市盈率?.toFixed(2) || '-'}</td>
                   <td className="py-4 px-4 text-center font-mono text-sm">{ipo.个人申购上限 || '-'}</td>
+                  <td className="py-4 px-4 text-center">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                      ipo.状态 === 'ONGOING' ? 'bg-green-500/20 text-green-400' :
+                      ipo.状态 === 'UPCOMING' ? 'bg-yellow-500/20 text-yellow-400' :
+                      ipo.状态 === 'LISTED' ? 'bg-blue-500/20 text-blue-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {ipo.状态 === 'ONGOING' ? '申购中' :
+                       ipo.状态 === 'UPCOMING' ? '待申购' :
+                       ipo.状态 === 'LISTED' ? '已上市' : '已取消'}
+                    </span>
+                  </td>
                   <td className="py-4 px-4 text-center">
                     <div className="w-32 mx-auto">
                       <button 
                         onClick={() => {
-                          // 计算实际申购数量，不超过个人上限和账户资金可购买的最大数量
-                          const maxQtyByFund = Math.floor(safeAccount.balance / ipo.发行价格);
-                          const actualQuantity = Math.min(ipo.个人申购上限 * 10000, maxQtyByFund);
+                          // 检查状态
+                          if (!canSubscribe(ipo.状态)) {
+                            alert(`新股 ${ipo.证券简称} 当前状态不可申购（${ipo.状态 === 'UPCOMING' ? '待申购' : ipo.状态}）`);
+                            return;
+                          }
                           
-                          if (actualQuantity <= 0) {
-                            alert('可用资金不足，无法申购');
+                          // 计算实际申购数量，使用正确的申购单位
+                          const maxQtyByFund = Math.floor(safeAccount.balance / ipo.发行价格);
+                          // 向下取整到申购单位的整数倍
+                          const maxQtyByUnit = Math.floor(maxQtyByFund / unit) * unit;
+                          const actualQuantity = Math.min(ipo.个人申购上限 * 10000, maxQtyByUnit);
+                          
+                          if (actualQuantity < unit) {
+                            alert(`可用资金不足，${marketName}最低申购${unit}股`);
                             return;
                           }
                           
                           handleTrade(
                             TradeType.IPO,
-                            ipo.申购代码,
+                            ipo.证券代码,
                             ipo.证券简称,
                             ipo.发行价格,
                             actualQuantity
                           );
                         }}
-                        disabled={isSubmitting}
-                        className="w-full py-2.5 rounded-lg bg-[var(--color-primary)] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
+                        disabled={isSubmitting || !canApply}
+                        className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all ${
+                          canApply 
+                            ? 'bg-[var(--color-primary)] text-white hover:opacity-90' 
+                            : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] cursor-not-allowed'
+                        } disabled:opacity-50`}
                       >
-                        {isSubmitting && selectedIpo?.证券代码 === ipo.证券代码 ? '提交中' : '一键申购'}
+                        {isSubmitting && selectedIpo?.证券代码 === ipo.证券代码 ? '提交中' : 
+                         canApply ? '一键申购' : 
+                         ipo.状态 === 'UPCOMING' ? '待开放' : '不可申购'}
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

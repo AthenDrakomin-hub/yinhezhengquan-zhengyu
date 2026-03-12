@@ -31,7 +31,11 @@
 - `admin-verify`
 - `approve-trade-order`
 - `cancel-trade-order`
-- `create-trade-order`
+- `create-a-share-order`
+- `create-hk-order`
+- `create-ipo-order`
+- `create-block-trade-order`
+- `create-limit-up-order`
 - `match-trade-order`
 
 #### 方法 2：通过 Supabase CLI 部署时配置

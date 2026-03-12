@@ -1,12 +1,11 @@
 // Service Worker 配置
-// 版本：2.0.1 - 修复预缓存问题
-// 功能：离线缓存、资源预加载、后台同步
+// 版本：2.0.2 - 修复无限循环问题
+// 功能：离线缓存、资源预加载
 
-const CACHE_NAME = 'zhengyu-trade-v2.0.1';
+const CACHE_NAME = 'zhengyu-trade-v2.0.2';
 const RUNTIME_CACHE = 'zhengyu-trade-runtime-v2';
 
-// 需要预缓存的核心资源（只缓存确定存在的静态资源）
-// 注意：带 hash 的 JS/CSS 文件会在运行时动态缓存，不在这里预缓存
+// 需要预缓存的核心资源
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -18,54 +17,48 @@ const CACHEABLE_EXTENSIONS = [
   '.js', '.css', '.json', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'
 ];
 
-// 处理 SKIP_WAITING 消息，立即激活新的 Service Worker
+// 处理 SKIP_WAITING 消息
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('[Service Worker] 收到 SKIP_WAITING 消息，立即激活');
+    console.log('[SW] 收到 SKIP_WAITING，立即激活');
     self.skipWaiting();
   }
 });
 
 // Service Worker 安装事件
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] 安装中...');
-
-  // 跳过等待，立即激活
+  console.log('[SW] 安装中...');
   self.skipWaiting();
-
+  
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] 预缓存核心资源...');
-      // 注意：实际的预缓存会在构建后替换为具体的 hash 文件名
-      return cache.addAll(PRECACHE_URLS.map(url => {
-        // 如果 URL 包含 [hash]，跳过（构建时需要替换）
-        if (url.includes('[hash]')) {
-          return null;
-        }
-        return url;
-      }).filter(Boolean));
+      console.log('[SW] 预缓存核心资源...');
+      return cache.addAll(PRECACHE_URLS);
     }).catch((error) => {
-      console.error('[Service Worker] 预缓存失败:', error);
+      console.error('[SW] 预缓存失败:', error);
     })
   );
 });
 
-// Service Worker 激活事件
+// Service Worker 激活事件 - 只清理旧版本缓存，不清理所有缓存
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] 激活中...');
+  console.log('[SW] 激活中...');
 
   event.waitUntil(
     Promise.all([
       // 立即控制所有客户端
       self.clients.claim(),
       
-      // 清理所有旧缓存（强制刷新）
+      // 只清理旧版本缓存，保留 runtime 缓存
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            // 清除所有旧版本缓存
-            console.log('[Service Worker] 清理缓存:', cacheName);
-            return caches.delete(cacheName);
+            // 只删除旧版本的主缓存，不删除 runtime 缓存
+            if (cacheName.startsWith('zhengyu-trade-v') && cacheName !== CACHE_NAME) {
+              console.log('[SW] 清理旧缓存:', cacheName);
+              return caches.delete(cacheName);
+            }
+            return Promise.resolve();
           })
         );
       })
@@ -88,34 +81,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 跳过 API 请求和 Supabase 请求
+  // 跳过 API 请求和外部资源
   if (
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('sinajs.cn') ||
-    url.hostname.includes('eastmoney.com')
+    url.hostname.includes('eastmoney.com') ||
+    url.hostname.includes('upstash.io')
   ) {
     return;
   }
 
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
-      // 1. 如果有缓存，直接返回
+      // 如果有缓存，直接返回
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      // 2. 否则，发起网络请求
+      // 否则，发起网络请求
       return fetch(request).then((response) => {
         // 检查响应是否有效
         if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
 
-        // 3. 克隆响应（响应流只能使用一次）
+        // 克隆响应
         const responseToCache = response.clone();
 
-        // 4. 判断是否需要缓存
+        // 判断是否需要缓存
         const shouldCache = CACHEABLE_EXTENSIONS.some(ext => url.pathname.endsWith(ext));
 
         if (shouldCache) {
@@ -128,12 +122,11 @@ self.addEventListener('fetch', (event) => {
 
         return response;
       }).catch((error) => {
-        console.error('[Service Worker] 请求失败:', error);
+        console.error('[SW] 请求失败:', error);
         
-        // 5. 网络失败时，尝试返回缓存的资源
+        // 网络失败时，尝试返回缓存
         return caches.match(request).then((cachedResponse) => {
           if (cachedResponse) {
-            console.log('[Service Worker] 返回离线缓存:', request.url);
             return cachedResponse;
           }
           
@@ -142,7 +135,6 @@ self.addEventListener('fetch', (event) => {
             return caches.match('/index.html');
           }
           
-          // 返回空响应
           return new Response('Network error', {
             status: 408,
             headers: { 'Content-Type': 'text/plain' }
@@ -153,31 +145,13 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 后台同步
-self.addEventListener('sync', (event) => {
-  console.log('[Service Worker] 后台同步:', event.tag);
-  
-  if (event.tag === 'sync-data') {
-    event.waitUntil(
-      // 这里可以添加数据同步逻辑
-      Promise.resolve()
-    );
-  }
-});
-
 // 推送通知
 self.addEventListener('push', (event) => {
-  console.log('[Service Worker] 收到推送通知');
-  
   const options = {
     body: event.data ? event.data.text() : '您有新消息',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    }
   };
 
   event.waitUntil(
@@ -187,10 +161,7 @@ self.addEventListener('push', (event) => {
 
 // 通知点击事件
 self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] 通知被点击');
-  
   event.notification.close();
-
   event.waitUntil(
     clients.openWindow('/client/dashboard')
   );

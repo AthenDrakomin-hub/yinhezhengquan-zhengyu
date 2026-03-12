@@ -63,10 +63,10 @@ const BlockTradeView: React.FC<BlockTradeViewProps> = ({ onBack }) => {
     try {
       setExecuting(true);
       const { supabase } = await import('../../../lib/supabase');
-      const { data, error } = await supabase.functions.invoke('create-trade-order', {
+      const { data, error } = await supabase.functions.invoke('create-block-trade-order', {
         body: { 
-          market_type: selectedProduct.market,
-          trade_type: 'BLOCK_TRADE',
+          market_type: selectedProduct.market === 'HK' || selectedProduct.market === 'HK_SHARE' ? '港股' : 'A股',
+          trade_type: 'BUY',
           stock_code: selectedProduct.symbol,
           stock_name: selectedProduct.name,
           price: discountedPrice,

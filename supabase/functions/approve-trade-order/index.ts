@@ -33,7 +33,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single()
+    const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).maybeSingle()
     if (!profile || profile.role !== 'admin') {
       return new Response(JSON.stringify({ error: '无权限', code: 3001 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -50,7 +50,7 @@ serve(async (req) => {
       .from('trades')
       .select('*')
       .eq('id', trade_id)
-      .single()
+      .maybeSingle()
 
     if (tradeError || !trade) {
       return new Response(JSON.stringify({ error: '订单不存在', code: 3002 }), {
@@ -113,14 +113,16 @@ serve(async (req) => {
       const fee = trade.fee || 0
 
       if (isBuy) {
-        const { data: assets } = await supabaseClient.from('assets').select('*').eq('user_id', trade.user_id).single()
-        const totalFrozen = amount + fee
-        await supabaseClient.from('assets').update({
-          available_balance: Number(assets.available_balance) + totalFrozen,
-          frozen_balance: Number(assets.frozen_balance) - totalFrozen
-        }).eq('user_id', trade.user_id)
+        const { data: assets } = await supabaseClient.from('assets').select('*').eq('user_id', trade.user_id).maybeSingle()
+        if (assets) {
+          const totalFrozen = amount + fee
+          await supabaseClient.from('assets').update({
+            available_balance: Number(assets.available_balance) + totalFrozen,
+            frozen_balance: Number(assets.frozen_balance) - totalFrozen
+          }).eq('user_id', trade.user_id)
+        }
       } else {
-        const { data: position } = await supabaseClient.from('positions').select('*').eq('user_id', trade.user_id).eq('symbol', trade.stock_code).single()
+        const { data: position } = await supabaseClient.from('positions').select('*').eq('user_id', trade.user_id).eq('symbol', trade.stock_code).maybeSingle()
         if (position) {
           await supabaseClient.from('positions').update({
             available_quantity: position.available_quantity + trade.quantity

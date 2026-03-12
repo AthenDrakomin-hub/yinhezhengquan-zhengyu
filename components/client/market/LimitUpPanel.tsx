@@ -1,6 +1,8 @@
 /**
  * 涨停个股展示面板
  * 用于首页展示当日涨停股票
+ * 
+ * 优化：移除自动刷新，减少API请求
  */
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, RefreshCw, ArrowRight } from 'lucide-react';
@@ -21,7 +23,7 @@ const LimitUpPanel: React.FC = () => {
       const limitUpStocks = data.filter(s => s.isLimitUp);
       setStocks(limitUpStocks.slice(0, 8)); // 最多显示8只
     } catch (error) {
-      console.error('获取涨停股票失败:', error);
+      // 静默失败
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -30,9 +32,11 @@ const LimitUpPanel: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // 移除自动刷新定时器
   }, []);
 
   const handleRefresh = () => {
+    if (refreshing) return;
     setRefreshing(true);
     fetchData();
   };

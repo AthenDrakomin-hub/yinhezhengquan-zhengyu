@@ -1,17 +1,13 @@
 /**
  * 涨停板监控组件
  * 实时监控涨停板股票
+ * 
+ * 优化：默认关闭自动刷新，减少API请求
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { RefreshCw, TrendingUp, AlertCircle, Clock } from 'lucide-react';
 import { getLimitUpList } from '../../services/limitUpService';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface LimitUpData {
   symbol: string;
@@ -40,8 +36,8 @@ interface Props {
 
 const LimitUpMonitor: React.FC<Props> = ({
   symbols,
-  autoRefresh = true,
-  refreshInterval = 5000, // 默认5秒刷新
+  autoRefresh = false, // 默认关闭自动刷新
+  refreshInterval = 60000, // 默认60秒刷新
 }) => {
   const [stocks, setStocks] = useState<LimitUpData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +55,6 @@ const LimitUpMonitor: React.FC<Props> = ({
       setStocks(data);
       setLastRefresh(new Date());
     } catch (err) {
-      console.error('加载涨停板数据失败:', err);
       setError(err instanceof Error ? err.message : '加载失败');
     } finally {
       setLoading(false);
@@ -69,6 +64,7 @@ const LimitUpMonitor: React.FC<Props> = ({
 
   // 手动刷新
   const handleRefresh = () => {
+    if (isRefreshing) return;
     setIsRefreshing(true);
     loadData();
   };
@@ -78,7 +74,7 @@ const LimitUpMonitor: React.FC<Props> = ({
     loadData();
   }, [loadData]);
 
-  // 自动刷新
+  // 自动刷新（默认关闭）
   useEffect(() => {
     if (!autoRefresh) return;
 
@@ -87,7 +83,7 @@ const LimitUpMonitor: React.FC<Props> = ({
     }, refreshInterval);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, loadData]);
+  }, [autoRefresh, refreshInterval]);
 
   // 格式化数字
   const formatNumber = (num: number, decimals = 2): string => {

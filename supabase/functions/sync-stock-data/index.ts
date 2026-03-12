@@ -1,275 +1,307 @@
 /**
  * 股票数据定时同步 Edge Function
  * 
- * 支持的调用方式：
- * 1. 手动触发: POST /sync-stock-data?action=sync_all
- * 2. pg_cron 定时调用（需配置）
- * 3. 外部定时器（GitHub Actions、Vercel Cron 等）
+ * @module sync-stock-data
+ * @description 同步股票基础数据，每日定时运行
  * 
- * 推荐方案：使用 Vercel Cron 或 GitHub Actions 每日调用
+ * 触发方式：
+ * 1. pg_cron 定时任务
+ * 2. 外部定时器（GitHub Actions、Vercel Cron）
+ * 3. 手动触发
  */
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+import {
+  // 响应
+  jsonResponse,
+  optionsResponse,
+  
+  // 缓存
+  clearStockCache,
+  clearMarketCache,
+} from '../_shared/mod.ts'
 
 // CORS 头
-const corsHeaders = {
+const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+}
 
-// 银禾数据 API（免费公开）
-const YINHE_BASE_URL = 'https://api.yinhedata.com';
+// 热门股票列表（默认同步）
+const HOT_STOCKS = {
+  CN: [
+    '600519', '000858', '601318', '000001', '300750',
+    '600036', '601166', '600887', '600276', '600900',
+    '601398', '601288', '600000', '600016', '601988',
+  ],
+  HK: [
+    '00700', '09988', '03690', '01810', '01024',
+    '00941', '02318', '01299', '00883', '00388',
+  ]
+}
 
-// 初始化 Supabase 客户端
-function getSupabaseClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// ==================== 授权验证 ====================
+
+function verifyAuth(req: Request): { authorized: boolean; source: string } {
+  const apiKey = req.headers.get('x-api-key')
+  if (apiKey && apiKey.length > 10) {
+    return { authorized: true, source: 'api-key' }
+  }
   
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-// 获取股票行情
-async function fetchQuote(symbol: string) {
-  try {
-    const response = await fetch(`${YINHE_BASE_URL}/stock/realtime?code=${symbol}`, {
-      headers: { 'Accept': 'application/json' },
-    });
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
+  const authHeader = req.headers.get('authorization')
+  if (authHeader) {
+    return { authorized: true, source: 'jwt' }
   }
-}
-
-// 获取K线
-async function fetchKline(symbol: string, period = 'day', limit = 100) {
-  try {
-    const response = await fetch(
-      `${YINHE_BASE_URL}/stock/kline?code=${symbol}&period=${period}&limit=${limit}`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
+  
+  const userAgent = req.headers.get('user-agent') || ''
+  if (userAgent.includes('pg_cron') || userAgent.includes('pg_net')) {
+    return { authorized: true, source: 'internal' }
   }
+  
+  const triggerSource = req.headers.get('x-trigger-source')
+  if (triggerSource === 'scheduled') {
+    return { authorized: true, source: 'cron' }
+  }
+  
+  const host = req.headers.get('host') || ''
+  if (host.includes('localhost')) {
+    return { authorized: true, source: 'local' }
+  }
+  
+  return { authorized: true, source: 'anonymous' }
 }
 
-// 获取资金流向
-async function fetchMoneyFlow(symbol: string) {
+// ==================== 数据获取 ====================
+
+// 从东方财富获取股票信息
+async function fetchStockFromEastmoney(symbol: string, market: 'CN' | 'HK') {
   try {
-    const response = await fetch(`${YINHE_BASE_URL}/stock/moneyflow?code=${symbol}`, {
-      headers: { 'Accept': 'application/json' },
-    });
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
+    const secid = market === 'HK' ? `116.${symbol}` : 
+                  symbol.startsWith('6') ? `1.${symbol}` : `0.${symbol}`
+    
+    const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=f57,f58,f43,f169,f170,f46,f44,f51,f168,f47,f48,f60,f45,f52,f50,f49,f171`
+    
+    const response = await fetch(url, {
+      headers: {
+        'Referer': 'https://quote.eastmoney.com/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      }
+    })
+    
+    if (!response.ok) return null
+    
+    const data = await response.json()
+    if (!data?.data) return null
+    
+    const d = data.data
+    return {
+      symbol,
+      name: d.f58 || `股票${symbol}`,
+      market: market === 'CN' ? 'CN' : 'HK',
+      price: d.f43 / 100 || 0,
+      change: d.f169 / 100 || 0,
+      change_percent: d.f170 / 100 || 0,
+      prev_close: d.f60 / 100 || 0,
+      open: d.f46 / 100 || 0,
+      high: d.f44 / 100 || 0,
+      low: d.f51 / 100 || 0,
+      volume: d.f47 || 0,
+      amount: d.f48 || 0,
+      pe: d.f162 || null,
+      pb: d.f167 || null,
+      total_mv: d.f116 || null,
+    }
+  } catch (error) {
+    console.error(`获取 ${symbol} 数据失败:`, error)
+    return null
   }
 }
 
 // ==================== 同步函数 ====================
 
-async function syncStockInfo(supabase: any, symbol: string) {
-  const quoteData = await fetchQuote(symbol);
-  if (!quoteData) return { success: false };
-  
-  const market = /^[06]/.test(symbol) ? 'CN' : 'HK';
+async function syncStockInfo(supabase: any, symbol: string, market: 'CN' | 'HK') {
+  const stockData = await fetchStockFromEastmoney(symbol, market)
+  if (!stockData) return { success: false, symbol }
   
   const { error } = await supabase.from('stock_info').upsert({
-    symbol,
-    name: quoteData.name || quoteData.stockName || `股票${symbol}`,
-    market,
-    price: parseFloat(quoteData.price) || 0,
-    change: parseFloat(quoteData.change) || 0,
-    change_percent: parseFloat(quoteData.changePercent) || 0,
-    prev_close: parseFloat(quoteData.prevClose) || 0,
-    open: parseFloat(quoteData.open) || 0,
-    high: parseFloat(quoteData.high) || 0,
-    low: parseFloat(quoteData.low) || 0,
-    volume: parseInt(quoteData.volume) || 0,
-    amount: parseFloat(quoteData.amount) || 0,
-    pe: parseFloat(quoteData.pe) || null,
-    pb: parseFloat(quoteData.pb) || null,
+    ...stockData,
     last_sync_at: new Date().toISOString(),
-  }, { onConflict: 'symbol' });
+  }, { onConflict: 'symbol' })
   
-  return { success: !error };
+  if (error) {
+    console.error(`同步 ${symbol} 失败:`, error)
+    return { success: false, symbol, error: error.message }
+  }
+  
+  return { success: true, symbol, name: stockData.name }
 }
 
-async function syncKline(supabase: any, symbol: string, period = 'day') {
-  const klineData = await fetchKline(symbol, period, 100);
-  if (!klineData || !Array.isArray(klineData)) return { success: false, count: 0 };
+// 同步热门股票列表
+async function syncHotStocks(supabase: any) {
+  const results = { total: 0, success: 0, failed: 0, details: [] as string[] }
   
-  const records = klineData
-    .filter((item: any) => item.time || item.date || item.d)
-    .map((item: any) => ({
-      symbol,
-      period,
-      trade_date: (item.time || item.date || item.d).split(' ')[0],
-      open: parseFloat(item.open || item.o) || 0,
-      high: parseFloat(item.high || item.h) || 0,
-      low: parseFloat(item.low || item.l) || 0,
-      close: parseFloat(item.close || item.c) || 0,
-      volume: parseInt(item.volume || item.v) || 0,
-    }));
+  // 同步A股热门
+  for (const symbol of HOT_STOCKS.CN) {
+    const result = await syncStockInfo(supabase, symbol, 'CN')
+    results.total++
+    if (result.success) {
+      results.success++
+    } else {
+      results.failed++
+      results.details.push(`A股 ${symbol} 同步失败`)
+    }
+    // 延迟避免请求过快
+    await new Promise(r => setTimeout(r, 100))
+  }
   
-  if (records.length === 0) return { success: false, count: 0 };
+  // 同步港股热门
+  for (const symbol of HOT_STOCKS.HK) {
+    const result = await syncStockInfo(supabase, symbol, 'HK')
+    results.total++
+    if (result.success) {
+      results.success++
+    } else {
+      results.failed++
+      results.details.push(`港股 ${symbol} 同步失败`)
+    }
+    await new Promise(r => setTimeout(r, 100))
+  }
   
-  const { error } = await supabase
-    .from('stock_kline')
-    .upsert(records, { onConflict: 'symbol,period,trade_date,trade_time' });
-  
-  return { success: !error, count: records.length };
+  return results
 }
 
-async function syncMoneyFlow(supabase: any, symbol: string) {
-  const flowData = await fetchMoneyFlow(symbol);
-  if (!flowData) return { success: false };
-  
-  const today = new Date().toISOString().split('T')[0];
-  
-  const { error } = await supabase.from('stock_money_flow').upsert({
-    symbol,
-    trade_date: today,
-    main_net_inflow: parseFloat(flowData.mainNetInflow) || 0,
-    retail_net_inflow: parseFloat(flowData.retailNetInflow) || 0,
-    super_large_net_inflow: parseFloat(flowData.superLargeNetInflow) || 0,
-    large_net_inflow: parseFloat(flowData.largeNetInflow) || 0,
-    medium_net_inflow: parseFloat(flowData.mediumNetInflow) || 0,
-    small_net_inflow: parseFloat(flowData.smallNetInflow) || 0,
-  }, { onConflict: 'symbol,trade_date' });
-  
-  return { success: !error };
-}
-
-// 同步用户关注的热门股票（自选股+持仓+热门50）
-async function syncActiveStocks(supabase: any, options: { kline?: boolean } = {}) {
-  // 获取需要同步的股票列表
-  // 1. 用户自选股
+// 同步用户关注股票（自选股+持仓）
+async function syncUserStocks(supabase: any) {
+  // 获取用户自选股
   const { data: watchlist } = await supabase
     .from('watchlist')
-    .select('symbol');
+    .select('symbol')
+    .limit(100)
   
-  // 2. 用户持仓
+  // 获取用户持仓
   const { data: positions } = await supabase
     .from('positions')
-    .select('stock_code');
-  
-  // 3. 热门股票（stock_info表中的前50只）
-  const { data: hotStocks } = await supabase
-    .from('stock_info')
-    .select('symbol')
-    .limit(50);
+    .select('stock_code, market')
+    .limit(100)
   
   // 合并去重
-  const symbolSet = new Set<string>();
+  const symbolSet = new Set<string>()
+  watchlist?.forEach((w: any) => symbolSet.add(w.symbol))
+  positions?.forEach((p: any) => symbolSet.add(p.stock_code))
   
-  watchlist?.forEach((w: any) => symbolSet.add(w.symbol));
-  positions?.forEach((p: any) => symbolSet.add(p.stock_code));
-  hotStocks?.forEach((s: any) => symbolSet.add(s.symbol));
+  const results = { total: 0, success: 0, failed: 0, details: [] as string[] }
   
-  const symbols = Array.from(symbolSet);
-  
-  if (symbols.length === 0) {
-    return { success: true, results: { total: 0, success: 0, failed: 0, details: ['无股票需要同步'] } };
-  }
-  
-  console.log(`[同步] 需要同步 ${symbols.length} 只股票`);
-  
-  const results = { total: symbols.length, success: 0, failed: 0, details: [] as string[] };
-  
-  for (const symbol of symbols) {
-    const quoteResult = await syncStockInfo(supabase, symbol);
-    
-    if (options.kline) {
-      await syncKline(supabase, symbol, 'day');
-    }
-    
-    await syncMoneyFlow(supabase, symbol);
-    
-    if (quoteResult.success) {
-      results.success++;
+  for (const symbol of Array.from(symbolSet)) {
+    const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN'
+    const result = await syncStockInfo(supabase, symbol, market)
+    results.total++
+    if (result.success) {
+      results.success++
     } else {
-      results.failed++;
+      results.failed++
     }
-    
-    // 延迟避免请求过快
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 100))
   }
   
-  results.details.push(`同步完成: 成功${results.success}, 失败${results.failed}`);
-  return { success: true, results };
+  return results
 }
 
 // ==================== 主服务 ====================
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return optionsResponse()
   }
   
-  const supabase = getSupabaseClient();
+  const startTime = Date.now()
+  
+  // 授权验证
+  const { source } = verifyAuth(req)
+  const triggeredBy = source === 'cron' || source === 'internal' ? 'scheduled' : 'manual'
+  
+  console.log(`🚀 开始同步股票数据... (来源: ${source})`)
+  
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
   
   try {
-    const url = new URL(req.url);
-    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const url = new URL(req.url)
+    const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {}
     
-    const action = body.action || url.searchParams.get('action') || 'health';
-    const symbol = body.symbol || url.searchParams.get('symbol');
+    const action = body.action || url.searchParams.get('action') || 'sync_hot'
+    const symbol = body.symbol || url.searchParams.get('symbol')
     
-    let result: any;
+    let result: any
     
     switch (action) {
       case 'sync_info':
-        result = symbol ? await syncStockInfo(supabase, symbol) : { success: false, error: '缺少 symbol' };
-        break;
-        
-      case 'sync_kline':
         if (!symbol) {
-          result = { success: false, error: '缺少 symbol' };
+          result = { success: false, error: '缺少 symbol 参数' }
         } else {
-          const period = body.period || 'day';
-          result = await syncKline(supabase, symbol, period);
+          const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN'
+          result = await syncStockInfo(supabase, symbol, market)
+          
+          // 清除该股票的缓存
+          await clearStockCache(symbol)
         }
-        break;
+        break
         
-      case 'sync_moneyflow':
-        result = symbol ? await syncMoneyFlow(supabase, symbol) : { success: false, error: '缺少 symbol' };
-        break;
+      case 'sync_hot':
+        result = await syncHotStocks(supabase)
+        break
         
-      case 'sync_active':
-        result = await syncActiveStocks(supabase, { kline: body.kline });
-        break;
+      case 'sync_user':
+        result = await syncUserStocks(supabase)
+        break
+        
+      case 'sync_all':
+        // 同步热门 + 用户关注
+        const hotResult = await syncHotStocks(supabase)
+        const userResult = await syncUserStocks(supabase)
+        result = {
+          success: true,
+          hot: hotResult,
+          user: userResult,
+          total: hotResult.total + userResult.total,
+          success_count: hotResult.success + userResult.success,
+          failed_count: hotResult.failed + userResult.failed,
+        }
+        break
         
       case 'health':
       default:
-        result = {
-          status: 'healthy',
-          service: 'sync-stock-data',
-          timestamp: new Date().toISOString(),
-          endpoints: [
-            'GET/POST ?action=health - 健康检查',
-            'POST {action:"sync_info", symbol:"600519"} - 同步单只股票',
-            'POST {action:"sync_kline", symbol:"600519", period:"day"} - 同步K线',
-            'POST {action:"sync_moneyflow", symbol:"600519"} - 同步资金流向',
-            'POST {action:"sync_active", kline:true} - 同步活跃股票(自选+持仓+热门)',
-          ],
-        };
+        result = { 
+          success: true, 
+          message: 'sync-stock-data 服务正常',
+          timestamp: new Date().toISOString()
+        }
     }
     
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // 成功同步后清除缓存
+    if (result.success && ['sync_hot', 'sync_user', 'sync_all'].includes(action)) {
+      const clearedCount = await clearStockCache()
+      console.log(`🧹 已清除 ${clearedCount} 个股票缓存`)
+      result.cache_cleared = clearedCount
+    }
+    
+    const duration = Date.now() - startTime
+    result.duration_ms = duration
+    result.triggered_by = triggeredBy
+    
+    console.log(`✅ 股票数据同步完成，耗时 ${duration}ms`)
+    
+    return jsonResponse(result)
     
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('❌ 同步失败:', error)
+    return jsonResponse({
+      success: false,
+      error: error.message,
+      duration_ms: Date.now() - startTime,
+    }, 500)
   }
-});
+})

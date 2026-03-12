@@ -21,18 +21,23 @@ enable_signup = true
 enabled = true
 
 [functions]
-nexus-sync = { verify_jwt = false }
 sync-ipo = { verify_jwt = false }
 sync-stock-data = { verify_jwt = false }
 fetch-galaxy-news = { verify_jwt = false }
 fetch-stock-f10 = { verify_jwt = false }
 get-limit-up = { verify_jwt = false }
-get-market-data = { verify_jwt = false }
-phone-location = { verify_jwt = false }
-db-migrate = { verify_jwt = false }
 admin-operations = { verify_jwt = false }
 admin-verify = { verify_jwt = false }
 approve-trade-order = { verify_jwt = false }
 cancel-trade-order = { verify_jwt = false }
-create-trade-order = { verify_jwt = false }
 match-trade-order = { verify_jwt = false }
+# 交易模式分离后的专用函数
+create-a-share-order = { verify_jwt = false }
+create-hk-order = { verify_jwt = false }
+create-ipo-order = { verify_jwt = false }
+create-block-trade-order = { verify_jwt = false }
+create-limit-up-order = { verify_jwt = false }
+stock-search = { verify_jwt = false }
+proxy-market = { verify_jwt = false }
+clear-cache = { verify_jwt = false }
+health-check = { verify_jwt = false }

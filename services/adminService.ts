@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { logger } from '@/utils/logger';
+import { cacheAdmin } from './marketApi';
 
 export const adminService = {
   /**
@@ -200,9 +201,102 @@ export const adminService = {
         config
       });
 
+      // 清除交易规则相关缓存
+      await cacheAdmin.clearKeys([`trade_rules:${ruleType}`]);
+
       return data;
     } catch (error: any) {
       logger.error('更新规则失败:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 更新股票基础信息
+   */
+  async updateStockInfo(symbol: string, market: 'CN' | 'HK', info: {
+    name?: string;
+    industry?: string;
+    sector?: string;
+    logo_url?: string;
+    description?: string;
+  }) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('未登录');
+
+      const { data, error } = await supabase
+        .from('stock_info')
+        .upsert({
+          symbol,
+          market,
+          ...info,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 记录操作日志
+      await this.logAdminOperation('STOCK_INFO_UPDATE', null, {
+        symbol,
+        market,
+        changes: info
+      });
+
+      // 清除该股票的所有缓存，确保修改立即生效
+      const cacheResult = await cacheAdmin.clearStockCache(symbol, market);
+      logger.info(`[管理端] 已清除股票 ${symbol} 的缓存，删除 ${cacheResult.deleted} 个键`);
+
+      return data;
+    } catch (error: any) {
+      logger.error('更新股票信息失败:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 批量刷新股票行情缓存
+   */
+  async refreshStockCache(symbols: string[], market: 'CN' | 'HK' = 'CN') {
+    try {
+      const results = [];
+      
+      for (const symbol of symbols) {
+        const result = await cacheAdmin.clearStockCache(symbol, market);
+        results.push({ symbol, ...result });
+      }
+      
+      // 记录操作日志
+      await this.logAdminOperation('CACHE_REFRESH', null, {
+        symbols,
+        market,
+        results
+      });
+
+      return results;
+    } catch (error: any) {
+      logger.error('刷新股票缓存失败:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 清除所有行情缓存
+   */
+  async clearAllMarketCache() {
+    try {
+      const result = await cacheAdmin.clearAll();
+      
+      // 记录操作日志
+      await this.logAdminOperation('CACHE_CLEAR_ALL', null, {
+        timestamp: new Date().toISOString()
+      });
+
+      return result;
+    } catch (error: any) {
+      logger.error('清除所有缓存失败:', error);
       throw error;
     }
   },

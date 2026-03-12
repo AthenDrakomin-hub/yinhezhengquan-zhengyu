@@ -156,15 +156,322 @@ supabase functions deploy
 
 | 函数名 | 功能 |
 |--------|------|
-| `get-market-data` | 获取实时行情数据 |
-| `sync-ipo` | 同步新股发行数据 |
+| `proxy-market` | 行情数据统一代理（核心函数） |
+| `health-check` | 服务健康检查与告警 |
+| `clear-cache` | 管理端缓存清除 |
+| `sync-ipo` | 同步新股发行数据（定时任务） |
+| `sync-stock-data` | 同步股票基础数据 |
 | `get-limit-up` | 获取涨停股票数据（QVeris API） |
+| `fetch-galaxy-news` | 获取银河证券新闻 |
 | `fetch-stock-f10` | 获取股票基本面数据 |
-| `create-trade-order` | 创建交易订单 |
+| `proxy-market` | 统一行情数据代理（报价+成交明细+K线） |
+| `stock-search` | 股票搜索 |
+| `create-a-share-order` | A股交易（买入/卖出） |
+| `create-hk-order` | 港股交易（买入/卖出） |
+| `create-ipo-order` | 新股申购 |
+| `create-block-trade-order` | 大宗交易 |
+| `create-limit-up-order` | 涨停打板 |
 | `cancel-trade-order` | 取消交易订单 |
+| `approve-trade-order` | 审批交易订单 |
 | `match-trade-order` | 匹配交易订单 |
 | `admin-verify` | 验证管理员权限 |
-| `exec-sql` | 执行 SQL 语句 |
+| `admin-operations` | 管理员操作入口 |
+
+---
+
+## 📈 行情数据代理服务 (proxy-market)
+
+### 架构说明
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     前端应用                            │
+│   marketApi.ts / stockDetailService.ts                 │
+└───────────────────────┬─────────────────────────────────┘
+                        │ supabase.functions.invoke()
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│              proxy-market Edge Function                 │
+│   - 支持 GET/POST 请求                                  │
+│   - 请求去重                                            │
+│   - 统一错误处理                                        │
+└───────────────────────┬─────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│                 Upstash Redis 缓存                      │
+│   - 减少外部 API 调用                                   │
+│   - 凭证安全存储在后端                                  │
+└───────────────────────┬─────────────────────────────────┘
+                        │ (cache miss)
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│                  东方财富 API                           │
+│   push2.eastmoney.com / push2his.eastmoney.com         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 支持的 Action 列表
+
+| Action | 说明 | 参数 | 返回数据 |
+|--------|------|------|----------|
+| `batch` | 批量行情 | `symbols[]`, `market` | `[{symbol, name, price, change, changePercent}]` |
+| `realtime` | 单只股票行情 | `symbols[]`, `market` | `{symbol, name, price, change, changePercent}` |
+| `quote` | 完整个股详情 | `symbols[]`, `market` | `{symbol, name, price, open, high, low, volume, ...}` |
+| `orderbook` | 五档盘口 | `symbols[]`, `market` | `{bids: [{price, volume}], asks: [{price, volume}]}` |
+| `kline` | K线数据 | `symbols[]`, `market`, `days` | `[close_price1, close_price2, ...]` |
+| `news` | 财经快讯 | `pageSize` | `[{id, title, content, time, source}]` |
+| `stock_news` | 个股相关新闻 | `symbols[]`, `pageSize` | `[{id, title, content, url}]` |
+| `stock_notice` | 个股公告 | `symbols[]`, `pageSize` | `[{id, title, date, type, url}]` |
+| `limitup` | 涨停板股票 | - | `[{symbol, name, price, changePercent, industry}]` |
+
+### 调用示例
+
+**GET 请求**：
+```bash
+# 批量行情
+curl "https://xxx.supabase.co/functions/v1/proxy-market?action=batch&market=CN&symbols=600519,000001"
+
+# K线数据
+curl "https://xxx.supabase.co/functions/v1/proxy-market?action=kline&market=CN&symbols=600519&days=30"
+
+# 港股行情
+curl "https://xxx.supabase.co/functions/v1/proxy-market?action=batch&market=HK&symbols=00700,09988"
+```
+
+**POST 请求**：
+```typescript
+import { supabase } from '@/lib/supabase';
+
+const { data, error } = await supabase.functions.invoke('proxy-market', {
+  body: { 
+    action: 'batch', 
+    symbols: ['600519', '000001'], 
+    market: 'CN' 
+  }
+});
+```
+
+**前端调用**：
+```typescript
+import { marketApi } from '@/services/marketApi';
+
+// 批量行情
+const stocks = await marketApi.getBatchStocks(['600519', '000001'], 'CN');
+
+// 完整行情
+const quote = await marketApi.getStockQuote('600519', 'CN');
+
+// 五档盘口
+const orderBook = await marketApi.getOrderBook('600519', 'CN');
+
+// K线数据
+const kline = await marketApi.getKline('600519', 'CN', 30);
+
+// 财经快讯
+const news = await marketApi.getNews(20);
+
+// 个股新闻
+const stockNews = await marketApi.getStockNews('600519', 10);
+
+// 涨停板
+const limitUp = await marketApi.getLimitUpStocks();
+```
+
+### 缓存 TTL 策略
+
+| 数据类型 | 缓存时间 | 说明 |
+|----------|----------|------|
+| 实时行情 (`realtime`, `batch`, `quote`) | 30秒 | 平衡实时性与性能 |
+| 五档盘口 (`orderbook`) | 5秒 | 高频更新数据 |
+| K线数据 (`kline`) | 5分钟 | 历史数据变化慢 |
+| 财经快讯 (`news`) | 60秒 | 中等时效性 |
+| 个股新闻 (`stock_news`) | 2分钟 | 低频更新 |
+| 个股公告 (`stock_notice`) | 5分钟 | 低频更新 |
+| 涨停板 (`limitup`) | 60秒 | 中等时效性 |
+
+### 环境变量配置
+
+**Supabase Edge Functions 环境变量**（在 Dashboard 配置）：
+
+| 变量名 | 说明 | 示例值 |
+|--------|------|--------|
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis URL | `https://xxx.upstash.io` |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis Token | `gQAAAAAAAQ8D...` |
+| `ALERT_WEBHOOK_URL` | 告警 Webhook（可选） | `https://hooks.slack.com/xxx` |
+
+> ⚠️ **安全提示**：Redis 凭证必须配置在 Supabase 后端环境变量中，切勿配置在前端 `.env` 文件中！
+
+---
+
+## 🗑️ 缓存管理 (clear-cache)
+
+### 调用方式
+
+```typescript
+import { cacheAdmin } from '@/services/marketApi';
+
+// 清除特定股票的所有缓存
+await cacheAdmin.clearStockCache('600519', 'CN');
+
+// 清除特定缓存键
+await cacheAdmin.clearKeys(['quote:CN:600519', 'kline:CN:600519:30']);
+
+// 按模式清除
+await cacheAdmin.clearPattern('quote');  // 清除所有行情缓存
+await cacheAdmin.clearPattern('news');   // 清除所有新闻缓存
+
+// 清除所有缓存（谨慎使用）
+await cacheAdmin.clearAll();
+```
+
+### 管理端自动缓存清除
+
+```typescript
+import { adminService } from '@/services/adminService';
+
+// 更新股票信息时自动清除缓存
+await adminService.updateStockInfo('600519', 'CN', {
+  name: '贵州茅台',
+  industry: '白酒'
+});
+
+// 批量刷新股票缓存
+await adminService.refreshStockCache(['600519', '000858'], 'CN');
+
+// 清除所有行情缓存
+await adminService.clearAllMarketCache();
+```
+
+---
+
+## 🏥 健康监控 (health-check)
+
+### 健康检查项
+
+| 检查项 | 说明 | 超时阈值 |
+|--------|------|----------|
+| Redis | 连接和响应检测 | 5秒 |
+| 东方财富 API | 行情接口可用性 | 5秒 |
+| Edge Function | proxy-market 自检 | 5秒 |
+
+### 状态级别
+
+- `healthy`: 所有检查通过 ✅
+- `degraded`: 部分检查失败 ⚠️
+- `unhealthy`: 全部检查失败 ❌
+
+### 前端集成
+
+```typescript
+import { healthMonitor } from '@/services/healthMonitor';
+
+// 配置告警
+healthMonitor.configure({
+  webhookUrl: 'https://hooks.slack.com/xxx',
+  onUnhealthy: (status) => {
+    console.error('服务异常:', status);
+  },
+  onRecovered: (status) => {
+    console.log('服务已恢复:', status);
+  }
+});
+
+// 启动定时检查（每60秒）
+healthMonitor.startPeriodicCheck(60000);
+
+// 手动检查
+const status = await healthMonitor.check();
+```
+
+### 定时任务配置
+
+**方式1: QStash（推荐）**
+```typescript
+import { Client } from "@upstash/qstash";
+
+const client = new Client({ token: "your-token" });
+await client.schedules.create({
+  destination: "https://xxx.supabase.co/functions/v1/health-check",
+  cron: "*/5 * * * *", // 每5分钟
+});
+```
+
+**方式2: Supabase pg_cron**
+```sql
+SELECT cron.schedule(
+  'health-check',
+  '*/5 * * * *',
+  $$SELECT net.http_post(url := 'https://xxx.supabase.co/functions/v1/health-check')$$
+);
+```
+
+---
+
+## 🚀 部署命令
+
+### 部署所有 Edge Functions
+
+```bash
+# 链接项目（首次）
+supabase link --project-ref your-project-ref
+
+# 部署所有函数
+supabase functions deploy
+```
+
+### 部署单个函数
+
+```bash
+# 行情代理（核心）
+supabase functions deploy proxy-market --no-verify-jwt
+
+# 健康检查
+supabase functions deploy health-check --no-verify-jwt
+
+# 缓存清除
+supabase functions deploy clear-cache --no-verify-jwt
+
+# 其他函数
+supabase functions deploy sync-ipo --no-verify-jwt
+supabase functions deploy stock-search --no-verify-jwt
+supabase functions deploy proxy-market --no-verify-jwt
+```
+
+### 配置环境变量
+
+```bash
+# 在 Supabase Dashboard → Edge Functions → Environment variables 配置：
+# - UPSTASH_REDIS_REST_URL
+# - UPSTASH_REDIS_REST_TOKEN
+# - ALERT_WEBHOOK_URL（可选）
+```
+
+### 配置 pg_cron 定时任务
+
+```bash
+# 1. 在 Supabase Dashboard → Database → Extensions 中启用 pg_cron
+
+# 2. 执行迁移文件（需要替换占位符）
+psql -f supabase/migrations/20250502000000_pg_cron_jobs.sql
+
+# 或者在 Supabase SQL Editor 中手动执行
+
+# 3. 需要替换的内容：
+# - "你的项目ID" → Supabase 项目 ID
+# - "你的服务角色密钥" → Settings → API → service_role key
+
+# 查看定时任务状态
+SELECT * FROM cron.job;
+SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;
+```
+
+**定时任务说明：**
+| 任务名称 | 执行频率 | 功能 |
+|---------|---------|------|
+| `sync-stock-data-every-minute` | 每分钟 | 同步股票基础数据 |
+| `sync-ipo-every-minute` | 每分钟 | 同步新股发行数据 |
+| `fetch-galaxy-news-every-minute` | 每分钟 | 同步银河证券新闻 |
 
 ## 🎯 涨停数据机制
 
@@ -287,12 +594,30 @@ background: slate-800;
 - [ ] 部署到 Vercel
 
 ### 后端部署（Supabase）
-- [ ] 部署所有 Edge Functions
-- [ ] 配置 `SUPABASE_URL`
-- [ ] 配置 `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] 配置 `QVERIS_API_KEY`（涨停数据）
+
+#### Edge Functions 部署
+- [ ] 部署 `proxy-market` 函数
+- [ ] 部署 `health-check` 函数
+- [ ] 部署 `clear-cache` 函数
+- [ ] 部署其他业务函数
+
+#### 环境变量配置
+- [ ] `UPSTASH_REDIS_REST_URL` - Redis 服务地址
+- [ ] `UPSTASH_REDIS_REST_TOKEN` - Redis 访问令牌
+- [ ] `SUPABASE_URL` - Supabase 项目 URL
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` - 服务角色密钥
+- [ ] `QVERIS_API_KEY` - 涨停数据 API 密钥
+- [ ] `ALERT_WEBHOOK_URL` - 告警通知 Webhook（可选）
+
+#### 数据库与认证
 - [ ] 执行数据库迁移
 - [ ] 创建管理员账号
+- [ ] 配置 RLS 策略
+
+#### 监控配置
+- [ ] 配置健康检查定时任务（QStash 或 pg_cron）
+- [ ] 配置告警 Webhook（Slack/企业微信）
+- [ ] 测试健康检查接口
 
 ### 功能验证
 - [ ] 用户登录/注册

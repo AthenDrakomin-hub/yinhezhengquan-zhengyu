@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme, useRouteTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { soundLibrary } from '../lib/sound';
+import { marketApi } from '../services/marketApi';
 import Layout from '../components/core/Layout';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import type { UserAccount, Stock } from '../lib/types';
@@ -112,7 +113,6 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (stockSymbols.length > 0) {
         try {
-          const { frontendMarketService } = await import('../services/frontendMarketService');
           // 分别处理A股和港股
           const cnSymbols = stockSymbols.filter(s => s.length === 6);
           const hkSymbols = stockSymbols.filter(s => s.length === 5);
@@ -120,12 +120,12 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const allStocks: { symbol: string; price: number }[] = [];
           
           if (cnSymbols.length > 0) {
-            const cnStocks = await frontendMarketService.getBatchStocks(cnSymbols, 'CN');
+            const cnStocks = await marketApi.getBatchStocks(cnSymbols, 'CN');
             allStocks.push(...cnStocks);
           }
           
           if (hkSymbols.length > 0) {
-            const hkStocks = await frontendMarketService.getBatchStocks(hkSymbols, 'HK');
+            const hkStocks = await marketApi.getBatchStocks(hkSymbols, 'HK');
             allStocks.push(...hkStocks);
           }
           
@@ -198,15 +198,16 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: t.stock_name || '',
           quantity: Number(t.quantity),
           price: Number(t.price),
-          amount: Number(t.amount),
+          amount: Number(t.amount || (t.price * t.quantity)),
           status: t.status as any,
           timestamp: t.created_at,
         })),
         conditionalOrders: (conditionalOrders || []).map(o => ({
           id: o.id,
           type: o.order_type as any,
-          symbol: o.stock_code || o.symbol,
-          triggerPrice: Number(o.trigger_price) || 0,
+          symbol: o.symbol,
+          name: o.stock_name,
+          triggerPrice: Number(o.trigger_price) || Number(o.stop_loss_price) || Number(o.take_profit_price) || 0,
           quantity: Number(o.quantity) || 0,
           status: o.status as any,
         })),
@@ -300,7 +301,12 @@ const ClientRoutes: React.FC = () => {
               <Route path="image-diagnostic" element={<ImageDiagnosticPage />} />
               <Route path="education" element={<EducationCenterView onBack={() => navigate('/client/dashboard')} />} />
               <Route path="profile/detail" element={<ProfileDetailView />} />
-              <Route path="profile/overview" element={<ProfileOverviewWrapper />} />
+              <Route path="profile" element={<ProfileViewWrapper />}>
+                <Route index element={<ProfileOverviewWrapper />} />
+                <Route path="overview" element={<ProfileOverviewWrapper />} />
+                <Route path="compliance" element={<ComplianceCenter onBack={() => navigate('/client/profile')} onOpenShield={() => navigate('/client/compliance/shield')} />} />
+                <Route path="education" element={<EducationCenterView onBack={() => navigate('/client/profile')} />} />
+              </Route>
               <Route path="transactions" element={<TransactionHistoryWrapper />} />
               <Route path="funds" element={<FundFlowsWrapper />} />
               <Route path="trading-preferences" element={<TradingPreferencesView />} />

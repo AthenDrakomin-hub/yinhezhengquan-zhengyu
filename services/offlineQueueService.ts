@@ -127,7 +127,28 @@ class OfflineQueueService {
   }
 
   private async executeTrade(data: any) {
-    const { data: result, error } = await supabase.functions.invoke('create-trade-order', {
+    // 根据交易类型选择 Edge Function
+    const getEdgeFunctionName = (tradeType: string, marketType?: string): string => {
+      switch (tradeType) {
+        case 'BUY':
+        case 'SELL':
+          if (marketType === 'HK_SHARE' || marketType === '港股' || marketType === 'HK') {
+            return 'create-hk-order';
+          }
+          return 'create-a-share-order';
+        case 'IPO':
+          return 'create-ipo-order';
+        case 'BLOCK_TRADE':
+          return 'create-block-trade-order';
+        case 'LIMIT_UP':
+          return 'create-limit-up-order';
+        default:
+          return 'create-a-share-order';
+      }
+    };
+    
+    const edgeFunctionName = getEdgeFunctionName(data.trade_type, data.market_type);
+    const { data: result, error } = await supabase.functions.invoke(edgeFunctionName, {
       body: data
     });
     if (error) throw error;

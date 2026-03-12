@@ -210,7 +210,7 @@ export const tradeService = {
       } else {
         // 普通买卖：验证价格合理性
         const realData = await getRealtimeStock(symbol, marketType === 'HK_SHARE' ? 'HK' : 'CN');
-        if (realData.price && Math.abs(realData.price - price) / realData.price > 0.05) {
+        if (realData?.price && Math.abs(realData.price - price) / realData.price > 0.05) {
           logger.warn('价格偏离过大，请刷新行情后再试');
         }
       }
@@ -219,23 +219,61 @@ export const tradeService = {
       // 不阻止交易，只记录警告
     }
 
-    const { data, error } = await supabase.functions.invoke('create-trade-order', {
-      body: {
-        market_type: marketType,
-        trade_type: normalizedTradeType,
-        stock_code: symbol,
-        stock_name: name,
-        price,
-        quantity,
-        leverage,
-        logo_url: logoUrl,
-        transaction_id: transactionId, // 添加幂等性标识
-        metadata: {
-          ...metadata,
-          request_id: requestId,
-          client_timestamp: Date.now()
-        }
+    // 根据交易类型选择不同的 Edge Function
+    const getEdgeFunctionName = (tradeType: string, market: string): string => {
+      switch (tradeType) {
+        case 'BUY':
+        case 'SELL':
+          // 根据市场类型选择 A股 或 港股 交易函数
+          if (market === 'HK_SHARE' || market === '港股' || market === 'HK') {
+            return 'create-hk-order';
+          }
+          return 'create-a-share-order';
+        case 'IPO':
+          return 'create-ipo-order';
+        case 'BLOCK_TRADE':
+          return 'create-block-trade-order';
+        case 'LIMIT_UP':
+          return 'create-limit-up-order';
+        default:
+          // 默认使用 A股交易
+          return 'create-a-share-order';
       }
+    };
+
+    const edgeFunctionName = getEdgeFunctionName(normalizedTradeType, marketType);
+    logger.info(`调用 Edge Function: ${edgeFunctionName}`, { tradeType: normalizedTradeType, marketType });
+
+    // 构建请求体（不同类型的交易参数略有不同）
+    const requestBody: Record<string, any> = {
+      stock_code: symbol,
+      stock_name: name,
+      price,
+      quantity,
+      leverage,
+      transaction_id: transactionId,
+      metadata: {
+        ...metadata,
+        request_id: requestId,
+        client_timestamp: Date.now()
+      }
+    };
+
+    // 根据交易类型添加特定参数
+    if (normalizedTradeType === 'BUY' || normalizedTradeType === 'SELL') {
+      requestBody.trade_type = normalizedTradeType;
+      requestBody.market_type = marketType === 'HK_SHARE' ? '港股' : 'A股';
+    } else if (normalizedTradeType === 'IPO') {
+      requestBody.market_type = marketType === 'HK_SHARE' ? '港股' : 'A股';
+    } else if (normalizedTradeType === 'BLOCK_TRADE') {
+      // 大宗交易需要从原始type参数获取买卖方向
+      requestBody.trade_type = type === TradeType.SELL ? 'SELL' : 'BUY';
+      requestBody.market_type = marketType === 'HK_SHARE' ? '港股' : 'A股';
+    }
+    // LIMIT_UP 不需要额外参数，默认A股
+
+    const { data, error } = await supabase.functions.invoke(edgeFunctionName, {
+      body: requestBody
     });
 
     if (error) {
@@ -305,15 +343,15 @@ export const tradeService = {
   },
 
   /**
-   * 获取行情数据
+   * 获取行情数据（通过 proxy-market）
    */
   async getMarketData(marketType: string, stockCodes: string[]) {
-    const { data, error } = await supabase.functions.invoke('get-market-data', {
-      body: { market_type: marketType, stock_codes: stockCodes }
+    const { data, error } = await supabase.functions.invoke('proxy-market', {
+      body: { action: 'batch', symbols: stockCodes, market: marketType === 'HK' ? 'HK' : 'CN' }
     });
 
     if (error) throw error;
-    return data;
+    return data?.data || [];
   },
 
   /**

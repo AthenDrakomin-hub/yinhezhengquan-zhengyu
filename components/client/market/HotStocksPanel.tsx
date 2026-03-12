@@ -1,32 +1,29 @@
 /**
  * 热门股票组件 - 银河证券风格
- * 展示交易热度最高的股票
+ * 使用 Redis 缓存的行情服务
  */
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, Activity, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { hotStocksService } from '@/services/optimizationService';
-import { frontendMarketService } from '@/services/frontendMarketService';
-import { STOCK_LIST } from '@/lib/stockList';
+import { marketApi } from '@/services/marketApi';
 
 interface HotStock {
   symbol: string;
-  name?: string;
-  trade_count: number;
-  total_volume: number;
-  unique_traders: number;
-  avg_price: number;
-  change?: number;
-}
-
-// 从股票列表中随机选择股票
-function getRandomStocks(count: number): { symbol: string; name: string }[] {
-  const shuffled = [...STOCK_LIST].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count).map(s => ({ symbol: s.symbol, name: s.name }));
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
 }
 
 const PAGE_SIZE = 5;
+
+// 热门股票代码列表
+const HOT_STOCK_SYMBOLS = [
+  '600519', '000858', '601318', '000333', '002415',
+  '300750', '002594', '600036', '601012', '600887',
+  '601888', '002230', '600276', '000002', '002714',
+];
 
 export const HotStocksPanel: React.FC = () => {
   const navigate = useNavigate();
@@ -36,101 +33,22 @@ export const HotStocksPanel: React.FC = () => {
 
   useEffect(() => {
     loadHotStocks();
-    const interval = setInterval(loadHotStocks, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadHotStocks = async () => {
     try {
-      const data = await hotStocksService.getHotStocks(20);
-      
-      if (data && data.length > 0) {
-        // 有真实交易数据，获取实时行情补充价格
-        const enrichedData = await Promise.all(
-          data.map(async (stock) => {
-            try {
-              // 根据股票代码判断市场：A股6位，港股5位
-              const market = stock.symbol.length === 5 ? 'HK' : 'CN';
-              const stockData = await frontendMarketService.getRealtimeStock(stock.symbol, market);
-              return {
-                ...stock,
-                name: stock.name || stockData.name,
-                avg_price: stockData.price,
-                change: stockData.changePercent,
-              };
-            } catch (e) {
-              return stock;
-            }
-          })
-        );
-        setHotStocks(enrichedData);
-      } else {
-        // 没有交易数据，从股票列表中随机选择股票获取真实行情
-        const randomStocks = getRandomStocks(15);
-        const stockPromises = randomStocks.map(async (stock, index) => {
-          try {
-            // 根据股票代码判断市场：A股6位，港股5位
-            const market = stock.symbol.length === 5 ? 'HK' : 'CN';
-            const stockData = await frontendMarketService.getRealtimeStock(stock.symbol, market);
-            return {
-              symbol: stock.symbol,
-              name: stockData.name || stock.name,
-              trade_count: 1000 - index * 50, // 模拟热度排名
-              total_volume: 1000000 - index * 50000,
-              unique_traders: 500 - index * 25,
-              avg_price: stockData.price,
-              change: stockData.changePercent,
-            };
-          } catch (e) {
-            return {
-              symbol: stock.symbol,
-              name: stock.name,
-              trade_count: 1000 - index * 50,
-              total_volume: 1000000 - index * 50000,
-              unique_traders: 500 - index * 25,
-              avg_price: 0,
-            };
-          }
-        });
-        
-        const results = await Promise.all(stockPromises);
-        setHotStocks(results);
-      }
+      setLoading(true);
+      // 使用代理接口获取行情（有 Redis 缓存）
+      const stocks = await marketApi.getBatchStocks(HOT_STOCK_SYMBOLS, 'CN');
+      setHotStocks(stocks.map(s => ({
+        symbol: s.symbol,
+        name: s.name,
+        price: s.price,
+        change: s.change,
+        changePercent: s.changePercent,
+      })));
     } catch (error) {
-      console.error('加载热门股票失败:', error);
-      // 出错时从股票列表中随机选择（尝试获取真实价格）
-      try {
-        const randomStocks = getRandomStocks(10);
-        const stockPromises = randomStocks.map(async (stock, index) => {
-          try {
-            // 根据股票代码判断市场：A股6位，港股5位
-            const market = stock.symbol.length === 5 ? 'HK' : 'CN';
-            const stockData = await frontendMarketService.getRealtimeStock(stock.symbol, market);
-            return {
-              symbol: stock.symbol,
-              name: stockData.name || stock.name,
-              trade_count: 1000 - index * 50,
-              total_volume: 1000000 - index * 50000,
-              unique_traders: 500 - index * 25,
-              avg_price: stockData.price,
-              change: stockData.changePercent,
-            };
-          } catch (e) {
-            return {
-              symbol: stock.symbol,
-              name: stock.name,
-              trade_count: 1000 - index * 50,
-              total_volume: 1000000 - index * 50000,
-              unique_traders: 500 - index * 25,
-              avg_price: 0,
-            };
-          }
-        });
-        const results = await Promise.all(stockPromises);
-        setHotStocks(results);
-      } catch (e) {
-        setHotStocks([]);
-      }
+      // 静默失败
     } finally {
       setLoading(false);
     }
@@ -159,17 +77,17 @@ export const HotStocksPanel: React.FC = () => {
       <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center gap-2">
         <TrendingUp className="w-4 h-4 text-[var(--color-primary)]" />
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">热门股票</h3>
-        <span className="text-xs text-[var(--color-text-muted)] ml-auto">实时热度</span>
+        <span className="text-xs text-[var(--color-text-muted)] ml-auto">实时行情</span>
       </div>
 
       <div className="divide-y divide-[var(--color-border)]">
         {currentStocks.map((stock, index) => {
-          const isUp = (stock.change || 0) >= 0;
+          const isUp = stock.changePercent >= 0;
           const rank = startIndex + index + 1;
           return (
             <div
               key={stock.symbol}
-              onClick={() => navigate(`/client/stock/${stock.symbol}`)}
+              onClick={() => navigate(`/client/trade?symbol=${stock.symbol}`)}
               className="flex items-center justify-between px-4 py-3 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
@@ -179,25 +97,19 @@ export const HotStocksPanel: React.FC = () => {
                   {rank}
                 </div>
                 <div>
-                  <div className="font-medium text-sm text-[var(--color-text-primary)]">{stock.symbol}</div>
-                  {stock.name && (
-                    <div className="text-xs text-[var(--color-text-muted)]">{stock.name}</div>
-                  )}
+                  <div className="font-medium text-sm text-[var(--color-text-primary)]">{stock.name}</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">{stock.symbol}</div>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
-                {/* 涨跌幅 */}
-                {stock.change !== undefined && (
-                  <div className={`flex items-center gap-1 text-xs font-medium ${isUp ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>
-                    {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    <span>{isUp ? '+' : ''}{stock.change.toFixed(2)}%</span>
-                  </div>
-                )}
+                <div className={`flex items-center gap-1 text-xs font-medium ${isUp ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>
+                  {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  <span>{isUp ? '+' : ''}{stock.changePercent.toFixed(2)}%</span>
+                </div>
                 
-                {/* 价格 */}
                 <div className="text-sm font-medium text-[var(--color-text-primary)]">
-                  ¥{stock.avg_price?.toFixed(2) || '-'}
+                  ¥{stock.price.toFixed(2)}
                 </div>
               </div>
             </div>
@@ -205,34 +117,25 @@ export const HotStocksPanel: React.FC = () => {
         })}
       </div>
 
-      {/* 分页控制 */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]">
+        <div className="px-4 py-2 border-t border-[var(--color-border)] flex items-center justify-between">
+          <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+            className="p-1 rounded hover:bg-[var(--color-bg)] disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
           <span className="text-xs text-[var(--color-text-muted)]">
-            第 {currentPage} / {totalPages} 页
+            {currentPage} / {totalPages}
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage === 1}
-              className="w-8 h-8 rounded-lg flex items-center justify-center border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages}
-              className="w-8 h-8 rounded-lg flex items-center justify-center border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {hotStocks.length === 0 && (
-        <div className="text-center py-8 text-[var(--color-text-muted)] text-sm">
-          暂无交易数据
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+            className="p-1 rounded hover:bg-[var(--color-bg)] disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>

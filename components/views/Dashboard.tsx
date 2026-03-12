@@ -6,6 +6,7 @@ import { HotStocksPanel } from '../client/market/HotStocksPanel';
 import LimitUpPanel from '../client/market/LimitUpPanel';
 import { usePerformanceMonitor } from '../../utils/performanceMonitor';
 import { LazyImage } from '../shared/LazyImage';
+import { supabase } from '../../lib/supabase';
 
 // Banner 组件
 const BannerImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
@@ -209,42 +210,15 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
 
   const fetchRealtimeNews = useCallback(async () => {
     try {
-      // 使用代理路径避免 CORS 问题
-      const apiUrl = import.meta.env.DEV 
-        ? '/api/eastmoney/comm/web/getFastNewsList?client=web&biz=web_724&fastColumn=102&sortEnd=0&pageSize=20&req_trace=' + Date.now()
-        : 'https://np-listapi.eastmoney.com/comm/web/getFastNewsList?client=web&biz=web_724&fastColumn=102&sortEnd=0&pageSize=20&req_trace=' + Date.now();
-      
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Accept': 'application/json',
-          'Referer': 'https://www.eastmoney.com/',
-        },
+      // 使用代理函数获取财经快讯
+      const { data, error } = await supabase.functions.invoke('proxy-market', {
+        body: { action: 'news', pageSize: 20 }
       });
       
-      if (!response.ok) throw new Error('获取快讯失败');
+      if (error) throw error;
       
-      const result = await response.json();
-      
-      if (result?.data?.fastNewsList && result.data.fastNewsList.length > 0) {
-        const formatted = result.data.fastNewsList.map((item: any) => {
-          // 从 showTime 提取时间部分 (格式: "2026-03-12 09:19:20" -> "09:19")
-          let timeStr = '';
-          if (item.showTime) {
-            const match = item.showTime.match(/\d{2}:\d{2}/);
-            timeStr = match ? match[0] : item.showTime;
-          }
-          
-          return {
-            id: item.code || Math.random().toString(),
-            title: item.title,
-            content: item.summary || item.content || '',
-            time: timeStr || getCurrentTimeStr(),
-            source: item.source || '财经快讯',
-            category: item.columnName || '财经快讯',
-            sentiment: item.emotion || 'neutral',
-          };
-        });
-        setRealtimeNews(formatted);
+      if (data?.success && data.data?.length > 0) {
+        setRealtimeNews(data.data);
       } else {
         // 如果没有数据，使用默认数据
         setRealtimeNews(defaultNewsData);

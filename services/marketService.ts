@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { frontendMarketService } from './frontendMarketService';
+import { marketApi } from './marketApi';
 
 // 新闻缓存（5分钟有效期）
 let newsCache: { data: any[]; timestamp: number } | null = null;
@@ -74,19 +74,20 @@ export const validateTradeRisk = async (stockName: string, amount: number, userR
       .from('trade_rules')
       .select('config')
       .eq('rule_type', 'GENERAL')
-      .single();
+      .eq('status', true)
+      .maybeSingle(); // 使用 maybeSingle 避免无数据时报错
 
-    if (rulesError || !rules) {
-      console.warn('未能获取风控规则，使用默认通过策略:', rulesError?.message);
-      return { 
-        isAppropriate: true, 
-        reason: "系统风控审核中", 
-        riskWarning: "入市有风险，投资需谨慎。请根据自身风险承受能力理性投资。" 
-      };
+    if (rulesError) {
+      console.warn('获取风控规则失败:', rulesError?.message);
     }
 
-    // 应用风控规则
-    const generalRule = rules.config;
+    // 默认风控配置
+    const defaultConfig = {
+      risk_level_threshold: 3,
+      daily_loss_limit: 100000,
+    };
+
+    const generalRule = rules?.config || defaultConfig;
     const riskThreshold = generalRule.risk_level_threshold || 3;
     const dailyLossLimit = generalRule.daily_loss_limit || 100000;
     
@@ -164,10 +165,10 @@ export const getStockF10Analysis = async (symbol: string, name: string) => {
   }
 };
 
-export { frontendMarketService } from './frontendMarketService';
+export { marketApi } from './marketApi';
 
 // Re-export getRealtimeStock as a standalone function
-const { getRealtimeStock } = frontendMarketService;
+const { getRealtimeStock } = marketApi;
 export { getRealtimeStock };
 
 /**
@@ -178,8 +179,8 @@ export const getStockQuote = async (symbol: string) => {
     // 根据股票代码规则自动识别市场
     // A股代码6位，港股代码5位
     const market = symbol.length === 5 ? 'HK' : 'CN';
-    const stock = await frontendMarketService.getRealtimeStock(symbol, market);
-    return { price: stock.price || 0, symbol };
+    const stock = await marketApi.getRealtimeStock(symbol, market);
+    return { price: stock?.price || 0, symbol };
   } catch (error) {
     console.error('获取股票行情失败:', error);
     return { price: 0, symbol };
@@ -274,7 +275,7 @@ export const getMarketList = async (market: 'CN' | 'HK' = 'CN', page: number = 1
       return [];
     }
     
-    const stocks = await frontendMarketService.getBatchStocks(symbols, market);
+    const stocks = await marketApi.getBatchStocks(symbols, market);
     
     // 返回分页信息
     return {

@@ -84,7 +84,6 @@ export async function getLimitUpData(symbol: string): Promise<LimitUpData> {
  */
 export async function getLimitUpList(symbols?: string[]): Promise<LimitUpData[]> {
   const stockList = symbols || getDefaultStockList();
-  console.log(`🔍 扫描 ${stockList.length} 只股票...`);
 
   try {
     // 调用 Edge Function 获取涨停数据
@@ -93,20 +92,16 @@ export async function getLimitUpList(symbols?: string[]): Promise<LimitUpData[]>
     });
 
     if (error) {
-      console.error('Edge Function 调用失败:', error);
       throw error;
     }
 
     if (data && data.success && data.data) {
-      console.log(`✅ 从 Edge Function 获取 ${data.data.length} 条涨停数据`);
       return data.data;
     }
 
-    console.log('⚠️ 未获取到涨停数据');
     return [];
     
   } catch (error) {
-    console.error('获取涨停板列表失败:', error);
     return [];
   }
 }

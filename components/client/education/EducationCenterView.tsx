@@ -2,7 +2,7 @@
  * 投教中心页面 - 客户端
  * 展示股票投资教学文章，支持分类浏览和搜索
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ICONS } from '@/lib/constants';
 
@@ -77,18 +77,18 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
   const [selectedArticle, setSelectedArticle] = useState<EducationArticle | null>(null);
   const [showArticleDetail, setShowArticleDetail] = useState(false);
 
-  // 获取文章列表
-  const fetchArticles = async () => {
+  // 获取文章列表 - 使用 useCallback 包装，避免无限循环
+  const fetchArticles = useCallback(async (keyword: string, category: string) => {
     setLoading(true);
     try {
       let data: EducationArticle[];
       
-      if (searchKeyword) {
-        data = await searchEducationTopics(searchKeyword);
-      } else if (selectedCategory === 'ALL') {
+      if (keyword) {
+        data = await searchEducationTopics(keyword);
+      } else if (category === 'ALL') {
         data = await getPublishedEducationTopics();
       } else {
-        data = await getEducationTopicsByCategory(selectedCategory);
+        data = await getEducationTopicsByCategory(category);
       }
       
       setArticles(data);
@@ -98,21 +98,22 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // 初始加载和分类变化
   useEffect(() => {
-    fetchArticles();
-  }, [selectedCategory]);
+    fetchArticles('', selectedCategory);
+  }, [selectedCategory, fetchArticles]);
 
-  // 搜索防抖
+  // 搜索防抖 - 仅在搜索关键词变化时延迟执行
   useEffect(() => {
+    if (searchKeyword === '') return; // 空字符串不触发额外搜索
+    
     const timer = setTimeout(() => {
-      if (searchKeyword !== undefined) {
-        fetchArticles();
-      }
+      fetchArticles(searchKeyword, selectedCategory);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchKeyword]);
+  }, [searchKeyword, selectedCategory, fetchArticles]);
 
   // 打开文章详情
   const handleOpenArticle = async (article: EducationArticle) => {

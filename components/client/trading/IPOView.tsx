@@ -34,29 +34,39 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
   }, [filterStatus]);
 
   const handleApply = async (ipo: any) => {
-    if (ipo.status !== 'ONGOING' && ipo.status !== 'UPCOMING') {
-      alert(`新股 ${ipo.name} 当前状态不可申购`);
+    if (ipo.status !== 'ONGOING') {
+      alert(`新股 ${ipo.name} 当前状态不可申购（${ipo.status === 'UPCOMING' ? '待申购' : ipo.status}）`);
       return;
     }
     if (!ipo.ipo_price || ipo.ipo_price <= 0) {
       alert('发行价无效，无法申购');
       return;
     }
-    const minUnit = 100;
-    const quantity = minUnit;
+    
+    // 根据股票代码判断申购单位
+    // 沪市主板（60开头）：1000股
+    // 深市主板（00开头）：500股
+    // 创业板（30开头）：500股
+    // 科创板（688开头）：500股
+    const unit = ipo.symbol.startsWith('60') ? 1000 : 500;
+    const marketName = ipo.symbol.startsWith('60') ? '沪市主板' : 
+                       ipo.symbol.startsWith('688') ? '科创板' :
+                       ipo.symbol.startsWith('00') ? '深市主板' :
+                       ipo.symbol.startsWith('30') ? '创业板' : ipo.market;
+    
+    const quantity = unit;
     const amount = ipo.ipo_price * quantity;
-    if (!window.confirm(`确认申购 ${ipo.name}(${ipo.symbol}) ${quantity}股，总金额 ¥${amount.toFixed(2)}？`)) {
+    if (!window.confirm(`确认申购 ${ipo.name}(${ipo.symbol}) ${quantity}股，总金额 ¥${amount.toFixed(2)}？\n\n${marketName}最低申购${unit}股`)) {
       return;
     }
     try {
       setExecuting(ipo.symbol);
       
-      // 调用 create-trade-order 统一接口
+      // 调用 create-ipo-order 专用接口
       const { supabase } = await import('../../../lib/supabase');
-      const { data, error } = await supabase.functions.invoke('create-trade-order', {
+      const { data, error } = await supabase.functions.invoke('create-ipo-order', {
         body: {
-          market_type: ipo.market === 'SH' ? 'A_SHARE' : 'A_SHARE',
-          trade_type: 'IPO',
+          market_type: 'A股',
           stock_code: ipo.symbol,
           stock_name: ipo.name,
           price: ipo.ipo_price,

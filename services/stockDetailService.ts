@@ -1,20 +1,13 @@
 /**
- * 个股详情数据服务 - 混合模式
+ * 个股详情数据服务 - 统一代理模式
  * 
  * 数据策略：
- * - 实时行情：优先东方财富API → 数据库 → 模拟数据
- * - 五档/Tick：模拟数据
- * - K线数据：模拟数据
- * - 公司资料/财务：数据库 → 模拟数据
- * - 资金流向：模拟数据
- * 
- * 缓存策略：
- * - 行情数据：30秒缓存
- * - 五档数据：10秒缓存
- * - K线数据：5分钟缓存
- * - 公司资料：30分钟缓存
+ * - 所有行情数据通过 proxy-market Edge Function 代理
+ * - 自动 Redis 缓存
+ * - 失败时降级到模拟数据
  */
 
+import { marketApi, StockQuote as ApiStockQuote } from './marketApi';
 import { supabase } from '@/lib/supabase';
 
 // ==================== 缓存管理 ====================
@@ -279,47 +272,30 @@ function generateRandomPrice(basePrice: number): number {
   return basePrice * (1 + changePercent);
 }
 
-// ==================== 东方财富 API ====================
+// ==================== 行情代理服务 ====================
 
-async function fetchFromEastmoney(symbol: string, market: 'CN' | 'HK'): Promise<Partial<StockQuote> | null> {
+async function fetchFromProxy(symbol: string, market: 'CN' | 'HK'): Promise<Partial<StockQuote> | null> {
   try {
-    const marketCode = market === 'CN' 
-      ? (symbol.startsWith('6') ? '1' : '0') 
-      : '116';
-    const secid = `${marketCode}.${symbol}`;
+    const quote = await marketApi.getStockQuote(symbol, market);
+    if (!quote || !quote.price) return null;
     
-    const response = await fetch(
-      `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=f57,f58,f43,f169,f170,f46,f44,f51,f168,f47,f48,f60,f45,f52,f50,f49,f171,f113`,
-      {
-        headers: {
-          'Referer': 'https://quote.eastmoney.com/',
-        },
-      }
-    );
-    
-    if (!response.ok) return null;
-    
-    const result = await response.json();
-    if (!result.data) return null;
-    
-    const d = result.data;
     return {
-      symbol: String(d.f57),
-      name: d.f58,
-      price: d.f43 / 100,
-      change: d.f169 / 100,
-      changePercent: d.f170 / 100,
-      open: d.f46 / 100,
-      high: d.f44 / 100,
-      low: d.f51 / 100,
-      prevClose: d.f60 / 100,
-      volume: d.f47,
-      amount: d.f48,
-      market,
-      timestamp: new Date().toISOString(),
+      symbol: quote.symbol,
+      name: quote.name,
+      price: quote.price,
+      change: quote.change,
+      changePercent: quote.changePercent,
+      open: quote.open,
+      high: quote.high,
+      low: quote.low,
+      prevClose: quote.prevClose,
+      volume: quote.volume,
+      amount: quote.amount,
+      market: quote.market,
+      timestamp: quote.timestamp,
     };
   } catch (error) {
-    console.warn('[东方财富API] 获取失败:', error);
+    console.warn('[行情代理] 获取失败:', error);
     return null;
   }
 }
@@ -495,8 +471,8 @@ export async function getStockQuote(symbol: string, market: 'CN' | 'HK'): Promis
   }
   
   try {
-    // 2. 尝试从东方财富API获取真实数据
-    const realData = await fetchFromEastmoney(symbol, market);
+    // 2. 通过代理获取真实数据
+    const realData = await fetchFromProxy(symbol, market);
     
     if (realData && realData.price) {
       console.log(`[东方财富] 获取行情成功: ${symbol}`);
@@ -548,18 +524,17 @@ export async function getOrderBook(symbol: string): Promise<OrderBook | null> {
   const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN';
   
   try {
-    // 使用东方财富API获取真实五档数据
-    const { frontendMarketService } = await import('./frontendMarketService');
-    const orderBookData = await frontendMarketService.getOrderBook(symbol, market);
+    // 使用代理获取真实五档数据
+    const orderBookData = await marketApi.getOrderBook(symbol, market);
     
     if (orderBookData && orderBookData.bids.length > 0) {
       const orderBook: OrderBook = {
-        asks: orderBookData.asks.map((item, index) => ({
+        asks: orderBookData.asks.map((item: any, index: number) => ({
           level: 5 - index,
           price: item.price,
           volume: item.volume,
         })),
-        bids: orderBookData.bids.map((item, index) => ({
+        bids: orderBookData.bids.map((item: any, index: number) => ({
           level: index + 1,
           price: item.price,
           volume: item.volume,
@@ -601,9 +576,9 @@ export async function getTradeTicks(symbol: string): Promise<TradeTick[]> {
   const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN';
   
   try {
-    // 使用东方财富API获取真实成交明细
-    const { frontendMarketService } = await import('./frontendMarketService');
-    const ticksData = await frontendMarketService.getTradeTicks(symbol, market);
+    // 使用代理接口获取真实成交明细
+    const { marketApi } = await import('./marketApi');
+    const ticksData = await marketApi.getTradeTicks(symbol, market);
     
     if (ticksData && ticksData.length > 0) {
       StockDetailCache.set(cacheKey, ticksData, 5 * 1000);
@@ -665,62 +640,42 @@ export async function getKLineData(
 }
 
 /**
- * 东方财富K线API
+ * K线数据获取 - 通过代理
  */
-async function fetchEastmoneyKLine(
+async function fetchKlineFromProxy(
   symbol: string, 
   market: 'CN' | 'HK', 
   period: 'day' | 'week' | 'month' | '1m' | '5m' | '15m' | '30m' | '60m',
   limit: number
 ): Promise<KLineData[]> {
-  // 市场代码
-  let marketCode = '1';
-  if (market === 'HK') {
-    marketCode = '116';
-  } else {
-    const prefix = symbol.substring(0, 2);
-    if (['00', '30'].includes(prefix) || symbol.startsWith('8') || symbol.startsWith('4')) {
-      marketCode = '0';
+  try {
+    // 日 K 使用代理获取价格数组，然后构造 K 线数据
+    if (period === 'day') {
+      const prices = await marketApi.getKline(symbol, market, limit);
+      if (prices.length > 0) {
+        // 返回简化的 K 线数据（只有收盘价）
+        return prices.map((close, index) => ({
+          time: `Day-${index + 1}`,
+          open: close,
+          close,
+          high: close,
+          low: close,
+          volume: 0,
+          amount: 0,
+        }));
+      }
     }
+    
+    // 其他周期暂时使用模拟数据
+    return [];
+  } catch (error) {
+    console.warn('[K线代理] 获取失败:', error);
+    return [];
   }
-  
-  // K线周期映射
-  const kltMap: Record<string, number> = {
-    '1m': 1,
-    '5m': 5,
-    '15m': 15,
-    '30m': 30,
-    '60m': 60,
-    'day': 101,
-    'week': 102,
-    'month': 103,
-  };
-  
-  const klt = kltMap[period] || 101;
-  const secid = `${marketCode}.${symbol}`;
-  
-  const url = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60&klt=${klt}&fqt=1&end=20500101&lmt=${limit}`;
-  
-  const response = await fetch(url);
-  if (!response.ok) return [];
-  
-  const json = await response.json();
-  if (!json.data || !json.data.klines) return [];
-  
-  // 解析K线数据
-  return json.data.klines.map((line: string) => {
-    const parts = line.split(',');
-    return {
-      time: parts[0] || '',
-      open: parseFloat(parts[1]) || 0,
-      close: parseFloat(parts[2]) || 0,
-      high: parseFloat(parts[3]) || 0,
-      low: parseFloat(parts[4]) || 0,
-      volume: parseInt(parts[5]) || 0,
-      amount: parseFloat(parts[6]) || 0,
-    };
-  });
 }
+
+// 保留原函数名作为别名
+const fetchEastmoneyKLine = fetchKlineFromProxy;
 
 /**
  * 获取资金流向

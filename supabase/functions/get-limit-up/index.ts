@@ -5,6 +5,12 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
+// CORS 头配置
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 // QVeris API 配置
 const QVERIS_BASE_URL = 'https://qveris.ai/api/v1';
 const QVERIS_TOOL_ID = 'ths_ifind.real_time_quotation.v1';
@@ -382,12 +388,17 @@ async function getLimitUpList(symbols: string[], apiKey: string): Promise<LimitU
 }
 
 serve(async (req) => {
+  // 处理 OPTIONS 预检请求
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     // 验证请求方法
     if (req.method !== 'GET' && req.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
-        { status: 405, headers: { 'Content-Type': 'application/json' } }
+        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -412,7 +423,7 @@ serve(async (req) => {
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: 'QVERIS_API_KEY not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -426,7 +437,7 @@ serve(async (req) => {
         data: limitUpList,
         total: limitUpList.length,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error in get-limit-up function:', error);
@@ -435,7 +446,7 @@ serve(async (req) => {
         error: 'Internal server error',
         message: error.message,
       }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

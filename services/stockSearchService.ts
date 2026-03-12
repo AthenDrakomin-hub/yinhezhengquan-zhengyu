@@ -1,6 +1,6 @@
 /**
  * 股票搜索服务
- * 接入东方财富搜索API，支持搜索全市场A股和港股
+ * 通过Edge Function代理实现股票搜索，绕过CORS限制
  */
 
 export interface StockSearchResult {
@@ -11,139 +11,8 @@ export interface StockSearchResult {
   exchange?: string;   // 交易所
 }
 
-// 东方财富搜索API（免费、无CORS限制）
-const EASTMONEY_SEARCH_URL = 'https://searchapi.eastmoney.com/bussiness/web/QuotationLabelSearch';
-
-// 港股搜索API
-const EASTMONEY_HK_SEARCH_URL = 'https://searchapi.eastmoney.com/api/hk/search';
-
 /**
- * 搜索A股股票
- */
-async function searchAStocks(keyword: string): Promise<StockSearchResult[]> {
-  try {
-    const url = `${EASTMONEY_SEARCH_URL}?cb=&keyword=${encodeURIComponent(keyword)}&type=stock&pi=1&ps=30`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': '*/*',
-        'Referer': 'https://quote.eastmoney.com/',
-      },
-    });
-
-    const text = await response.text();
-    
-    // 解析JSONP响应
-    let jsonStr = text;
-    if (text.startsWith('(') || text.startsWith('[')) {
-      jsonStr = text;
-    } else {
-      // 移除JSONP回调函数包装
-      const match = text.match(/\((.*)\)/);
-      if (match) {
-        jsonStr = match[1];
-      }
-    }
-
-    const data = JSON.parse(jsonStr);
-    
-    if (!data || !data.Data) {
-      return [];
-    }
-
-    const results: StockSearchResult[] = [];
-    
-    for (const item of data.Data) {
-      if (!item.Code || !item.Name) continue;
-      
-      // 过滤掉非股票类型
-      if (item.Type && !['股票', 'A股', '科创板', '创业板', '主板'].includes(item.Type)) {
-        continue;
-      }
-
-      // 确定市场类型
-      const code = item.Code;
-      let market: 'CN' | 'HK' = 'CN';
-      let symbol = code;
-      
-      // A股代码格式化
-      if (code.startsWith('SH')) {
-        symbol = code.replace('SH', '');
-        market = 'CN';
-      } else if (code.startsWith('SZ')) {
-        symbol = code.replace('SZ', '');
-        market = 'CN';
-      } else if (code.length === 6 && (code.startsWith('60') || code.startsWith('00') || code.startsWith('30') || code.startsWith('68'))) {
-        market = 'CN';
-      }
-
-      results.push({
-        symbol,
-        name: item.Name,
-        market,
-        type: item.Type || '股票',
-        exchange: item.Market,
-      });
-    }
-
-    return results;
-  } catch (error) {
-    console.error('搜索A股失败:', error);
-    return [];
-  }
-}
-
-/**
- * 搜索港股
- */
-async function searchHKStocks(keyword: string): Promise<StockSearchResult[]> {
-  try {
-    const url = `${EASTMONEY_HK_SEARCH_URL}?keyword=${encodeURIComponent(keyword)}&type=stock&pi=1&ps=20`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': '*/*',
-        'Referer': 'https://quote.eastmoney.com/hk',
-      },
-    });
-
-    const data = await response.json();
-    
-    if (!data || !data.Data) {
-      return [];
-    }
-
-    const results: StockSearchResult[] = [];
-    
-    for (const item of data.Data) {
-      if (!item.Code || !item.Name) continue;
-
-      // 港股代码格式化
-      let symbol = item.Code;
-      if (symbol.length < 5) {
-        symbol = symbol.padStart(5, '0');
-      }
-
-      results.push({
-        symbol,
-        name: item.Name,
-        market: 'HK',
-        type: item.Type || '股票',
-        exchange: 'HKEX',
-      });
-    }
-
-    return results;
-  } catch (error) {
-    console.error('搜索港股失败:', error);
-    return [];
-  }
-}
-
-/**
- * 搜索股票（同时搜索A股和港股）
+ * 搜索股票（通过Edge Function代理）
  */
 export async function searchStocks(keyword: string, market?: 'CN' | 'HK' | 'ALL'): Promise<StockSearchResult[]> {
   if (!keyword || keyword.trim().length === 0) {
@@ -152,73 +21,152 @@ export async function searchStocks(keyword: string, market?: 'CN' | 'HK' | 'ALL'
 
   const trimmedKeyword = keyword.trim();
   
-  // 判断搜索范围
-  const searchAll = !market || market === 'ALL';
-  const searchCN = searchAll || market === 'CN';
-  const searchHK = searchAll || market === 'HK';
-
-  // 自动判断：如果关键字是纯数字且以0开头且长度5位，可能是港股
-  const isLikelyHK = /^[0-9]{5}$/.test(trimmedKeyword) && trimmedKeyword.startsWith('0');
+  try {
+    // 方案1: 通过Edge Function代理搜索（推荐，绕过CORS）
+    const { supabase } = await import('../lib/supabase');
+    const { data, error } = await supabase.functions.invoke('stock-search', {
+      body: { keyword: trimmedKeyword, market: market || 'ALL' }
+    });
+    
+    if (!error && data?.success && Array.isArray(data.results) && data.results.length > 0) {
+      console.log(`[股票搜索] Edge Function找到 ${data.results.length} 条结果`);
+      return data.results;
+    }
+    
+    if (error) {
+      console.warn('[股票搜索] Edge Function调用失败:', error);
+    }
+  } catch (error) {
+    console.warn('[股票搜索] Edge Function请求失败:', error);
+  }
   
-  // 如果关键字明显是港股代码，优先搜索港股
-  if (isLikelyHK && searchHK) {
-    const hkResults = await searchHKStocks(trimmedKeyword);
-    if (hkResults.length > 0) {
-      return hkResults;
+  // 方案2: 直接调用腾讯行情API验证股票代码（仅限代码搜索）
+  if (/^\d{4,6}$/.test(trimmedKeyword) || /^[A-Za-z]?\d{4,6}$/.test(trimmedKeyword)) {
+    try {
+      const cleanKeyword = trimmedKeyword.replace(/^(sh|sz|hk|SH|SZ|HK)/i, '');
+      const prefixes = ['sz', 'sh', 'hk'];
+      const queries = prefixes.map(p => `${p}${cleanKeyword}`).join(',');
+      const url = `https://qt.gtimg.cn/q=${queries}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Accept': '*/*',
+          'Referer': 'https://gu.qq.com/',
+        },
+      });
+      
+      const text = await response.text();
+      const results: StockSearchResult[] = [];
+      
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      for (const line of lines) {
+        if (line.includes('v_pv_none_match')) continue;
+        
+        const match = line.match(/v_(\w+)="(.+)"/);
+        if (!match) continue;
+        
+        const code = match[1];
+        const data = match[2];
+        const fields = data.split('~');
+        
+        if (fields.length < 3) continue;
+        
+        const name = fields[1];
+        const symbol = fields[2];
+        
+        let stockMarket: 'CN' | 'HK' = 'CN';
+        let exchange = '';
+        
+        if (code.startsWith('hk')) {
+          stockMarket = 'HK';
+          exchange = '港交所';
+        } else if (code.startsWith('sh')) {
+          stockMarket = 'CN';
+          exchange = '上交所';
+        } else if (code.startsWith('sz')) {
+          stockMarket = 'CN';
+          exchange = '深交所';
+        }
+        
+        // 市场过滤
+        if (market && market !== 'ALL' && stockMarket !== market) continue;
+        
+        if (name && symbol) {
+          results.push({
+            symbol,
+            name,
+            market: stockMarket,
+            type: '股票',
+            exchange,
+          });
+        }
+      }
+      
+      if (results.length > 0) {
+        console.log(`[股票搜索] 腾讯API找到 ${results.length} 条结果`);
+        return results;
+      }
+    } catch (error) {
+      console.error('[股票搜索] 腾讯API请求失败:', error);
     }
   }
-
-  // 并行搜索A股和港股
-  const promises: Promise<StockSearchResult[]>[] = [];
   
-  if (searchCN) {
-    promises.push(searchAStocks(trimmedKeyword));
-  }
-  
-  if (searchHK) {
-    promises.push(searchHKStocks(trimmedKeyword));
-  }
-
-  const results = await Promise.all(promises);
-  
-  // 合并结果，A股在前
-  const allResults: StockSearchResult[] = [];
-  for (let i = 0; i < results.length; i++) {
-    allResults.push(...results[i]);
-  }
-
-  // 去重（按symbol去重）
-  const uniqueResults = allResults.filter((item, index, self) => 
-    index === self.findIndex(t => t.symbol === item.symbol)
-  );
-
-  // 按相关性排序：代码完全匹配优先，名称完全匹配次之
-  uniqueResults.sort((a, b) => {
-    const aCodeMatch = a.symbol.toLowerCase() === trimmedKeyword.toLowerCase();
-    const bCodeMatch = b.symbol.toLowerCase() === trimmedKeyword.toLowerCase();
-    const aNameMatch = a.name.includes(trimmedKeyword);
-    const bNameMatch = b.name.includes(trimmedKeyword);
+  // 方案3: 使用本地股票列表作为兜底
+  try {
+    const { STOCK_LIST } = await import('../lib/stockList');
     
-    if (aCodeMatch && !bCodeMatch) return -1;
-    if (!aCodeMatch && bCodeMatch) return 1;
-    if (aNameMatch && !bNameMatch) return -1;
-    if (!aNameMatch && bNameMatch) return 1;
+    const results: StockSearchResult[] = [];
+    const lowerKeyword = trimmedKeyword.toLowerCase();
     
-    return 0;
-  });
-
-  return uniqueResults.slice(0, 30);
+    for (const stock of STOCK_LIST) {
+      if (market && market !== 'ALL' && stock.market !== market) continue;
+      
+      const codeMatch = stock.symbol.toLowerCase().includes(lowerKeyword);
+      const nameMatch = stock.name.toLowerCase().includes(lowerKeyword);
+      
+      if (codeMatch || nameMatch) {
+        results.push({
+          symbol: stock.symbol,
+          name: stock.name,
+          market: stock.market,
+          type: stock.type === 'stock' ? '股票' : stock.type === 'etf' ? 'ETF' : '指数',
+          exchange: stock.market === 'CN' 
+            ? (stock.symbol.startsWith('60') || stock.symbol.startsWith('68') ? '上交所' : '深交所')
+            : '港交所',
+        });
+      }
+    }
+    
+    // 排序：代码完全匹配优先
+    results.sort((a, b) => {
+      const aCodeMatch = a.symbol.toLowerCase() === lowerKeyword;
+      const bCodeMatch = b.symbol.toLowerCase() === lowerKeyword;
+      if (aCodeMatch && !bCodeMatch) return -1;
+      if (!aCodeMatch && bCodeMatch) return 1;
+      return 0;
+    });
+    
+    if (results.length > 0) {
+      console.log(`[股票搜索] 本地列表找到 ${results.length} 条结果`);
+      return results.slice(0, 20);
+    }
+  } catch (error) {
+    console.error('[股票搜索] 本地搜索失败:', error);
+  }
+  
+  return [];
 }
 
 /**
- * 根据股票代码获取股票信息
+ * 根据股票代码搜索
  */
-export async function getStockInfo(symbol: string): Promise<StockSearchResult | null> {
+export async function searchBySymbol(symbol: string): Promise<StockSearchResult | null> {
   const results = await searchStocks(symbol);
   return results.find(r => r.symbol === symbol) || null;
 }
 
 export default {
   searchStocks,
-  getStockInfo,
+  searchBySymbol,
 };

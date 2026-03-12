@@ -41,7 +41,7 @@ serve(async (req) => {
       .select('*')
       .eq('id', trade_id)
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (tradeError || !trade) {
       return new Response(JSON.stringify({ error: '订单不存在', code: 2001 }), {
@@ -68,14 +68,16 @@ serve(async (req) => {
     const fee = trade.fee || 0
 
     if (isBuy) {
-      const { data: assets } = await supabaseClient.from('assets').select('*').eq('user_id', user.id).single()
-      const totalFrozen = amount + fee
-      await supabaseClient.from('assets').update({
-        available_balance: Number(assets.available_balance) + totalFrozen,
-        frozen_balance: Number(assets.frozen_balance) - totalFrozen
-      }).eq('user_id', user.id)
+      const { data: assets } = await supabaseClient.from('assets').select('*').eq('user_id', user.id).maybeSingle()
+      if (assets) {
+        const totalFrozen = amount + fee
+        await supabaseClient.from('assets').update({
+          available_balance: Number(assets.available_balance) + totalFrozen,
+          frozen_balance: Number(assets.frozen_balance) - totalFrozen
+        }).eq('user_id', user.id)
+      }
     } else {
-      const { data: position } = await supabaseClient.from('positions').select('*').eq('user_id', user.id).eq('symbol', trade.stock_code).single()
+      const { data: position } = await supabaseClient.from('positions').select('*').eq('user_id', user.id).eq('symbol', trade.stock_code).maybeSingle()
       if (position) {
         await supabaseClient.from('positions').update({
           available_quantity: position.available_quantity + remainingQty

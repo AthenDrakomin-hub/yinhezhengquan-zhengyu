@@ -92,32 +92,6 @@
   <link rel="stylesheet" href="/index.css">
 </head>
 <body>
-  <!-- 🔴 强制清除 Service Worker 缓存 - 在应用加载前执行 -->
-  <script>
-    (async function() {
-      if ('serviceWorker' in navigator) {
-        try {
-          // 注销所有 Service Worker
-          var regs = await navigator.serviceWorker.getRegistrations();
-          for (var i = 0; i < regs.length; i++) {
-            console.log('🗑️ [HTML] 注销 Service Worker:', regs[i].scope);
-            await regs[i].unregister();
-          }
-          // 清除所有缓存
-          var caches = await window.caches.keys();
-          for (var j = 0; j < caches.length; j++) {
-            console.log('🗑️ [HTML] 清除缓存:', caches[j]);
-            await window.caches.delete(caches[j]);
-          }
-          console.log('✅ [HTML] Service Worker 缓存已清除');
-        } catch(e) {
-          console.error('清除缓存失败:', e);
-        }
-      }
-    })();
-  </script>
-  <!-- END 强制清除 -->
-  
   <div id="root">
     <div class="initial-loader">
       <div class="loader-spinner"></div>

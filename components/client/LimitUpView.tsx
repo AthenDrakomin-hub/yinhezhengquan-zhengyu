@@ -10,8 +10,8 @@ import LimitUpMonitor from './LimitUpMonitor';
 const LimitUpView: React.FC = () => {
   const [customSymbols, setCustomSymbols] = useState('');
   const [useCustomList, setUseCustomList] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(5000);
+  const [autoRefresh, setAutoRefresh] = useState(false); // 默认关闭自动刷新
+  const [refreshInterval, setRefreshInterval] = useState(60000); // 60秒
   const [showSettings, setShowSettings] = useState(false);
 
   // 默认热门股票列表

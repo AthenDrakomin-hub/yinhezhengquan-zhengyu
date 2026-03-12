@@ -52,13 +52,13 @@ serve(async (req) => {
         continue
       }
       
-      // 处理大宗交易：确认折扣计算是否正确（已在create-trade-order中验证）
+      // 处理大宗交易：确认折扣计算是否正确（已在create-block-trade-order中验证）
       if (originalTradeType === 'BLOCK_TRADE') {
         // 大宗交易按普通交易处理，但可以记录日志
         console.log(`处理大宗交易订单: ${order.trade_id}, 股票: ${order.stock_code}`)
       }
       
-      // 处理涨停打板：价格限制为涨停价（已在create-trade-order中验证）
+      // 处理涨停打板：价格限制为涨停价（已在create-limit-up-order中验证）
       if (originalTradeType === 'LIMIT_UP') {
         // 涨停打板按普通交易处理，但可以记录日志
         console.log(`处理涨停打板订单: ${order.trade_id}, 股票: ${order.stock_code}, 价格: ${order.price}`)
@@ -158,13 +158,13 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
   const matchPrice = sellOrder.price // 成交价为卖出价（价格优先原则）
   const amount = Number(matchPrice) * matchQty
 
-  // 获取结算规则
+  // 获取结算规则（可选）
   const { data: settlementRule } = await supabase
     .from('trade_rules')
     .select('config')
     .eq('rule_type', '结算规则')
     .eq('status', true)
-    .single()
+    .maybeSingle()
   
   // 判断市场类型，A股T+1，港股T+0
   const marketType = buyOrder.market_type || 'A股'
@@ -172,14 +172,17 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
   const tomorrow = isT0Market ? null : new Date(Date.now() + 86400000).toISOString().split('T')[0]
 
   // 1. 更新买家资产 (解冻并扣除)
-  const { data: buyAssets } = await supabase.from('assets').select('*').eq('user_id', buyOrder.user_id).single()
+  const { data: buyAssets } = await supabase.from('assets').select('*').eq('user_id', buyOrder.user_id).maybeSingle()
+  if (!buyAssets) {
+    throw new Error('买家资产记录不存在')
+  }
   await supabase.from('assets').update({
     frozen_balance: Number(buyAssets.frozen_balance) - amount,
     total_balance: Number(buyAssets.total_balance) - amount
   }).eq('user_id', buyOrder.user_id)
 
   // 2. 更新买家持仓
-  const { data: buyPos } = await supabase.from('positions').select('*').eq('user_id', buyOrder.user_id).eq('symbol', buyOrder.stock_code).single()
+  const { data: buyPos } = await supabase.from('positions').select('*').eq('user_id', buyOrder.user_id).eq('symbol', buyOrder.stock_code).maybeSingle()
   
   // 港股T+0：当日买入可当日卖出，不锁定
   // A股T+1：当日买入次日可卖，锁定到次日，available_quantity不增加
@@ -217,14 +220,17 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
   }
 
   // 3. 更新卖家资产 (增加余额)
-  const { data: sellAssets } = await supabase.from('assets').select('*').eq('user_id', sellOrder.user_id).single()
+  const { data: sellAssets } = await supabase.from('assets').select('*').eq('user_id', sellOrder.user_id).maybeSingle()
+  if (!sellAssets) {
+    throw new Error('卖家资产记录不存在')
+  }
   await supabase.from('assets').update({
     available_balance: Number(sellAssets.available_balance) + amount,
     total_balance: Number(sellAssets.total_balance) + amount
   }).eq('user_id', sellOrder.user_id)
 
   // 4. 更新卖家持仓
-  const { data: sellPos } = await supabase.from('positions').select('*').eq('user_id', sellOrder.user_id).eq('symbol', sellOrder.stock_code).single()
+  const { data: sellPos } = await supabase.from('positions').select('*').eq('user_id', sellOrder.user_id).eq('symbol', sellOrder.stock_code).maybeSingle()
   if (sellPos) {
     const newQty = sellPos.quantity - matchQty
     if (newQty <= 0) {
@@ -269,7 +275,7 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
 
   // 7. 检查并更新原始交易订单状态
   // 获取订单原始数量
-  const { data: originalTrade } = await supabase.from('trades').select('quantity').eq('id', buyOrder.trade_id).single()
+  const { data: originalTrade } = await supabase.from('trades').select('quantity').eq('id', buyOrder.trade_id).maybeSingle()
   const originalQuantity = originalTrade?.quantity || buyOrder.quantity
   
   // 计算已成交和剩余数量
@@ -294,7 +300,7 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
   }
 
   // 卖方订单同理
-  const { data: originalSellTrade } = await supabase.from('trades').select('quantity').eq('id', sellOrder.trade_id).single()
+  const { data: originalSellTrade } = await supabase.from('trades').select('quantity').eq('id', sellOrder.trade_id).maybeSingle()
   const originalSellQuantity = originalSellTrade?.quantity || sellOrder.quantity
   const executedSellQty = originalSellQuantity - (sellOrder.quantity - matchQty)
   const remainingSellQty = sellOrder.quantity - matchQty
@@ -361,7 +367,7 @@ async function handleIPOTrade(supabase: any, order: any) {
       .select('config')
       .in('rule_type', ['IPO', '新股申购'])
       .limit(1)
-      .single()
+      .maybeSingle()
     
     const winRate = rule?.config?.win_rate || 0.005
     console.log(`IPO 撮合: 中签率=${winRate}, 订单=${order.trade_id}`)
@@ -370,7 +376,7 @@ async function handleIPOTrade(supabase: any, order: any) {
     if (!isWin) {
       // 未中签：解冻资金
       const amount = order.price * order.quantity
-      const { data: assets } = await supabase.from('assets').select('*').eq('user_id', order.user_id).single()
+      const { data: assets } = await supabase.from('assets').select('*').eq('user_id', order.user_id).maybeSingle()
       
       await supabase.from('assets').update({
         frozen_balance: Number(assets.frozen_balance) - amount,
@@ -403,7 +409,7 @@ async function handleIPOTrade(supabase: any, order: any) {
     const { data: assets } = await supabase.from('assets')
       .select('*')
       .eq('user_id', order.user_id)
-      .single()
+      .maybeSingle()
     
     if (assets) {
       const amount = order.price * order.quantity
@@ -418,7 +424,7 @@ async function handleIPOTrade(supabase: any, order: any) {
       .select('*')
       .eq('user_id', order.user_id)
       .eq('symbol', order.stock_code)
-      .single()
+      .maybeSingle()
     
     if (position) {
       // 如果已有持仓，更新数量
