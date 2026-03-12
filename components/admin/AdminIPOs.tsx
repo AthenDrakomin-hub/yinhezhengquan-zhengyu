@@ -178,7 +178,7 @@ const AdminIPOs: React.FC = () => {
                 {renderFormFields()}
                 <div className="mt-6 flex gap-3">
                   <button type="button" className="flex-1 p-3 bg-gray-100 rounded-xl font-bold" onClick={() => { setIsCreateModalOpen(false); setShowEditForm(false); }}>取消</button>
-                  <button type="submit" disabled={submitting} className="flex-1 p-3 bg-industrial-800 text-white rounded-xl font-bold">{submitting ? '提交中...' : '确认'}</button>
+                  <button type="submit" disabled={submitting} className="flex-1 p-3 bg-industrial-800 text-[var(--color-text-primary)] rounded-xl font-bold">{submitting ? '提交中...' : '确认'}</button>
                 </div>
               </form>
             </motion.div>

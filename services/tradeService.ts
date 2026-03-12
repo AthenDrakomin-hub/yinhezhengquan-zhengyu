@@ -128,6 +128,15 @@ export const tradeService = {
       requestId // 用于幂等性检查
     } = params;
 
+    // 先检查用户是否登录
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      logger.error('用户未登录，无法执行交易');
+      return { success: false, error: '请先登录后再进行交易', code: 401 };
+    }
+    
+    logger.info('执行交易:', { userId, type, symbol, price, quantity, sessionUser: session.user.id });
+
     // 生成幂等性标识（如果客户端未提供）
     const transactionId = requestId || `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -231,7 +240,10 @@ export const tradeService = {
 
     if (error) {
       logger.error('交易失败:', error);
-      if (data && data.error) return data;
+      // 返回详细错误信息
+      if (data && data.error) {
+        return { success: false, error: data.error, code: data.code };
+      }
       throw new Error(error.message || '交易执行失败');
     }
 

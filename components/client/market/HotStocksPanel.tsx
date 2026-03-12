@@ -8,6 +8,7 @@ import { TrendingUp, Users, Activity, TrendingDown, ChevronLeft, ChevronRight } 
 import { useNavigate } from 'react-router-dom';
 import { hotStocksService } from '@/services/optimizationService';
 import { frontendMarketService } from '@/services/frontendMarketService';
+import { STOCK_LIST } from '@/lib/stockList';
 
 interface HotStock {
   symbol: string;
@@ -19,13 +20,11 @@ interface HotStock {
   change?: number;
 }
 
-// 默认热门股票代码（价格和涨跌从行情API获取）
-const defaultHotSymbols = [
-  '600519', '000858', '601318', '000333', '002415',
-  '600036', '601166', '000001', '601398', '601288',
-  '600000', '600016', '601988', '600030', '601211',
-  '600837',
-];
+// 从股票列表中随机选择股票
+function getRandomStocks(count: number): { symbol: string; name: string }[] {
+  const shuffled = [...STOCK_LIST].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count).map(s => ({ symbol: s.symbol, name: s.name }));
+}
 
 const PAGE_SIZE = 5;
 
@@ -50,7 +49,9 @@ export const HotStocksPanel: React.FC = () => {
         const enrichedData = await Promise.all(
           data.map(async (stock) => {
             try {
-              const stockData = await frontendMarketService.getRealtimeStock(stock.symbol, 'CN');
+              // 根据股票代码判断市场：A股6位，港股5位
+              const market = stock.symbol.length === 5 ? 'HK' : 'CN';
+              const stockData = await frontendMarketService.getRealtimeStock(stock.symbol, market);
               return {
                 ...stock,
                 name: stock.name || stockData.name,
@@ -64,13 +65,16 @@ export const HotStocksPanel: React.FC = () => {
         );
         setHotStocks(enrichedData);
       } else {
-        // 没有交易数据，使用默认股票代码获取真实行情
-        const stockPromises = defaultHotSymbols.map(async (symbol, index) => {
+        // 没有交易数据，从股票列表中随机选择股票获取真实行情
+        const randomStocks = getRandomStocks(15);
+        const stockPromises = randomStocks.map(async (stock, index) => {
           try {
-            const stockData = await frontendMarketService.getRealtimeStock(symbol, 'CN');
+            // 根据股票代码判断市场：A股6位，港股5位
+            const market = stock.symbol.length === 5 ? 'HK' : 'CN';
+            const stockData = await frontendMarketService.getRealtimeStock(stock.symbol, market);
             return {
-              symbol,
-              name: stockData.name,
+              symbol: stock.symbol,
+              name: stockData.name || stock.name,
               trade_count: 1000 - index * 50, // 模拟热度排名
               total_volume: 1000000 - index * 50000,
               unique_traders: 500 - index * 25,
@@ -79,7 +83,8 @@ export const HotStocksPanel: React.FC = () => {
             };
           } catch (e) {
             return {
-              symbol,
+              symbol: stock.symbol,
+              name: stock.name,
               trade_count: 1000 - index * 50,
               total_volume: 1000000 - index * 50000,
               unique_traders: 500 - index * 25,
@@ -93,14 +98,17 @@ export const HotStocksPanel: React.FC = () => {
       }
     } catch (error) {
       console.error('加载热门股票失败:', error);
-      // 出错时使用默认数据（尝试获取真实价格）
+      // 出错时从股票列表中随机选择（尝试获取真实价格）
       try {
-        const stockPromises = defaultHotSymbols.slice(0, 10).map(async (symbol, index) => {
+        const randomStocks = getRandomStocks(10);
+        const stockPromises = randomStocks.map(async (stock, index) => {
           try {
-            const stockData = await frontendMarketService.getRealtimeStock(symbol, 'CN');
+            // 根据股票代码判断市场：A股6位，港股5位
+            const market = stock.symbol.length === 5 ? 'HK' : 'CN';
+            const stockData = await frontendMarketService.getRealtimeStock(stock.symbol, market);
             return {
-              symbol,
-              name: stockData.name,
+              symbol: stock.symbol,
+              name: stockData.name || stock.name,
               trade_count: 1000 - index * 50,
               total_volume: 1000000 - index * 50000,
               unique_traders: 500 - index * 25,
@@ -109,7 +117,8 @@ export const HotStocksPanel: React.FC = () => {
             };
           } catch (e) {
             return {
-              symbol,
+              symbol: stock.symbol,
+              name: stock.name,
               trade_count: 1000 - index * 50,
               total_volume: 1000000 - index * 50000,
               unique_traders: 500 - index * 25,

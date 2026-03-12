@@ -3,7 +3,7 @@ import { ICONS } from '../../lib/constants';
 import { getBanners } from '../../services/contentService';
 import { Transaction, Banner } from '../../lib/types';
 import { HotStocksPanel } from '../client/market/HotStocksPanel';
-import { SmartRecommendations } from '../client/analysis/SmartRecommendations';
+import LimitUpPanel from '../client/market/LimitUpPanel';
 import { usePerformanceMonitor } from '../../utils/performanceMonitor';
 import { LazyImage } from '../shared/LazyImage';
 
@@ -346,11 +346,11 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
         </div>
       </section>
 
-      {/* 热门股票和智能推荐 */}
+      {/* 热门股票和涨停个股 */}
       <section>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <HotStocksPanel />
-          <SmartRecommendations />
+          <LimitUpPanel />
         </div>
       </section>
 

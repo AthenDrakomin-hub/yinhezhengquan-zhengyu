@@ -48,10 +48,7 @@ const AdminConditionalOrders: React.FC = () => {
     try {
       let query = supabase
         .from('conditional_orders')
-        .select(`
-          *,
-          profiles!conditional_orders_user_id_fkey (username)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (filter !== 'ALL') {
@@ -62,9 +59,27 @@ const AdminConditionalOrders: React.FC = () => {
       
       if (error) throw error;
       
+      // 获取所有唯一的 user_id
+      const userIds = [...new Set((data || []).map(item => item.user_id))];
+      
+      // 批量查询用户信息
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', userIds);
+        
+        if (!profileError && profiles) {
+          profiles.forEach(profile => {
+            userMap[profile.id] = profile.username || '未知用户';
+          });
+        }
+      }
+      
       const formattedData = (data || []).map((item: any) => ({
         ...item,
-        username: item.profiles?.username || '未知用户'
+        username: userMap[item.user_id] || '未知用户'
       }));
       
       setOrders(formattedData);
@@ -150,24 +165,24 @@ const AdminConditionalOrders: React.FC = () => {
       {/* 头部 */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-white">条件单管理</h1>
-          <p className="text-sm text-slate-400 mt-1">监控和管理所有用户的条件单</p>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">条件单管理</h1>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">监控和管理所有用户的条件单</p>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-400">
+          <span className="text-sm text-[var(--color-text-muted)]">
             运行中: <span className="text-green-400 font-bold">{orders.filter(o => o.status === 'ACTIVE').length}</span>
           </span>
         </div>
       </div>
 
       {/* 筛选栏 */}
-      <div className="flex flex-wrap gap-4 items-center p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+      <div className="flex flex-wrap gap-4 items-center p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
         <input
           type="text"
           placeholder="搜索股票代码、名称或用户..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 min-w-[200px] px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+          className="flex-1 min-w-[200px] px-4 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-blue-500"
         />
         <div className="flex gap-2">
           {['ALL', 'ACTIVE', 'TRIGGERED', 'CANCELLED'].map((status) => (
@@ -176,8 +191,8 @@ const AdminConditionalOrders: React.FC = () => {
               onClick={() => { setFilter(status as any); setCurrentPage(1); }}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 filter === status
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-blue-500 text-[var(--color-text-primary)]'
+                  : 'bg-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
               }`}
             >
               {status === 'ALL' ? '全部' : getStatusText(status)}
@@ -192,7 +207,7 @@ const AdminConditionalOrders: React.FC = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
         </div>
       ) : paginatedOrders.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="text-center py-12 text-[var(--color-text-muted)]">
           <ICONS.Info size={48} className="mx-auto mb-4 opacity-50" />
           <p>暂无条件单</p>
         </div>
@@ -203,7 +218,7 @@ const AdminConditionalOrders: React.FC = () => {
               key={order.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 cursor-pointer transition-all"
+              className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] hover:border-[var(--color-border)] cursor-pointer transition-all"
               onClick={() => { setSelectedOrder(order); setIsDetailOpen(true); }}
             >
               <div className="flex justify-between items-start">
@@ -213,10 +228,10 @@ const AdminConditionalOrders: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-white font-bold">{order.stock_name || order.symbol}</h3>
-                      <span className="text-xs text-slate-400 font-mono">{order.symbol}</span>
+                      <h3 className="text-[var(--color-text-primary)] font-bold">{order.stock_name || order.symbol}</h3>
+                      <span className="text-xs text-[var(--color-text-muted)] font-mono">{order.symbol}</span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
                       {order.username} · {getOrderTypeText(order.order_type)}
                     </p>
                   </div>
@@ -226,28 +241,28 @@ const AdminConditionalOrders: React.FC = () => {
                 </span>
               </div>
               
-              <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between text-xs">
+              <div className="mt-3 pt-3 border-t border-[var(--color-border)]/50 flex justify-between text-xs">
                 <div className="flex gap-6">
                   {order.order_type === 'TP_SL' && (
                     <>
                       {order.stop_loss_price && (
-                        <span className="text-slate-400">止损: <span className="text-green-400 font-mono">{order.stop_loss_price}</span></span>
+                        <span className="text-[var(--color-text-muted)]">止损: <span className="text-green-400 font-mono">{order.stop_loss_price}</span></span>
                       )}
                       {order.take_profit_price && (
-                        <span className="text-slate-400">止盈: <span className="text-red-400 font-mono">{order.take_profit_price}</span></span>
+                        <span className="text-[var(--color-text-muted)]">止盈: <span className="text-red-400 font-mono">{order.take_profit_price}</span></span>
                       )}
                     </>
                   )}
                   {order.order_type === 'GRID' && (
-                    <span className="text-slate-400">
+                    <span className="text-[var(--color-text-muted)]">
                       区间: <span className="text-blue-400 font-mono">{order.grid_lower_price} - {order.grid_upper_price}</span>
                     </span>
                   )}
                   {order.quantity && (
-                    <span className="text-slate-400">数量: <span className="text-white font-mono">{order.quantity}</span></span>
+                    <span className="text-[var(--color-text-muted)]">数量: <span className="text-[var(--color-text-primary)] font-mono">{order.quantity}</span></span>
                   )}
                 </div>
-                <span className="text-slate-500">{formatTime(order.created_at)}</span>
+                <span className="text-[var(--color-text-muted)]">{formatTime(order.created_at)}</span>
               </div>
             </motion.div>
           ))}
@@ -277,59 +292,59 @@ const AdminConditionalOrders: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-slate-900 rounded-2xl p-6 max-w-lg w-full border border-slate-700"
+              className="bg-[var(--color-bg)] rounded-2xl p-6 max-w-lg w-full border border-[var(--color-border)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-white">条件单详情</h2>
-                <button onClick={() => setIsDetailOpen(false)} className="text-slate-400 hover:text-white">
+                <h2 className="text-lg font-bold text-[var(--color-text-primary)]">条件单详情</h2>
+                <button onClick={() => setIsDetailOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                   <ICONS.Plus className="rotate-45" size={20} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-slate-800 rounded-lg">
-                    <p className="text-xs text-slate-400 mb-1">用户</p>
-                    <p className="text-white font-bold">{selectedOrder.username}</p>
+                  <div className="p-3 bg-[var(--color-surface)] rounded-lg">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">用户</p>
+                    <p className="text-[var(--color-text-primary)] font-bold">{selectedOrder.username}</p>
                   </div>
-                  <div className="p-3 bg-slate-800 rounded-lg">
-                    <p className="text-xs text-slate-400 mb-1">状态</p>
+                  <div className="p-3 bg-[var(--color-surface)] rounded-lg">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">状态</p>
                     <span className={`text-xs font-bold px-2 py-1 rounded border ${getStatusColor(selectedOrder.status)}`}>
                       {getStatusText(selectedOrder.status)}
                     </span>
                   </div>
-                  <div className="p-3 bg-slate-800 rounded-lg">
-                    <p className="text-xs text-slate-400 mb-1">类型</p>
-                    <p className="text-white font-bold">{getOrderTypeText(selectedOrder.order_type)}</p>
+                  <div className="p-3 bg-[var(--color-surface)] rounded-lg">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">类型</p>
+                    <p className="text-[var(--color-text-primary)] font-bold">{getOrderTypeText(selectedOrder.order_type)}</p>
                   </div>
-                  <div className="p-3 bg-slate-800 rounded-lg">
-                    <p className="text-xs text-slate-400 mb-1">创建时间</p>
-                    <p className="text-white text-sm">{formatTime(selectedOrder.created_at)}</p>
+                  <div className="p-3 bg-[var(--color-surface)] rounded-lg">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">创建时间</p>
+                    <p className="text-[var(--color-text-primary)] text-sm">{formatTime(selectedOrder.created_at)}</p>
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                  <p className="text-xs text-slate-400 mb-2">触发条件</p>
+                <div className="p-4 bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-2">触发条件</p>
                   <div className="space-y-2 text-sm">
                     {selectedOrder.order_type === 'TP_SL' && (
                       <>
                         {selectedOrder.stop_loss_price && (
-                          <p className="text-slate-300">止损价: <span className="text-green-400 font-mono">{selectedOrder.stop_loss_price}</span></p>
+                          <p className="text-[var(--color-text-secondary)]">止损价: <span className="text-green-400 font-mono">{selectedOrder.stop_loss_price}</span></p>
                         )}
                         {selectedOrder.take_profit_price && (
-                          <p className="text-slate-300">止盈价: <span className="text-red-400 font-mono">{selectedOrder.take_profit_price}</span></p>
+                          <p className="text-[var(--color-text-secondary)]">止盈价: <span className="text-red-400 font-mono">{selectedOrder.take_profit_price}</span></p>
                         )}
                       </>
                     )}
                     {selectedOrder.order_type === 'GRID' && (
                       <>
-                        <p className="text-slate-300">网格上限: <span className="text-red-400 font-mono">{selectedOrder.grid_upper_price}</span></p>
-                        <p className="text-slate-300">网格下限: <span className="text-green-400 font-mono">{selectedOrder.grid_lower_price}</span></p>
+                        <p className="text-[var(--color-text-secondary)]">网格上限: <span className="text-red-400 font-mono">{selectedOrder.grid_upper_price}</span></p>
+                        <p className="text-[var(--color-text-secondary)]">网格下限: <span className="text-green-400 font-mono">{selectedOrder.grid_lower_price}</span></p>
                       </>
                     )}
                     {selectedOrder.quantity && (
-                      <p className="text-slate-300">委托数量: <span className="text-white font-mono">{selectedOrder.quantity}</span></p>
+                      <p className="text-[var(--color-text-secondary)]">委托数量: <span className="text-[var(--color-text-primary)] font-mono">{selectedOrder.quantity}</span></p>
                     )}
                   </div>
                 </div>
@@ -337,9 +352,9 @@ const AdminConditionalOrders: React.FC = () => {
                 {selectedOrder.triggered_at && (
                   <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
                     <p className="text-xs text-blue-400 mb-2">触发信息</p>
-                    <p className="text-sm text-slate-300">触发时间: {formatTime(selectedOrder.triggered_at)}</p>
+                    <p className="text-sm text-[var(--color-text-secondary)]">触发时间: {formatTime(selectedOrder.triggered_at)}</p>
                     {selectedOrder.triggered_price && (
-                      <p className="text-sm text-slate-300">触发价格: <span className="text-white font-mono">{selectedOrder.triggered_price}</span></p>
+                      <p className="text-sm text-[var(--color-text-secondary)]">触发价格: <span className="text-[var(--color-text-primary)] font-mono">{selectedOrder.triggered_price}</span></p>
                     )}
                   </div>
                 )}

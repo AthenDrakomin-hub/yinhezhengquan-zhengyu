@@ -100,9 +100,9 @@ const AdminDashboard: React.FC = () => {
           volume: dailyData[name].volume
         })));
 
-        // 使用真实数据（在线用户数暂时用活跃账户数代替，因为没有实时连接追踪）
+        // 使用真实数据
         setStats({
-          onlineUsers: Math.min(accountCount || 0, 10), // 暂时显示较小值，实际需要 WebSocket 追踪
+          onlineUsers: Math.min(accountCount || 0, 10),
           todayVolume: todayVolume,
           activeAccounts: accountCount || 0,
           pendingTickets: ticketCount || 0,
@@ -126,19 +126,19 @@ const AdminDashboard: React.FC = () => {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 60000); // 改为1分钟刷新一次
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, []);
 
   const getTradeTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      'BUY': '#22c55e',
-      'SELL': '#ef4444',
-      'IPO': '#3b82f6',
-      'BLOCK_TRADE': '#a855f7',
-      'LIMIT_UP': '#f97316'
+      'BUY': 'text-green-600',
+      'SELL': 'text-red-600',
+      'IPO': 'text-blue-600',
+      'BLOCK_TRADE': 'text-purple-600',
+      'LIMIT_UP': 'text-orange-600'
     };
-    return colors[type] || '#94a3b8';
+    return colors[type] || 'text-gray-500';
   };
 
   const getTradeTypeText = (type: string) => {
@@ -160,111 +160,117 @@ const AdminDashboard: React.FC = () => {
     return `${Math.floor(mins / 60)}小时前`;
   };
 
+  const statItems = [
+    { label: '活跃账户', value: stats.activeAccounts.toLocaleString(), icon: '👤', color: 'text-blue-600', desc: '注册用户总数' },
+    { label: '今日交易额', value: `¥${stats.todayVolume.toLocaleString()}`, icon: '💰', color: 'text-green-600', desc: `${stats.todayTrades} 笔交易` },
+    { label: '持仓账户', value: stats.totalPositions.toLocaleString(), icon: '📊', color: 'text-orange-600', desc: '有持仓的用户数' },
+    { label: '待处理工单', value: stats.pendingTickets.toLocaleString(), icon: '🎫', color: 'text-red-600', desc: '需要处理的工单' },
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-        {[
-          { label: '活跃账户', value: stats.activeAccounts.toLocaleString(), icon: '👤', color: '#3b82f6', desc: '注册用户总数' },
-          { label: '今日交易额', value: `¥${stats.todayVolume.toLocaleString()}`, icon: '💰', color: '#22c55e', desc: `${stats.todayTrades} 笔交易` },
-          { label: '持仓账户', value: stats.totalPositions.toLocaleString(), icon: '📊', color: '#f97316', desc: '有持仓的用户数' },
-          { label: '待处理工单', value: stats.pendingTickets.toLocaleString(), icon: '🎫', color: '#ef4444', desc: '需要处理的工单' },
-        ].map((stat, i) => (
-          <div key={i} style={{
-            background: '#1e293b',
-            borderRadius: '12px',
-            padding: '20px',
-            border: '1px solid #334155'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontSize: '24px' }}>{stat.icon}</span>
-              <span style={{ color: stat.color, fontSize: '12px', fontWeight: 'bold' }}>●</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statItems.map((stat, i) => (
+          <div key={i} className="galaxy-card p-5">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-2xl">{stat.icon}</span>
+              <span className={`text-xs font-bold ${stat.color}`}>●</span>
             </div>
-            <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>{stat.label}</p>
-            <h3 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{stat.value}</h3>
-            <p style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>{stat.desc}</p>
+            <p className="text-xs text-[var(--color-text-muted)] mb-1">{stat.label}</p>
+            <h3 className="text-2xl font-bold text-[var(--color-text-primary)]">{stat.value}</h3>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">{stat.desc}</p>
           </div>
         ))}
       </div>
 
       {/* Chart */}
-      <div style={{
-        background: '#1e293b',
-        borderRadius: '12px',
-        padding: '24px',
-        border: '1px solid #334155'
-      }}>
-        <h3 style={{ color: 'white', fontSize: '14px', fontWeight: 'bold', marginBottom: '20px' }}>
+      <div className="galaxy-card p-6">
+        <h3 className="text-sm font-bold text-[var(--color-text-primary)] mb-5">
           📊 交易热度趋势 (近7日)
         </h3>
-        <div style={{ height: '250px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} />
-              <YAxis stroke="#94a3b8" fontSize={10} />
-              <Tooltip 
-                contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                labelStyle={{ color: 'white' }}
-              />
-              <Area type="monotone" dataKey="trades" stroke="#ef4444" fill="url(#gradient)" />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="h-64">
+          {loading ? (
+            <div className="flex items-center justify-center h-full text-[var(--color-text-muted)]">
+              加载中...
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorTrades" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="name" stroke="var(--color-text-muted)" fontSize={12} />
+                <YAxis stroke="var(--color-text-muted)" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'var(--color-surface)', 
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Area type="monotone" dataKey="trades" stroke="#3b82f6" fillOpacity={1} fill="url(#colorTrades)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
       {/* Recent Trades */}
-      <div style={{
-        background: '#1e293b',
-        borderRadius: '12px',
-        padding: '24px',
-        border: '1px solid #334155'
-      }}>
-        <h3 style={{ color: 'white', fontSize: '14px', fontWeight: 'bold', marginBottom: '16px' }}>
-          📈 最新交易动态
+      <div className="galaxy-card p-6">
+        <h3 className="text-sm font-bold text-[var(--color-text-primary)] mb-4">
+          📋 最新交易记录
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {recentTrades.length === 0 ? (
-            <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>暂无交易记录</p>
-          ) : recentTrades.map((trade) => (
-            <div key={trade.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px',
-              background: '#0f172a',
-              borderRadius: '8px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '10px',
-                  fontWeight: 'bold',
-                  background: getTradeTypeColor(trade.trade_type) + '20',
-                  color: getTradeTypeColor(trade.trade_type)
-                }}>
-                  {getTradeTypeText(trade.trade_type)}
-                </span>
-                <div>
-                  <p style={{ color: 'white', fontWeight: 'bold' }}>{trade.stock_name || trade.stock_code}</p>
-                  <p style={{ color: '#94a3b8', fontSize: '12px' }}>{trade.stock_code}</p>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ color: 'white', fontWeight: 'bold' }}>
-                  ¥{(trade.price * trade.quantity).toLocaleString()}
-                </p>
-                <p style={{ color: '#94a3b8', fontSize: '12px' }}>{formatTime(trade.created_at)}</p>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)]">
+                <th className="text-left py-3 px-2 text-[var(--color-text-secondary)] font-medium">股票</th>
+                <th className="text-left py-3 px-2 text-[var(--color-text-secondary)] font-medium">类型</th>
+                <th className="text-right py-3 px-2 text-[var(--color-text-secondary)] font-medium">价格</th>
+                <th className="text-right py-3 px-2 text-[var(--color-text-secondary)] font-medium">数量</th>
+                <th className="text-right py-3 px-2 text-[var(--color-text-secondary)] font-medium">时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentTrades.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-[var(--color-text-muted)]">
+                    暂无交易记录
+                  </td>
+                </tr>
+              ) : (
+                recentTrades.map((trade) => (
+                  <tr key={trade.id} className="border-b border-[var(--color-border-light)] hover:bg-[var(--color-surface-hover)]">
+                    <td className="py-3 px-2">
+                      <div>
+                        <p className="font-medium text-[var(--color-text-primary)]">{trade.stock_name || trade.stock_code}</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{trade.stock_code}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className={`font-medium ${getTradeTypeColor(trade.trade_type)}`}>
+                        {getTradeTypeText(trade.trade_type)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-right font-mono text-[var(--color-text-primary)]">
+                      ¥{Number(trade.price).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-2 text-right text-[var(--color-text-secondary)]">
+                      {trade.quantity}
+                    </td>
+                    <td className="py-3 px-2 text-right text-xs text-[var(--color-text-muted)]">
+                      {formatTime(trade.created_at)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

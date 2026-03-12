@@ -136,7 +136,7 @@ const AdminTradeManagement: React.FC = () => {
       'BLOCK_TRADE': { text: '大宗交易', color: '#a855f7' },
       'LIMIT_UP': { text: '涨停打板', color: '#f97316' }
     };
-    return map[type] || { text: type, color: '#64748b' };
+    return map[type] || { text: type, color: 'var(--color-text-muted)' };
   };
 
   // 获取审批状态信息
@@ -145,9 +145,9 @@ const AdminTradeManagement: React.FC = () => {
       'APPROVED': { text: '已通过', color: '#22c55e' },
       'REJECTED': { text: '已拒绝', color: '#ef4444' },
       'PENDING': { text: '待审批', color: '#f97316' },
-      'NOT_REQUIRED': { text: '无需审批', color: '#64748b' }
+      'NOT_REQUIRED': { text: '无需审批', color: 'var(--color-text-muted)' }
     };
-    return map[status] || { text: status, color: '#64748b' };
+    return map[status] || { text: status, color: 'var(--color-text-muted)' };
   };
 
   return (
@@ -155,15 +155,15 @@ const AdminTradeManagement: React.FC = () => {
       {/* 头部 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>交易管理</h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8' }}>审批和管理所有交易订单</p>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '4px' }}>交易管理</h3>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>审批和管理所有交易订单</p>
         </div>
         <button 
           onClick={fetchOrders}
           style={{
             padding: '8px 16px',
-            background: '#334155',
-            color: 'white',
+            background: 'var(--color-border)',
+            color: 'var(--color-text-primary)',
             border: 'none',
             borderRadius: '6px',
             fontSize: '12px',
@@ -179,7 +179,7 @@ const AdminTradeManagement: React.FC = () => {
       </div>
 
       {/* 筛选标签 */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #334155' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)' }}>
         {[
           { key: 'pending', label: '待审批', count: trades.filter(t => t.approval_status === 'PENDING').length },
           { key: 'approved', label: '已通过', count: trades.filter(t => t.approval_status === 'APPROVED').length },
@@ -208,15 +208,15 @@ const AdminTradeManagement: React.FC = () => {
 
       {/* 高级筛选 */}
       <div style={{
-        background: '#1e293b',
+        background: 'var(--color-surface)',
         borderRadius: '12px',
         padding: '16px',
-        border: '1px solid #334155'
+        border: '1px solid var(--color-border)'
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
           {/* 搜索框 */}
           <div style={{ gridColumn: 'span 2', position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>🔍</span>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}>🔍</span>
             <input
               type="text"
               placeholder="搜索代码/名称/用户/订单ID..."
@@ -225,10 +225,10 @@ const AdminTradeManagement: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '10px 12px 10px 36px',
-                background: '#0f172a',
-                border: '1px solid #334155',
+                background: 'var(--color-surface-active)',
+                border: '1px solid var(--color-border)',
                 borderRadius: '6px',
-                color: 'white',
+                color: 'var(--color-text-primary)',
                 fontSize: '13px',
                 outline: 'none'
               }}
@@ -241,10 +241,10 @@ const AdminTradeManagement: React.FC = () => {
             onChange={(e) => setTradeTypeFilter(e.target.value)}
             style={{
               padding: '10px 12px',
-              background: '#0f172a',
-              border: '1px solid #334155',
+              background: 'var(--color-surface-active)',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px',
-              color: 'white',
+              color: 'var(--color-text-primary)',
               fontSize: '13px',
               outline: 'none',
               cursor: 'pointer'
@@ -265,10 +265,10 @@ const AdminTradeManagement: React.FC = () => {
             onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
             style={{
               padding: '10px 12px',
-              background: '#0f172a',
-              border: '1px solid #334155',
+              background: 'var(--color-surface-active)',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px',
-              color: 'white',
+              color: 'var(--color-text-primary)',
               fontSize: '13px',
               outline: 'none'
             }}
@@ -279,52 +279,52 @@ const AdminTradeManagement: React.FC = () => {
             onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
             style={{
               padding: '10px 12px',
-              background: '#0f172a',
-              border: '1px solid #334155',
+              background: 'var(--color-surface-active)',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px',
-              color: 'white',
+              color: 'var(--color-text-primary)',
               fontSize: '13px',
               outline: 'none'
             }}
           />
         </div>
         
-        <div style={{ marginTop: '12px', fontSize: '12px', color: '#94a3b8' }}>
-          筛选结果: <span style={{ color: 'white', fontWeight: 'bold' }}>{filteredTrades.length}</span> 条记录
+        <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+          筛选结果: <span style={{ color: 'var(--color-text-primary)', fontWeight: 'bold' }}>{filteredTrades.length}</span> 条记录
         </div>
       </div>
 
       {/* 交易列表 */}
       <div style={{
-        background: '#1e293b',
+        background: 'var(--color-surface)',
         borderRadius: '12px',
-        border: '1px solid #334155',
+        border: '1px solid var(--color-border)',
         overflow: 'hidden'
       }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#0f172a' }}>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>订单ID</th>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>股票信息</th>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>交易类型</th>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>价格/数量</th>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>金额</th>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>审批状态</th>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>时间</th>
-                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #334155', textAlign: 'right' }}>操作</th>
+              <tr style={{ background: 'var(--color-surface-active)' }}>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>订单ID</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>股票信息</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>交易类型</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>价格/数量</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>金额</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>审批状态</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>时间</th>
+                <th style={{ padding: '14px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)', textAlign: 'right' }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                     加载中...
                   </td>
                 </tr>
               ) : paginatedTrades.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                     暂无数据
                   </td>
                 </tr>
@@ -333,13 +333,13 @@ const AdminTradeManagement: React.FC = () => {
                 const statusInfo = getApprovalStatusInfo(trade.approval_status);
                 
                 return (
-                  <tr key={trade.id} style={{ borderBottom: '1px solid #334155' }}>
-                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
+                  <tr key={trade.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '14px 16px', fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
                       {trade.id?.substring(0, 8)}...
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>{trade.stock_name || trade.stock_code}</p>
-                      <p style={{ fontSize: '11px', color: '#64748b' }}>{trade.stock_code}</p>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{trade.stock_name || trade.stock_code}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{trade.stock_code}</p>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{
@@ -354,10 +354,10 @@ const AdminTradeManagement: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <p style={{ fontSize: '12px', color: 'white' }}>¥{Number(trade.price).toFixed(2)}</p>
-                      <p style={{ fontSize: '11px', color: '#64748b' }}>{trade.quantity}股</p>
+                      <p style={{ fontSize: '12px', color: 'var(--color-text-primary)' }}>¥{Number(trade.price).toFixed(2)}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{trade.quantity}股</p>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 'bold', color: 'white' }}>
+                    <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                       ¥{(trade.price * trade.quantity).toLocaleString()}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
@@ -372,7 +372,7 @@ const AdminTradeManagement: React.FC = () => {
                         {statusInfo.text}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#64748b' }}>
+                    <td style={{ padding: '14px 16px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
                       {new Date(trade.created_at).toLocaleString('zh-CN')}
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'right' }}>
@@ -402,7 +402,7 @@ const AdminTradeManagement: React.FC = () => {
         
         {/* 分页 */}
         {filteredTrades.length > ITEMS_PER_PAGE && (
-          <div style={{ padding: '16px', borderTop: '1px solid #334155' }}>
+          <div style={{ padding: '16px', borderTop: '1px solid var(--color-border)' }}>
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
@@ -431,38 +431,38 @@ const AdminTradeManagement: React.FC = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             style={{
-              background: '#1e293b',
+              background: 'var(--color-surface)',
               borderRadius: '12px',
-              border: '1px solid #334155',
+              border: '1px solid var(--color-border)',
               width: '100%',
               maxWidth: '560px'
             }}
           >
-            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>交易详情</h3>
-              <button onClick={() => setIsDetailModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>交易详情</h3>
+              <button onClick={() => setIsDetailModalOpen(false)} style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
             <div style={{ padding: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>订单ID</p>
-                  <p style={{ fontSize: '12px', color: 'white', fontFamily: 'monospace' }}>{selectedTrade.id}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>订单ID</p>
+                  <p style={{ fontSize: '12px', color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>{selectedTrade.id}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>用户ID</p>
-                  <p style={{ fontSize: '12px', color: 'white', fontFamily: 'monospace' }}>{selectedTrade.user_id?.substring(0, 16)}...</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>用户ID</p>
+                  <p style={{ fontSize: '12px', color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>{selectedTrade.user_id?.substring(0, 16)}...</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>股票代码</p>
-                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedTrade.stock_code}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>股票代码</p>
+                  <p style={{ fontSize: '12px', color: 'var(--color-text-primary)' }}>{selectedTrade.stock_code}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>股票名称</p>
-                  <p style={{ fontSize: '12px', color: 'white' }}>{selectedTrade.stock_name || '-'}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>股票名称</p>
+                  <p style={{ fontSize: '12px', color: 'var(--color-text-primary)' }}>{selectedTrade.stock_name || '-'}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>交易类型</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>交易类型</p>
                   <span style={{
                     fontSize: '12px',
                     fontWeight: 'bold',
@@ -472,7 +472,7 @@ const AdminTradeManagement: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>审批状态</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>审批状态</p>
                   <span style={{
                     fontSize: '12px',
                     fontWeight: 'bold',
@@ -482,25 +482,25 @@ const AdminTradeManagement: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>委托价格</p>
-                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>¥{Number(selectedTrade.price).toFixed(2)}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>委托价格</p>
+                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>¥{Number(selectedTrade.price).toFixed(2)}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>委托数量</p>
-                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{selectedTrade.quantity} 股</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>委托数量</p>
+                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{selectedTrade.quantity} 股</p>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>委托金额</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>委托金额</p>
                   <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#ef4444' }}>¥{(selectedTrade.price * selectedTrade.quantity).toLocaleString()}</p>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>创建时间</p>
-                  <p style={{ fontSize: '12px', color: 'white' }}>{new Date(selectedTrade.created_at).toLocaleString('zh-CN')}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>创建时间</p>
+                  <p style={{ fontSize: '12px', color: 'var(--color-text-primary)' }}>{new Date(selectedTrade.created_at).toLocaleString('zh-CN')}</p>
                 </div>
                 {selectedTrade.remark && (
                   <div style={{ gridColumn: 'span 2' }}>
-                    <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>备注</p>
-                    <p style={{ fontSize: '12px', color: 'white' }}>{selectedTrade.remark}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>备注</p>
+                    <p style={{ fontSize: '12px', color: 'var(--color-text-primary)' }}>{selectedTrade.remark}</p>
                   </div>
                 )}
               </div>
@@ -514,7 +514,7 @@ const AdminTradeManagement: React.FC = () => {
                       flex: 1,
                       padding: '12px',
                       background: '#22c55e',
-                      color: 'white',
+                      color: 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '13px',
@@ -530,7 +530,7 @@ const AdminTradeManagement: React.FC = () => {
                       flex: 1,
                       padding: '12px',
                       background: '#ef4444',
-                      color: 'white',
+                      color: 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '13px',

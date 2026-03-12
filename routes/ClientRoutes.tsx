@@ -86,28 +86,50 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       // 获取用户资产
-      const { data: assets } = await supabase
+      const { data: assets, error: assetsError } = await supabase
         .from('assets')
         .select('*')
         .eq('user_id', user.id)
         .single();
+      
+      if (assetsError && assetsError.code !== 'PGRST116') {
+        console.warn('获取资产失败:', assetsError.message);
+      }
 
       // 获取用户持仓
-      const { data: positions } = await supabase
+      const { data: positions, error: positionsError } = await supabase
         .from('positions')
         .select('*')
         .eq('user_id', user.id);
+      
+      if (positionsError) {
+        console.warn('获取持仓失败:', positionsError.message);
+      }
 
       // 获取当前价格（从市场数据）
-      const stockSymbols = (positions || []).map(p => p.symbol || p.stock_code);
+      const stockSymbols = (positions || []).map(p => p.symbol || p.stock_code).filter(Boolean);
       let stockPrices: Record<string, number> = {};
       
       if (stockSymbols.length > 0) {
         try {
           const { frontendMarketService } = await import('../services/frontendMarketService');
-          const market = stockSymbols[0].startsWith('00') || stockSymbols[0].startsWith('60') ? 'CN' : 'HK';
-          const stocks = await frontendMarketService.getBatchStocks(stockSymbols, market);
-          stocks.forEach((s: { symbol: string; price: number }) => {
+          // 分别处理A股和港股
+          const cnSymbols = stockSymbols.filter(s => s.length === 6);
+          const hkSymbols = stockSymbols.filter(s => s.length === 5);
+          
+          const allStocks: { symbol: string; price: number }[] = [];
+          
+          if (cnSymbols.length > 0) {
+            const cnStocks = await frontendMarketService.getBatchStocks(cnSymbols, 'CN');
+            allStocks.push(...cnStocks);
+          }
+          
+          if (hkSymbols.length > 0) {
+            const hkStocks = await frontendMarketService.getBatchStocks(hkSymbols, 'HK');
+            allStocks.push(...hkStocks);
+          }
+          
+          allStocks.forEach((s: { symbol: string; price: number }) => {
             stockPrices[s.symbol] = s.price;
           });
         } catch (e) {
@@ -116,19 +138,27 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // 获取最近交易
-      const { data: trades } = await supabase
+      const { data: trades, error: tradesError } = await supabase
         .from('trades')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
+      
+      if (tradesError) {
+        console.warn('获取交易记录失败:', tradesError.message);
+      }
 
       // 获取条件单
-      const { data: conditionalOrders } = await supabase
+      const { data: conditionalOrders, error: conditionalError } = await supabase
         .from('conditional_orders')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'ACTIVE');
+      
+      if (conditionalError) {
+        console.warn('获取条件单失败:', conditionalError.message);
+      }
 
       // 构建用户账户对象
       const userAccount: UserAccount = {
@@ -136,7 +166,7 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: user.email || '',
         username: user.user_metadata?.username || user.email?.split('@')[0] || '用户',
         status: 'ACTIVE',
-        balance: assets?.available_balance || 0,
+        balance: Number(assets?.available_balance) || 0,
         holdings: (positions || []).map(p => {
           const symbol = p.symbol || p.stock_code;
           const currentPrice = stockPrices[symbol] || Number(p.current_price || p.average_price);
@@ -175,9 +205,9 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
         conditionalOrders: (conditionalOrders || []).map(o => ({
           id: o.id,
           type: o.order_type as any,
-          symbol: o.stock_code,
-          triggerPrice: Number(o.trigger_price),
-          quantity: Number(o.quantity),
+          symbol: o.stock_code || o.symbol,
+          triggerPrice: Number(o.trigger_price) || 0,
+          quantity: Number(o.quantity) || 0,
           status: o.status as any,
         })),
         history: [],
@@ -388,7 +418,8 @@ const TradePanelWrapper: React.FC = () => {
     name: string,
     price: number,
     quantity: number,
-    logoUrl?: string
+    logoUrl?: string,
+    marketType?: string
   ): Promise<boolean> => {
     if (!user?.id) {
       alert('请先登录');
@@ -405,7 +436,7 @@ const TradePanelWrapper: React.FC = () => {
         price,
         quantity,
         logoUrl,
-        marketType: type === TradeType.SELL ? 'A_SHARE' : 'A_SHARE', // 默认A股
+        marketType: marketType || 'A_SHARE', // 使用传入的市场类型，默认A股
       });
 
       if (result && result.success) {

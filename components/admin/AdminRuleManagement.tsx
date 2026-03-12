@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 // 规则元数据 - 中文说明
 const RULE_METADATA: Record<string, { label: string; description: string; tip: string; unit?: string; min?: number; max?: number; step?: number }> = {
   // IPO 规则
-  win_rate: { label: '中签率', description: '新股申购的中签概率', tip: '范围0-1，如0.005表示0.5%中签率', unit: '', min: 0, max: 1, step: 0.001 },
+  win_rate: { label: '中签率', description: '新股申购的中签概率', tip: '范围0.1%-100%，如0.005表示0.5%中签率', unit: '', min: 0.001, max: 1, step: 0.001 },
   min_apply_quantity: { label: '最小申购数量', description: '单次申购最低股数', tip: '通常不低于500股', unit: '股', min: 0 },
   max_apply_amount: { label: '最大申购金额', description: '单次申购最高金额', tip: '超过此金额需人工审核', unit: '元', min: 0 },
   allocation_per_account: { label: '每户配售上限', description: '每账户最多中签数量', tip: '控制单一账户中签额度', unit: '股', min: 0 },
@@ -110,7 +110,7 @@ const AdminRuleManagement: React.FC = () => {
   };
 
   const getRuleTypeInfo = (ruleType: string) => {
-    return RULE_TYPE_INFO[ruleType] || { label: ruleType, desc: '', color: '#64748b' };
+    return RULE_TYPE_INFO[ruleType] || { label: ruleType, desc: '', color: 'var(--color-text-muted)' };
   };
 
   return (
@@ -118,15 +118,15 @@ const AdminRuleManagement: React.FC = () => {
       {/* 头部 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>交易规则管控</h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8' }}>配置股票、IPO、大宗交易及涨停打板的核心参数</p>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '4px' }}>交易规则管控</h3>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>配置股票、IPO、大宗交易及涨停打板的核心参数</p>
         </div>
         <button
           onClick={fetchRules}
           style={{
             padding: '8px 16px',
-            background: '#334155',
-            color: 'white',
+            background: 'var(--color-border)',
+            color: 'var(--color-text-primary)',
             border: 'none',
             borderRadius: '6px',
             fontSize: '12px',
@@ -143,22 +143,22 @@ const AdminRuleManagement: React.FC = () => {
 
       {/* 规则类型说明 */}
       <div style={{
-        background: '#1e293b',
+        background: 'var(--color-surface)',
         borderRadius: '12px',
         padding: '16px',
-        border: '1px solid #334155'
+        border: '1px solid var(--color-border)'
       }}>
-        <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'white', marginBottom: '12px' }}>📋 规则类型说明</h4>
+        <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '12px' }}>📋 规则类型说明</h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
           {Object.entries(RULE_TYPE_INFO).map(([key, info]) => (
             <div key={key} style={{
-              background: '#0f172a',
+              background: 'var(--color-surface-active)',
               borderRadius: '8px',
               padding: '12px',
               borderLeft: `3px solid ${info.color}`
             }}>
               <p style={{ fontSize: '13px', fontWeight: 'bold', color: info.color, marginBottom: '4px' }}>{info.label}</p>
-              <p style={{ fontSize: '11px', color: '#94a3b8' }}>{info.desc}</p>
+              <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{info.desc}</p>
             </div>
           ))}
         </div>
@@ -167,23 +167,23 @@ const AdminRuleManagement: React.FC = () => {
       {/* 规则列表 */}
       {loading ? (
         <div style={{
-          background: '#1e293b',
+          background: 'var(--color-surface)',
           borderRadius: '12px',
           padding: '40px',
           textAlign: 'center',
-          border: '1px solid #334155'
+          border: '1px solid var(--color-border)'
         }}>
-          <p style={{ color: '#64748b', fontSize: '13px' }}>加载中...</p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>加载中...</p>
         </div>
       ) : rules.length === 0 ? (
         <div style={{
-          background: '#1e293b',
+          background: 'var(--color-surface)',
           borderRadius: '12px',
           padding: '40px',
           textAlign: 'center',
-          border: '1px solid #334155'
+          border: '1px solid var(--color-border)'
         }}>
-          <p style={{ color: '#64748b', fontSize: '13px' }}>暂无规则配置</p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>暂无规则配置</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '16px' }}>
@@ -197,16 +197,16 @@ const AdminRuleManagement: React.FC = () => {
                 key={rule.id}
                 layoutId={rule.id}
                 style={{
-                  background: '#1e293b',
+                  background: 'var(--color-surface)',
                   borderRadius: '12px',
-                  border: '1px solid #334155',
+                  border: '1px solid var(--color-border)',
                   overflow: 'hidden'
                 }}
               >
                 {/* 规则头部 */}
                 <div style={{
                   padding: '16px',
-                  borderBottom: '1px solid #334155',
+                  borderBottom: '1px solid var(--color-border)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
@@ -224,7 +224,7 @@ const AdminRuleManagement: React.FC = () => {
                       <ICONS.Shield size={20} style={{ color: typeInfo.color }} />
                     </div>
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{typeInfo.label}</h4>
+                      <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{typeInfo.label}</h4>
                       <span style={{
                         fontSize: '10px',
                         fontWeight: 'bold',
@@ -262,14 +262,14 @@ const AdminRuleManagement: React.FC = () => {
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '10px 0',
-                        borderBottom: '1px solid #334155'
+                        borderBottom: '1px solid var(--color-border)'
                       }}>
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>
+                          <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                             {meta?.label || key}
                           </p>
                           {meta?.description && (
-                            <p style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{meta.description}</p>
+                            <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{meta.description}</p>
                           )}
                         </div>
                         <span style={{
@@ -293,10 +293,10 @@ const AdminRuleManagement: React.FC = () => {
                         width: '100%',
                         padding: '10px',
                         marginTop: '12px',
-                        background: '#0f172a',
+                        background: 'var(--color-surface-active)',
                         border: 'none',
                         borderRadius: '6px',
-                        color: '#64748b',
+                        color: 'var(--color-text-muted)',
                         fontSize: '11px',
                         fontWeight: 'bold',
                         cursor: 'pointer'
@@ -329,20 +329,20 @@ const AdminRuleManagement: React.FC = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             style={{
-              background: '#1e293b',
+              background: 'var(--color-surface)',
               borderRadius: '12px',
-              border: '1px solid #334155',
+              border: '1px solid var(--color-border)',
               width: '100%',
               maxWidth: '600px',
               maxHeight: '90vh',
               overflow: 'auto'
             }}
           >
-            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                 编辑规则 - {getRuleTypeInfo(editingRule.rule_type).label}
               </h3>
-              <button onClick={() => setEditingRule(null)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setEditingRule(null)} style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
             <div style={{ padding: '20px' }}>
@@ -355,7 +355,7 @@ const AdminRuleManagement: React.FC = () => {
                     onChange={(e) => setEditingRule({ ...editingRule, status: e.target.checked })}
                     style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                   />
-                  <span style={{ fontSize: '13px', color: 'white' }}>规则生效</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-primary)' }}>规则生效</span>
                 </label>
               </div>
 
@@ -367,14 +367,14 @@ const AdminRuleManagement: React.FC = () => {
                   
                   return (
                     <div key={key}>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'white', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '6px' }}>
                         {meta?.label || key}
                       </label>
                       {meta?.description && (
-                        <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>{meta.description}</p>
+                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px' }}>{meta.description}</p>
                       )}
                       {meta?.tip && (
-                        <p style={{ fontSize: '10px', color: '#64748b', marginBottom: '8px' }}>💡 {meta.tip}</p>
+                        <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>💡 {meta.tip}</p>
                       )}
                       
                       {isBoolean ? (
@@ -387,10 +387,10 @@ const AdminRuleManagement: React.FC = () => {
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            background: '#0f172a',
-                            border: '1px solid #334155',
+                            background: 'var(--color-surface-active)',
+                            border: '1px solid var(--color-border)',
                             borderRadius: '6px',
-                            color: 'white',
+                            color: 'var(--color-text-primary)',
                             fontSize: '13px',
                             outline: 'none'
                           }}
@@ -412,10 +412,10 @@ const AdminRuleManagement: React.FC = () => {
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            background: '#0f172a',
-                            border: '1px solid #334155',
+                            background: 'var(--color-surface-active)',
+                            border: '1px solid var(--color-border)',
                             borderRadius: '6px',
-                            color: 'white',
+                            color: 'var(--color-text-primary)',
                             fontSize: '13px',
                             outline: 'none'
                           }}
@@ -432,8 +432,8 @@ const AdminRuleManagement: React.FC = () => {
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: '#334155',
-                    color: 'white',
+                    background: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '13px',
@@ -450,7 +450,7 @@ const AdminRuleManagement: React.FC = () => {
                     flex: 1,
                     padding: '12px',
                     background: '#ef4444',
-                    color: 'white',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '13px',

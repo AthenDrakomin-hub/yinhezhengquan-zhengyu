@@ -544,8 +544,38 @@ export async function getOrderBook(symbol: string): Promise<OrderBook | null> {
     return cached;
   }
   
+  // 判断市场
+  const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN';
+  
+  try {
+    // 使用东方财富API获取真实五档数据
+    const { frontendMarketService } = await import('./frontendMarketService');
+    const orderBookData = await frontendMarketService.getOrderBook(symbol, market);
+    
+    if (orderBookData && orderBookData.bids.length > 0) {
+      const orderBook: OrderBook = {
+        asks: orderBookData.asks.map((item, index) => ({
+          level: 5 - index,
+          price: item.price,
+          volume: item.volume,
+        })),
+        bids: orderBookData.bids.map((item, index) => ({
+          level: index + 1,
+          price: item.price,
+          volume: item.volume,
+        })),
+      };
+      
+      StockDetailCache.set(cacheKey, orderBook, StockDetailCache['ORDER_BOOK_TTL']);
+      console.log(`[真实数据] 获取五档成功: ${symbol}`);
+      return orderBook;
+    }
+  } catch (error) {
+    console.warn('[五档数据] 东方财富API失败，使用模拟数据:', error);
+  }
+  
   // 获取当前价格作为基础
-  const quote = await getStockQuote(symbol, 'CN');
+  const quote = await getStockQuote(symbol, market);
   const price = quote?.price || 50;
   
   console.log(`[模拟数据] 生成五档: ${symbol}`);
@@ -560,8 +590,32 @@ export async function getOrderBook(symbol: string): Promise<OrderBook | null> {
  * 获取成交明细
  */
 export async function getTradeTicks(symbol: string): Promise<TradeTick[]> {
-  // 成交明细不缓存，每次都生成新数据
-  const quote = await getStockQuote(symbol, 'CN');
+  // 检查缓存
+  const cacheKey = `ticks_${symbol}`;
+  const cached = StockDetailCache.get<TradeTick[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
+  // 判断市场
+  const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN';
+  
+  try {
+    // 使用东方财富API获取真实成交明细
+    const { frontendMarketService } = await import('./frontendMarketService');
+    const ticksData = await frontendMarketService.getTradeTicks(symbol, market);
+    
+    if (ticksData && ticksData.length > 0) {
+      StockDetailCache.set(cacheKey, ticksData, 5 * 1000);
+      console.log(`[真实数据] 获取成交明细成功: ${symbol}`);
+      return ticksData;
+    }
+  } catch (error) {
+    console.warn('[成交明细] 东方财富API失败，使用模拟数据:', error);
+  }
+  
+  // 获取当前价格作为基础
+  const quote = await getStockQuote(symbol, market);
   const price = quote?.price || 50;
   
   console.log(`[模拟数据] 生成成交明细: ${symbol}`);
@@ -583,8 +637,23 @@ export async function getKLineData(
     return cached;
   }
   
+  // 判断市场
+  const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN';
+  
+  try {
+    // 使用东方财富K线API
+    const klineData = await fetchEastmoneyKLine(symbol, market, period, limit);
+    if (klineData && klineData.length > 0) {
+      StockDetailCache.set(cacheKey, klineData, StockDetailCache['KLINE_TTL']);
+      console.log(`[真实数据] 获取K线成功: ${symbol} ${period}`);
+      return klineData;
+    }
+  } catch (error) {
+    console.warn('[K线数据] 东方财富API失败，使用模拟数据:', error);
+  }
+  
   // 获取当前价格作为基础
-  const quote = await getStockQuote(symbol, 'CN');
+  const quote = await getStockQuote(symbol, market);
   const price = quote?.price || 50;
   
   console.log(`[模拟数据] 生成K线: ${symbol} ${period}`);
@@ -593,6 +662,64 @@ export async function getKLineData(
   // 缓存
   StockDetailCache.set(cacheKey, klineData, StockDetailCache['KLINE_TTL']);
   return klineData;
+}
+
+/**
+ * 东方财富K线API
+ */
+async function fetchEastmoneyKLine(
+  symbol: string, 
+  market: 'CN' | 'HK', 
+  period: 'day' | 'week' | 'month' | '1m' | '5m' | '15m' | '30m' | '60m',
+  limit: number
+): Promise<KLineData[]> {
+  // 市场代码
+  let marketCode = '1';
+  if (market === 'HK') {
+    marketCode = '116';
+  } else {
+    const prefix = symbol.substring(0, 2);
+    if (['00', '30'].includes(prefix) || symbol.startsWith('8') || symbol.startsWith('4')) {
+      marketCode = '0';
+    }
+  }
+  
+  // K线周期映射
+  const kltMap: Record<string, number> = {
+    '1m': 1,
+    '5m': 5,
+    '15m': 15,
+    '30m': 30,
+    '60m': 60,
+    'day': 101,
+    'week': 102,
+    'month': 103,
+  };
+  
+  const klt = kltMap[period] || 101;
+  const secid = `${marketCode}.${symbol}`;
+  
+  const url = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60&klt=${klt}&fqt=1&end=20500101&lmt=${limit}`;
+  
+  const response = await fetch(url);
+  if (!response.ok) return [];
+  
+  const json = await response.json();
+  if (!json.data || !json.data.klines) return [];
+  
+  // 解析K线数据
+  return json.data.klines.map((line: string) => {
+    const parts = line.split(',');
+    return {
+      time: parts[0] || '',
+      open: parseFloat(parts[1]) || 0,
+      close: parseFloat(parts[2]) || 0,
+      high: parseFloat(parts[3]) || 0,
+      low: parseFloat(parts[4]) || 0,
+      volume: parseInt(parts[5]) || 0,
+      amount: parseFloat(parts[6]) || 0,
+    };
+  });
 }
 
 /**

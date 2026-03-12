@@ -289,13 +289,13 @@ const AdminMatchIntervention: React.FC = () => {
       'MEDIUM': { text: '中风险', color: '#f97316', bg: '#f9731620' },
       'LOW': { text: '低风险', color: '#22c55e', bg: '#22c55e20' }
     };
-    return map[level] || { text: level, color: '#64748b', bg: '#64748b20' };
+    return map[level] || { text: level, color: 'var(--color-text-muted)', bg: '#64748b20' };
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* 标签切换 */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #334155' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)' }}>
         <button
           onClick={() => setActiveTab('pool')}
           style={{
@@ -333,15 +333,15 @@ const AdminMatchIntervention: React.FC = () => {
       {/* 撮合池管理 */}
       {activeTab === 'pool' && (
         <div style={{
-          background: '#1e293b',
+          background: 'var(--color-surface)',
           borderRadius: '12px',
           padding: '24px',
-          border: '1px solid #334155'
+          border: '1px solid var(--color-border)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>撮合干预面板</h3>
-              <p style={{ fontSize: '12px', color: '#94a3b8' }}>监控撮合池订单，手动执行撮合或干预异常订单</p>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '4px' }}>撮合干预面板</h3>
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>监控撮合池订单，手动执行撮合或干预异常订单</p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
@@ -350,7 +350,7 @@ const AdminMatchIntervention: React.FC = () => {
                 style={{
                   padding: '8px 16px',
                   background: '#ef4444',
-                  color: 'white',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '12px',
@@ -368,8 +368,8 @@ const AdminMatchIntervention: React.FC = () => {
                 onClick={fetchPool}
                 style={{
                   padding: '8px 16px',
-                  background: '#334155',
-                  color: 'white',
+                  background: 'var(--color-border)',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '12px',
@@ -388,35 +388,35 @@ const AdminMatchIntervention: React.FC = () => {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #334155' }}>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>订单ID</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>标的/类型</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>价格/数量</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>状态</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>进入时间</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>操作</th>
+                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>订单ID</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>标的/类型</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>价格/数量</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>状态</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>进入时间</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>操作</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                       加载中...
                     </td>
                   </tr>
                 ) : paginatedOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                       撮合池暂无订单
                     </td>
                   </tr>
                 ) : paginatedOrders.map((order) => (
-                  <tr key={order.id} style={{ borderBottom: '1px solid #334155' }}>
-                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>
+                  <tr key={order.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '14px 16px', fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
                       {order.trade_id?.substring(0, 8)}...
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>{order.stock_code}</p>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{order.stock_code}</p>
                       <span style={{
                         fontSize: '10px',
                         fontWeight: 'bold',
@@ -429,8 +429,8 @@ const AdminMatchIntervention: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>¥{Number(order.price).toFixed(2)}</p>
-                      <p style={{ fontSize: '11px', color: '#64748b' }}>{order.quantity} 股</p>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>¥{Number(order.price).toFixed(2)}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{order.quantity} 股</p>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{
@@ -444,7 +444,7 @@ const AdminMatchIntervention: React.FC = () => {
                         {order.status === 'MATCHING' ? '撮合中' : '已暂停'}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: '11px', color: '#64748b' }}>
+                    <td style={{ padding: '14px 16px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
                       {new Date(order.enter_time).toLocaleTimeString()}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
@@ -575,22 +575,22 @@ const AdminMatchIntervention: React.FC = () => {
       {/* 异常持仓监控 */}
       {activeTab === 'positions' && (
         <div style={{
-          background: '#1e293b',
+          background: 'var(--color-surface)',
           borderRadius: '12px',
           padding: '24px',
-          border: '1px solid #334155'
+          border: '1px solid var(--color-border)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>异常持仓监控</h3>
-              <p style={{ fontSize: '12px', color: '#94a3b8' }}>监控高风险持仓，执行强制平仓操作</p>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '4px' }}>异常持仓监控</h3>
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>监控高风险持仓，执行强制平仓操作</p>
             </div>
             <button
               onClick={fetchAbnormalPositions}
               style={{
                 padding: '8px 16px',
-                background: '#334155',
-                color: 'white',
+                background: 'var(--color-border)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '6px',
                 fontSize: '12px',
@@ -608,46 +608,46 @@ const AdminMatchIntervention: React.FC = () => {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #334155' }}>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>股票</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>持仓数量</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>成本/现价</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>市值</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>盈亏</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>风险等级</th>
-                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase' }}>操作</th>
+                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>股票</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>持仓数量</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>成本/现价</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>市值</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>盈亏</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>风险等级</th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 'bold', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>操作</th>
                 </tr>
               </thead>
               <tbody>
                 {positionsLoading ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                       加载中...
                     </td>
                   </tr>
                 ) : paginatedPositions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>
                       暂无持仓数据
                     </td>
                   </tr>
                 ) : paginatedPositions.map((position) => {
                   const riskInfo = getRiskLevelInfo(position.risk_level);
                   return (
-                    <tr key={position.id} style={{ borderBottom: '1px solid #334155' }}>
+                    <tr key={position.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: '14px 16px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>{position.stock_name || position.stock_code}</p>
-                        <p style={{ fontSize: '11px', color: '#64748b' }}>{position.stock_code}</p>
+                        <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{position.stock_name || position.stock_code}</p>
+                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{position.stock_code}</p>
                       </td>
                       <td style={{ padding: '14px 16px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>{position.quantity.toLocaleString()}</p>
-                        <p style={{ fontSize: '11px', color: '#64748b' }}>可用: {position.available_quantity.toLocaleString()}</p>
+                        <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{position.quantity.toLocaleString()}</p>
+                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>可用: {position.available_quantity.toLocaleString()}</p>
                       </td>
                       <td style={{ padding: '14px 16px' }}>
-                        <p style={{ fontSize: '12px', color: 'white' }}>¥{position.avg_cost.toFixed(2)}</p>
-                        <p style={{ fontSize: '11px', color: '#64748b' }}>¥{position.current_price.toFixed(2)}</p>
+                        <p style={{ fontSize: '12px', color: 'var(--color-text-primary)' }}>¥{position.avg_cost.toFixed(2)}</p>
+                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>¥{position.current_price.toFixed(2)}</p>
                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 'bold', color: 'white' }}>
+                      <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                         ¥{position.market_value.toLocaleString()}
                       </td>
                       <td style={{ padding: '14px 16px' }}>
@@ -728,27 +728,27 @@ const AdminMatchIntervention: React.FC = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             style={{
-              background: '#1e293b',
+              background: 'var(--color-surface)',
               borderRadius: '12px',
-              border: '1px solid #334155',
+              border: '1px solid var(--color-border)',
               width: '100%',
               maxWidth: '400px'
             }}
           >
-            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>强制平仓</h3>
-              <button onClick={() => setIsForceSellModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>强制平仓</h3>
+              <button onClick={() => setIsForceSellModalOpen(false)} style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
             <div style={{ padding: '20px' }}>
-              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>持仓信息</p>
-                <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{selectedPosition.stock_name || selectedPosition.stock_code}</p>
-                <p style={{ fontSize: '12px', color: '#64748b' }}>可用数量: {selectedPosition.available_quantity.toLocaleString()} 股</p>
+              <div style={{ background: 'var(--color-surface-active)', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>持仓信息</p>
+                <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{selectedPosition.stock_name || selectedPosition.stock_code}</p>
+                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>可用数量: {selectedPosition.available_quantity.toLocaleString()} 股</p>
               </div>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>平仓数量</label>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px', fontWeight: 'bold' }}>平仓数量</label>
                 <input
                   type="number"
                   value={forceSellQuantity}
@@ -757,10 +757,10 @@ const AdminMatchIntervention: React.FC = () => {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#0f172a',
-                    border: '1px solid #334155',
+                    background: 'var(--color-surface-active)',
+                    border: '1px solid var(--color-border)',
                     borderRadius: '6px',
-                    color: 'white',
+                    color: 'var(--color-text-primary)',
                     fontSize: '14px',
                     outline: 'none'
                   }}
@@ -768,7 +768,7 @@ const AdminMatchIntervention: React.FC = () => {
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: 'bold' }}>平仓原因 *</label>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px', fontWeight: 'bold' }}>平仓原因 *</label>
                 <textarea
                   value={forceSellReason}
                   onChange={(e) => setForceSellReason(e.target.value)}
@@ -776,10 +776,10 @@ const AdminMatchIntervention: React.FC = () => {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#0f172a',
-                    border: '1px solid #334155',
+                    background: 'var(--color-surface-active)',
+                    border: '1px solid var(--color-border)',
                     borderRadius: '6px',
-                    color: 'white',
+                    color: 'var(--color-text-primary)',
                     fontSize: '13px',
                     outline: 'none',
                     height: '80px',
@@ -794,8 +794,8 @@ const AdminMatchIntervention: React.FC = () => {
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: '#334155',
-                    color: 'white',
+                    background: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '13px',
@@ -812,7 +812,7 @@ const AdminMatchIntervention: React.FC = () => {
                     flex: 1,
                     padding: '12px',
                     background: '#ef4444',
-                    color: 'white',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '13px',

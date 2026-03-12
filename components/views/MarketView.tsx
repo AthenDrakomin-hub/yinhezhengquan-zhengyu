@@ -5,6 +5,7 @@ import { Stock } from '../../lib/types';
 import StockIdentity from '../shared/StockIdentity';
 import { getMarketList, getTotalStockCount } from '../../services/marketService';
 import { userService } from '../../services/userService';
+import { searchStocks } from '../../services/stockSearchService';
 
 interface MarketViewProps {
   onSelectStock?: (symbol: string) => void;
@@ -17,6 +18,8 @@ const MarketView: React.FC<MarketViewProps> = ({ onSelectStock }) => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searching, setSearching] = useState(false); // 在线搜索中
+  const [searchResults, setSearchResults] = useState<Stock[]>([]); // 搜索结果
   const [watchlistSymbols, setWatchlistSymbols] = useState<Set<string>>(new Set());
   const [watchlistCount, setWatchlistCount] = useState(0);
   
@@ -53,21 +56,28 @@ const MarketView: React.FC<MarketViewProps> = ({ onSelectStock }) => {
         setLoading(true);
         const watchlistItems = await userService.getWatchlist();
         if (watchlistItems && watchlistItems.length > 0) {
-          // 从自选股中获取实时行情数据
-          const symbols = watchlistItems.map(item => item.symbol);
-          const marketType = symbols.some(s => s.startsWith('00') || s.startsWith('60') || s.startsWith('30')) ? 'CN' : 'HK';
-          const result = await getMarketList(marketType, page, PAGE_SIZE);
+          // 直接从自选股列表获取股票数据，使用 getRealtimeStock 逐个获取
+          const { getRealtimeStock } = await import('../../services/marketService');
+          const watchlistStocks: Stock[] = [];
           
-          // 处理返回结果（可能是数组或分页对象）
-          const allStocks = Array.isArray(result) ? result : (result as any).stocks || [];
-          const pagination = Array.isArray(result) ? null : (result as any).pagination;
+          for (const item of watchlistItems) {
+            try {
+              // 市场判断：A股代码6位，港股代码5位
+              // A股: 000/002/003/300/301/600/601/603/605/688/689 等
+              // 港股: 00700/09988/03690 等 (5位)
+              const symbol = item.symbol;
+              const isHK = symbol.length === 5;
+              const market = isHK ? 'HK' : 'CN';
+              const stock = await getRealtimeStock(symbol, market);
+              if (stock) {
+                watchlistStocks.push(stock);
+              }
+            } catch (err) {
+              console.warn(`获取自选股 ${item.symbol} 行情失败:`, err);
+            }
+          }
           
-          // 筛选出用户自选的股票
-          const filteredWatchlistStocks = allStocks.filter((stock: Stock) => 
-            watchlistItems.some(watchItem => watchItem.symbol === stock.symbol)
-          );
-          
-          setStocks(filteredWatchlistStocks);
+          setStocks(watchlistStocks);
           setWatchlistCount(watchlistItems.length);
         } else {
           setStocks([]);
@@ -130,11 +140,71 @@ const MarketView: React.FC<MarketViewProps> = ({ onSelectStock }) => {
     return () => clearInterval(timer);
   }, [loadMarketData, currentPage]);
 
+  // 在线搜索股票
+  const performSearch = useCallback(async (keyword: string) => {
+    const term = keyword.trim();
+    if (!term) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      // 搜索全市场股票
+      const results = await searchStocks(term);
+      
+      // 转换为 Stock 格式
+      const stockResults: Stock[] = results.map(item => ({
+        symbol: item.symbol,
+        name: item.name,
+        price: 0,
+        change: 0,
+        changePercent: 0,
+        market: item.market,
+        sparkline: [],
+      }));
+
+      setSearchResults(stockResults);
+    } catch (error) {
+      console.error('搜索股票失败:', error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  // 搜索防抖
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (!term) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      performSearch(term);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, performSearch]);
+
   const filteredStocks = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = searchTerm.trim();
+    
+    // 如果有搜索词且搜索结果不为空，使用搜索结果
+    if (term && searchResults.length > 0) {
+      return searchResults;
+    }
+    
+    // 如果正在搜索中，返回空数组显示加载状态
+    if (term && searching) {
+      return [];
+    }
+    
+    // 否则使用本地过滤（用于无搜索词时显示当前列表）
     if (!term) return stocks;
-    return stocks.filter(s => s.name.toLowerCase().includes(term) || s.symbol.toLowerCase().includes(term));
-  }, [stocks, searchTerm]);
+    return stocks.filter(s => s.name.toLowerCase().includes(term.toLowerCase()) || s.symbol.toLowerCase().includes(term.toLowerCase()));
+  }, [stocks, searchTerm, searchResults, searching]);
 
   // 切换自选股状态
   const toggleWatchlist = async (stock: Stock, e: React.MouseEvent) => {
@@ -232,22 +302,31 @@ const MarketView: React.FC<MarketViewProps> = ({ onSelectStock }) => {
           </div>
           
           <div className="divide-y divide-[var(--color-border)] min-h-[400px]">
-            {loading ? (
+            {loading || searching ? (
               <div className="py-20 text-center space-y-4">
                  <div className="w-8 h-8 border-2 border-[#00D4AA] border-t-transparent rounded-full animate-spin mx-auto" />
-                 <p className="text-[10px] font-black uppercase text-[#00D4AA] tracking-[0.2em]">正在同步全市场行情...</p>
+                 <p className="text-[10px] font-black uppercase text-[#00D4AA] tracking-[0.2em]">
+                   {searching ? '正在搜索全市场股票...' : '正在同步全市场行情...'}
+                 </p>
               </div>
             ) : filteredStocks.length === 0 ? (
               <div className="py-20 text-center">
                 <div className="text-[var(--color-text-muted)] mb-4">
-                  {marketTab === 'WATCH' 
-                    ? '暂无自选股，快去添加一些关注的股票吧！' 
-                    : '未找到匹配的股票'}
+                  {searchTerm.trim() 
+                    ? `未找到包含 "${searchTerm}" 的股票` 
+                    : marketTab === 'WATCH' 
+                      ? '暂无自选股，快去添加一些关注的股票吧！' 
+                      : '暂无数据'}
                 </div>
-                {marketTab === 'WATCH' && (
+                {searchTerm.trim() && (
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    请尝试搜索其他关键词
+                  </p>
+                )}
+                {!searchTerm.trim() && marketTab === 'WATCH' && (
                   <button 
                     onClick={() => setMarketTab('CN')}
-                    className="px-4 py-2 bg-[#00D4AA] text-[#0A1628] rounded-xl text-sm font-black"
+                    className="mt-4 px-4 py-2 bg-[#00D4AA] text-[#0A1628] rounded-xl text-sm font-black"
                   >
                     去添加自选
                   </button>

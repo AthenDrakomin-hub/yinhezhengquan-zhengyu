@@ -142,20 +142,51 @@ const DATA_SOURCES = {
       // 清理股票代码：移除 SH/SZ/HK 等前缀
       const cleanSymbol = symbol.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
       
-      // 东方财富市场代码: 1=沪市A股, 0=深市A股, 116=港股
+      // 东方财富市场代码规则：
+      // 1 = 沪市A股 (600/601/603/605/688科创板等)
+      // 0 = 深市A股 (000/001/002/003/300创业板/301等)
+      // 116 = 港股
       let marketCode = '1'; // 默认沪市
+      
       if (market === 'HK') {
         marketCode = '116';
-      } else if (cleanSymbol.startsWith('0') || cleanSymbol.startsWith('3')) {
-        marketCode = '0'; // 深市
+      } else {
+        // 根据股票代码前缀判断市场
+        const prefix = cleanSymbol.substring(0, 2);
+        const prefix3 = cleanSymbol.substring(0, 3);
+        
+        // 深市：000/001/002/003/300/301
+        if (['00', '30'].includes(prefix)) {
+          marketCode = '0';
+        }
+        // 沪市：600/601/603/605/688/689
+        else if (['60', '68'].includes(prefix)) {
+          marketCode = '1';
+        }
+        // 北交所：8开头或4开头，也用0
+        else if (cleanSymbol.startsWith('8') || cleanSymbol.startsWith('4')) {
+          marketCode = '0';
+        }
       }
+      
       // 使用批量接口（ulist.np）获取单只股票，更稳定
       return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${marketCode}.${cleanSymbol}`;
     },
     parseRealtimeData: (data: any, symbol: string, market: 'CN' | 'HK'): Partial<Stock> | null => {
       try {
         // 批量接口返回格式: { data: { diff: [...] } }
-        if (!data || !data.data || !data.data.diff || data.data.diff.length === 0) return null;
+        if (!data) {
+          console.warn('东方财富返回数据为空');
+          return null;
+        }
+        if (!data.data) {
+          console.warn('东方财富返回数据缺少 data 字段:', JSON.stringify(data).substring(0, 200));
+          return null;
+        }
+        if (!data.data.diff || data.data.diff.length === 0) {
+          console.warn(`东方财富 diff 为空，股票代码可能不存在: symbol=${symbol}`);
+          return null;
+        }
         const item = data.data.diff[0];
         return {
           symbol: item.f12 || symbol,
@@ -183,12 +214,18 @@ const DATA_SOURCES = {
         // 清理股票代码：移除 SH/SZ/HK 等前缀
         const cleanSymbol = sym.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
         
-        // 深市股票需要用 0. 前缀，沪市用 1.，港股用 116.
+        // 东方财富市场代码规则（与 getRealtimeUrl 保持一致）
         if (market === 'HK') {
           return `116.${cleanSymbol}`;
-        } else if (cleanSymbol.startsWith('0') || cleanSymbol.startsWith('3')) {
+        }
+        
+        const prefix = cleanSymbol.substring(0, 2);
+        
+        // 深市：00/30 开头，或北交所 8/4 开头
+        if (['00', '30'].includes(prefix) || cleanSymbol.startsWith('8') || cleanSymbol.startsWith('4')) {
           return `0.${cleanSymbol}`;
         }
+        // 沪市：60/68 开头
         return `1.${cleanSymbol}`;
       }).join(',');
       return `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${codeList}`;
@@ -269,8 +306,31 @@ const DATA_SOURCES = {
     priority: 4,
     enabled: useRealMarketData,
     getKlineUrl: (symbol: string, market: 'CN' | 'HK', period: 'day' | 'week' | 'month' = 'day'): string => {
-      const marketCode = market === 'CN' ? 'sz' : 'hk';
-      return `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${marketCode}${symbol},${period},,,320`;
+      // 清理股票代码
+      const cleanSymbol = symbol.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
+      
+      // 腾讯财经市场代码：sh=沪市, sz=深市, hk=港股
+      let marketCode = 'sh'; // 默认沪市
+      
+      if (market === 'HK') {
+        marketCode = 'hk';
+      } else {
+        const prefix = cleanSymbol.substring(0, 2);
+        // 深市：00/30 开头
+        if (['00', '30'].includes(prefix)) {
+          marketCode = 'sz';
+        }
+        // 沪市：60/68 开头
+        else if (['60', '68'].includes(prefix)) {
+          marketCode = 'sh';
+        }
+        // 北交所或其他
+        else if (cleanSymbol.startsWith('8') || cleanSymbol.startsWith('4')) {
+          marketCode = 'bj'; // 北交所
+        }
+      }
+      
+      return `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${marketCode}${cleanSymbol},${period},,,320`;
     },
     parseKlineData: (data: any): number[] => {
       try {
@@ -281,6 +341,158 @@ const DATA_SOURCES = {
         console.error('解析腾讯K线数据失败:', error);
         return [];
       }
+    }
+  },
+
+  // 腾讯财经五档盘口数据 (无CORS限制，返回GBK编码)
+  TENCENT_ORDERBOOK: {
+    name: '腾讯财经五档盘口',
+    priority: 4, // 优先级高于东方财富
+    enabled: useRealMarketData,
+    // 五档数据API - 返回GBK编码的字符串
+    // 数据格式: v_sh600519="1~股票名~代码~当前价~昨收~今开~...~买一价~买一量~买二价~买二量~...~卖一价~卖一量~..."
+    // 位置索引: 9=买一价, 10=买一量, 11=买二价, 12=买二量, ...
+    //          19=卖一价, 20=卖一量, 21=卖二价, 22=卖二量, ...
+    getOrderBookUrl: (symbol: string, market: 'CN' | 'HK'): string => {
+      const cleanSymbol = symbol.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
+      
+      // 腾讯财经市场代码：sh=沪市, sz=深市, hk=港股
+      let prefix = 'sh'; // 默认沪市
+      if (market === 'HK') {
+        prefix = 'hk';
+      } else {
+        const codePrefix = cleanSymbol.substring(0, 2);
+        if (['00', '30'].includes(codePrefix) || cleanSymbol.startsWith('8') || cleanSymbol.startsWith('4')) {
+          prefix = 'sz';
+        }
+      }
+      
+      return `https://web.sqt.gtimg.cn/q=${prefix}${cleanSymbol}`;
+    },
+    parseOrderBookData: async (response: Response): Promise<{ asks: { price: number; volume: number }[]; bids: { price: number; volume: number }[] } | null> => {
+      try {
+        // 腾讯财经返回GBK编码的数据，需要使用TextDecoder解码
+        const buffer = await response.arrayBuffer();
+        const decoder = new TextDecoder('gbk');
+        const text = decoder.decode(buffer);
+        
+        // 提取引号内的数据
+        const start = text.indexOf('"');
+        const end = text.lastIndexOf('"');
+        if (start === -1 || end === -1) return null;
+        
+        const content = text.substring(start + 1, end);
+        const parts = content.split('~');
+        
+        if (parts.length < 29) return null;
+        
+        // 解析五档买盘
+        const bids = [
+          { price: parseFloat(parts[9]) || 0, volume: parseInt(parts[10]) || 0 },
+          { price: parseFloat(parts[11]) || 0, volume: parseInt(parts[12]) || 0 },
+          { price: parseFloat(parts[13]) || 0, volume: parseInt(parts[14]) || 0 },
+          { price: parseFloat(parts[15]) || 0, volume: parseInt(parts[16]) || 0 },
+          { price: parseFloat(parts[17]) || 0, volume: parseInt(parts[18]) || 0 },
+        ].filter(item => item.price > 0);
+        
+        // 解析五档卖盘
+        const asks = [
+          { price: parseFloat(parts[19]) || 0, volume: parseInt(parts[20]) || 0 },
+          { price: parseFloat(parts[21]) || 0, volume: parseInt(parts[22]) || 0 },
+          { price: parseFloat(parts[23]) || 0, volume: parseInt(parts[24]) || 0 },
+          { price: parseFloat(parts[25]) || 0, volume: parseInt(parts[26]) || 0 },
+          { price: parseFloat(parts[27]) || 0, volume: parseInt(parts[28]) || 0 },
+        ].filter(item => item.price > 0);
+        
+        if (bids.length === 0 && asks.length === 0) return null;
+        
+        return { bids, asks };
+      } catch (error) {
+        console.error('解析腾讯财经五档数据失败:', error);
+        return null;
+      }
+    }
+  },
+
+  // 东方财富五档盘口数据 (无CORS限制)
+  EASTMONEY_ORDERBOOK: {
+    name: '东方财富五档盘口',
+    priority: 5,
+    enabled: useRealMarketData,
+    // 五档数据API - 返回买卖各5档价格和量
+    // 字段映射：f19/f20=买一价/量, f17/f18=买二, f15/f16=买三, f13/f14=买四, f11/f12=买五
+    //          f31/f32=卖一价/量, f33/f34=卖二, f35/f36=卖三, f37/f38=卖四, f39/f40=卖五
+    getOrderBookUrl: (symbol: string, market: 'CN' | 'HK'): string => {
+      const cleanSymbol = symbol.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
+      
+      // 市场代码
+      let marketCode = '1';
+      if (market === 'HK') {
+        marketCode = '116';
+      } else {
+        const prefix = cleanSymbol.substring(0, 2);
+        if (['00', '30'].includes(prefix) || cleanSymbol.startsWith('8') || cleanSymbol.startsWith('4')) {
+          marketCode = '0';
+        }
+      }
+      
+      // 请求五档数据字段
+      const fields = 'f11,f12,f13,f14,f15,f16,f17,f18,f19,f20,f31,f32,f33,f34,f35,f36,f37,f38,f39,f40';
+      return `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketCode}.${cleanSymbol}&fields=${fields}`;
+    },
+    parseOrderBookData: (data: any): { asks: { price: number; volume: number }[]; bids: { price: number; volume: number }[] } | null => {
+      try {
+        if (!data || !data.data) return null;
+        const d = data.data;
+        
+        // 买盘（价格需要除以100）
+        const bids = [
+          { price: (d.f19 || 0) / 100, volume: d.f20 || 0 },
+          { price: (d.f17 || 0) / 100, volume: d.f18 || 0 },
+          { price: (d.f15 || 0) / 100, volume: d.f16 || 0 },
+          { price: (d.f13 || 0) / 100, volume: d.f14 || 0 },
+          { price: (d.f11 || 0) / 100, volume: d.f12 || 0 },
+        ].filter(item => item.price > 0);
+        
+        // 卖盘（价格需要除以100）
+        const asks = [
+          { price: (d.f31 || 0) / 100, volume: d.f32 || 0 },
+          { price: (d.f33 || 0) / 100, volume: d.f34 || 0 },
+          { price: (d.f35 || 0) / 100, volume: d.f36 || 0 },
+          { price: (d.f37 || 0) / 100, volume: d.f38 || 0 },
+          { price: (d.f39 || 0) / 100, volume: d.f40 || 0 },
+        ].filter(item => item.price > 0);
+        
+        if (bids.length === 0 && asks.length === 0) return null;
+        
+        return { bids, asks };
+      } catch (error) {
+        console.error('解析东方财富五档数据失败:', error);
+        return null;
+      }
+    }
+  },
+
+  // 东方财富成交明细 (无CORS限制)
+  EASTMONEY_TICKS: {
+    name: '东方财富成交明细',
+    priority: 6,
+    enabled: useRealMarketData,
+    getTicksUrl: (symbol: string, market: 'CN' | 'HK'): string => {
+      const cleanSymbol = symbol.replace(/^(SH|SZ|sh|sz|HK|hk)/, '');
+      
+      let marketCode = '1';
+      if (market === 'HK') {
+        marketCode = '116';
+      } else {
+        const prefix = cleanSymbol.substring(0, 2);
+        if (['00', '30'].includes(prefix) || cleanSymbol.startsWith('8') || cleanSymbol.startsWith('4')) {
+          marketCode = '0';
+        }
+      }
+      
+      // 获取最近成交记录
+      return `https://push2.eastmoney.com/api/qt/stock/ticks?secid=${marketCode}.${cleanSymbol}&fields=f1,f2,f3,f4,f5,f6,f7&pos=-11`;
     }
   }
 };
@@ -849,6 +1061,98 @@ export const frontendMarketService = {
         // 未知交易类型，返回普通行情
         return this.getRealtimeStock(symbol, market);
     }
+  },
+
+  /**
+   * 获取五档盘口数据
+   */
+  async getOrderBook(symbol: string, market: 'CN' | 'HK'): Promise<{ asks: { price: number; volume: number }[]; bids: { price: number; volume: number }[] } | null> {
+    // 检查缓存
+    const cacheKey = `orderbook_${market}_${symbol}`;
+    const cached = MarketCache.get<{ asks: { price: number; volume: number }[]; bids: { price: number; volume: number }[] }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // 优先使用腾讯财经API（有真实的五档数据）
+    try {
+      const tencentUrl = DATA_SOURCES.TENCENT_ORDERBOOK.getOrderBookUrl(symbol, market);
+      const tencentResponse = await fetch(tencentUrl);
+      
+      if (tencentResponse.ok) {
+        const orderBook = await DATA_SOURCES.TENCENT_ORDERBOOK.parseOrderBookData(tencentResponse);
+        
+        if (orderBook && orderBook.bids.length > 0) {
+          MarketCache.set(cacheKey, orderBook, 5 * 1000); // 五档数据缓存5秒
+          console.log(`[真实数据-腾讯] 获取五档成功: ${symbol}`);
+          return orderBook;
+        }
+      }
+    } catch (error) {
+      console.warn('[五档数据] 腾讯财经API失败，尝试东方财富:', error);
+    }
+
+    // 降级到东方财富API
+    try {
+      const url = DATA_SOURCES.EASTMONEY_ORDERBOOK.getOrderBookUrl(symbol, market);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const json = await response.json();
+      const orderBook = DATA_SOURCES.EASTMONEY_ORDERBOOK.parseOrderBookData(json);
+      
+      if (orderBook && orderBook.bids.length > 0) {
+        MarketCache.set(cacheKey, orderBook, 5 * 1000); // 五档数据缓存5秒
+        console.log(`[真实数据-东财] 获取五档成功: ${symbol}`);
+        return orderBook;
+      }
+    } catch (error) {
+      console.error('[五档数据] 东方财富API也失败:', error);
+    }
+    
+    return null;
+  },
+
+  /**
+   * 获取成交明细数据
+   */
+  async getTradeTicks(symbol: string, market: 'CN' | 'HK'): Promise<{ time: string; price: number; volume: number; direction: 'BUY' | 'SELL' }[]> {
+    // 检查缓存
+    const cacheKey = `ticks_${market}_${symbol}`;
+    const cached = MarketCache.get<{ time: string; price: number; volume: number; direction: 'BUY' | 'SELL' }[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const url = DATA_SOURCES.EASTMONEY_TICKS.getTicksUrl(symbol, market);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const json = await response.json();
+      
+      if (json && json.data && json.data.ticks) {
+        const ticks = json.data.ticks.map((tick: any[]) => ({
+          time: tick[0] || '',
+          price: parseFloat(tick[1]) || 0,
+          volume: parseInt(tick[2]) || 0,
+          direction: tick[3] === '1' ? 'BUY' as const : 'SELL' as const
+        }));
+        
+        MarketCache.set(cacheKey, ticks, 5 * 1000); // 成交明细缓存5秒
+        return ticks;
+      }
+    } catch (error) {
+      console.error('获取成交明细失败:', error);
+    }
+    
+    return [];
   }
 };
 

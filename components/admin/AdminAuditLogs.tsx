@@ -63,7 +63,7 @@ const AdminAuditLogs: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-black">审计日志</h1>
-          <p className="text-sm text-slate-400 mt-1">查看所有管理员操作记录</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">查看所有管理员操作记录</p>
         </div>
         <button
           onClick={handleExport}
@@ -81,7 +81,7 @@ const AdminAuditLogs: React.FC = () => {
           <select
             value={filters.operateType}
             onChange={(e) => setFilters({ ...filters, operateType: e.target.value })}
-            className="px-4 py-2 bg-slate-800 rounded-xl border border-white/10"
+            className="px-4 py-2 bg-[var(--color-surface)] rounded-xl border border-white/10"
           >
             <option value="">全部类型</option>
             <option value="RULE_UPDATE">规则更新</option>
@@ -94,19 +94,19 @@ const AdminAuditLogs: React.FC = () => {
             type="date"
             value={filters.startDate}
             onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-            className="px-4 py-2 bg-slate-800 rounded-xl border border-white/10"
+            className="px-4 py-2 bg-[var(--color-surface)] rounded-xl border border-white/10"
           />
 
           <input
             type="date"
             value={filters.endDate}
             onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-            className="px-4 py-2 bg-slate-800 rounded-xl border border-white/10"
+            className="px-4 py-2 bg-[var(--color-surface)] rounded-xl border border-white/10"
           />
 
           <button
             onClick={handleSearch}
-            className="px-4 py-2 bg-slate-700 rounded-xl hover:bg-slate-600"
+            className="px-4 py-2 bg-[var(--color-border)] rounded-xl hover:bg-[var(--color-surface-hover)]"
           >
             查询
           </button>
@@ -118,11 +118,11 @@ const AdminAuditLogs: React.FC = () => {
         {loading ? (
           <div className="p-8 text-center">加载中...</div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">暂无日志数据</div>
+          <div className="p-8 text-center text-[var(--color-text-muted)]">暂无日志数据</div>
         ) : (
           <>
             <table className="w-full">
-              <thead className="bg-slate-800">
+              <thead className="bg-[var(--color-surface)]">
                 <tr>
                   <th className="text-left p-4 text-xs">时间</th>
                   <th className="text-left p-4 text-xs">操作人</th>
@@ -143,7 +143,7 @@ const AdminAuditLogs: React.FC = () => {
                         {getOperateTypeText(log.operation_type)}
                       </span>
                     </td>
-                    <td className="p-4 text-sm text-slate-400">
+                    <td className="p-4 text-sm text-[var(--color-text-muted)]">
                       <pre className="text-xs">{JSON.stringify(log.details, null, 2)}</pre>
                     </td>
                     <td className="p-4 text-sm font-mono">{log.ip_address}</td>

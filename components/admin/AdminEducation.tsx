@@ -385,7 +385,7 @@ const AdminEducation: React.FC = () => {
         <button
           type="submit"
           disabled={submitting}
-          className="flex-1 px-6 py-3 rounded-xl bg-[#00D4AA] text-white text-sm font-bold hover:bg-[#00B894] transition disabled:opacity-50"
+          className="flex-1 px-6 py-3 rounded-xl bg-[#00D4AA] text-[var(--color-text-primary)] text-sm font-bold hover:bg-[#00B894] transition disabled:opacity-50"
         >
           {submitting ? '保存中...' : (isEdit ? '保存修改' : '创建文章')}
         </button>
@@ -413,7 +413,7 @@ const AdminEducation: React.FC = () => {
               resetForm();
               setIsCreateModalOpen(true);
             }}
-            className="px-4 py-2 rounded-xl bg-[#00D4AA] text-white text-sm font-bold hover:bg-[#00B894] transition flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-[#00D4AA] text-[var(--color-text-primary)] text-sm font-bold hover:bg-[#00B894] transition flex items-center gap-2"
           >
             <ICONS.Plus size={16} /> 新建文章
           </button>
@@ -452,7 +452,7 @@ const AdminEducation: React.FC = () => {
             onClick={() => setFilterStatus(filter.value as typeof filterStatus)}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
               filterStatus === filter.value
-                ? 'bg-[#00D4AA] text-white'
+                ? 'bg-[#00D4AA] text-[var(--color-text-primary)]'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -672,12 +672,12 @@ const AdminEducation: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <button
                   onClick={() => setIsPreviewOpen(false)}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white hover:bg-white/30 transition"
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-[var(--color-text-primary)] hover:bg-white/30 transition"
                 >
                   <ICONS.Plus className="rotate-45" size={20} />
                 </button>
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h2 className="text-xl font-black text-white">{selectedTopic.title}</h2>
+                  <h2 className="text-xl font-black text-[var(--color-text-primary)]">{selectedTopic.title}</h2>
                 </div>
               </div>
 

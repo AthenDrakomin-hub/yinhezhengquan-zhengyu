@@ -53,6 +53,21 @@ serve(async (req) => {
   }
 
   try {
+    // 获取 Authorization header
+    const authHeader = req.headers.get('Authorization')
+    console.log('Authorization header:', authHeader ? '存在' : '不存在')
+    
+    if (!authHeader) {
+      console.error('缺少 Authorization header')
+      return new Response(JSON.stringify({ 
+        error: '缺少授权信息，请重新登录', 
+        code: 401 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+
     // 创建两个客户端：
     // 1. 使用 ANON_KEY 验证用户身份
     const authClient = createClient(
@@ -61,7 +76,7 @@ serve(async (req) => {
       { 
         global: { 
           headers: { 
-            Authorization: req.headers.get('Authorization') ?? '' 
+            Authorization: authHeader 
           } 
         } 
       }
@@ -70,8 +85,19 @@ serve(async (req) => {
     // 验证用户身份
     const { data: { user }, error: authError } = await authClient.auth.getUser()
     
-    if (authError || !user) {
-      console.error('授权验证失败:', authError)
+    if (authError) {
+      console.error('授权验证失败:', authError.message)
+      return new Response(JSON.stringify({ 
+        error: `授权验证失败: ${authError.message}`, 
+        code: 401 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+    
+    if (!user) {
+      console.error('未找到用户信息')
       return new Response(JSON.stringify({ 
         error: '未授权，请先登录', 
         code: 401 
@@ -80,6 +106,8 @@ serve(async (req) => {
         status: 401,
       })
     }
+
+    console.log('用户认证成功:', user.id)
 
     const userId = user.id
 
@@ -384,7 +412,7 @@ serve(async (req) => {
         .from('positions')
         .select('*')
         .eq('user_id', userId)
-        .eq('stock_code', stock_code)
+        .eq('symbol', stock_code)
         .single()
 
       if (!position || position.available_quantity < quantity) {
@@ -445,7 +473,7 @@ serve(async (req) => {
         .from('positions')
         .select('*')
         .eq('user_id', userId)
-        .eq('stock_code', stock_code)
+        .eq('symbol', stock_code)
         .single()
       
       const { error: freezeError } = await supabaseClient
@@ -454,7 +482,7 @@ serve(async (req) => {
           available_quantity: position.available_quantity - quantity 
         })
         .eq('user_id', userId)
-        .eq('stock_code', stock_code)
+        .eq('symbol', stock_code)
       if (freezeError) throw freezeError
     }
 

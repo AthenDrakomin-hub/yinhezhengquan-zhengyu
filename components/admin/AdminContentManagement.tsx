@@ -41,8 +41,8 @@ const AdminContentManagement: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* 标题 */}
       <div>
-        <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>内容管理</h3>
-        <p style={{ fontSize: '12px', color: '#94a3b8' }}>管理研报、投教、日历、横幅、新股等内容</p>
+        <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '4px' }}>内容管理</h3>
+        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>管理研报、投教、日历、横幅、新股等内容</p>
       </div>
 
       {/* 统计概览 */}
@@ -51,10 +51,10 @@ const AdminContentManagement: React.FC = () => {
           <div 
             key={index} 
             style={{
-              background: '#1e293b',
+              background: 'var(--color-surface)',
               borderRadius: '8px',
               padding: '16px',
-              border: '1px solid #334155'
+              border: '1px solid var(--color-border)'
             }}
           >
             <div style={{
@@ -69,19 +69,19 @@ const AdminContentManagement: React.FC = () => {
             }}>
               <span style={{ fontSize: '16px', fontWeight: 'bold', color: stat.color }}>{stat.value}</span>
             </div>
-            <p style={{ fontSize: '11px', color: '#64748b' }}>{stat.label}</p>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{stat.label}</p>
           </div>
         ))}
       </div>
 
       {/* 子菜单标签 */}
       <div style={{
-        background: '#1e293b',
+        background: 'var(--color-surface)',
         borderRadius: '12px',
-        border: '1px solid #334155',
+        border: '1px solid var(--color-border)',
         overflow: 'hidden'
       }}>
-        <div style={{ display: 'flex', borderBottom: '1px solid #334155' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)' }}>
           {subMenus.map((menu) => (
             <button
               key={menu.id}
@@ -116,7 +116,7 @@ const AdminContentManagement: React.FC = () => {
             width: '64px',
             height: '64px',
             borderRadius: '12px',
-            background: '#334155',
+            background: 'var(--color-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -124,10 +124,10 @@ const AdminContentManagement: React.FC = () => {
           }}>
             <span style={{ fontSize: '28px' }}>⚙️</span>
           </div>
-          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '8px' }}>
             请选择子功能
           </h3>
-          <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '16px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
             点击上方标签进入对应的管理页面
           </p>
           <button
@@ -135,7 +135,7 @@ const AdminContentManagement: React.FC = () => {
             style={{
               padding: '10px 20px',
               background: '#ef4444',
-              color: 'white',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '6px',
               fontSize: '12px',
@@ -155,21 +155,21 @@ const AdminContentManagement: React.FC = () => {
             key={menu.id}
             onClick={() => navigate(menu.path)}
             style={{
-              background: '#1e293b',
+              background: 'var(--color-surface)',
               borderRadius: '12px',
               padding: '20px',
-              border: '1px solid #334155',
+              border: '1px solid var(--color-border)',
               cursor: 'pointer',
               transition: 'border-color 0.2s'
             }}
             onMouseEnter={(e) => e.currentTarget.style.borderColor = '#ef4444'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#334155'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
               <span style={{ fontSize: '24px' }}>{menu.icon}</span>
-              <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{menu.label}</h4>
+              <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{menu.label}</h4>
             </div>
-            <p style={{ fontSize: '12px', color: '#64748b' }}>{menu.desc}</p>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{menu.desc}</p>
           </div>
         ))}
       </div>

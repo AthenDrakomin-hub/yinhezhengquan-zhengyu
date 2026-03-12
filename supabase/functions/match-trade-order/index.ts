@@ -182,10 +182,11 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
   const { data: buyPos } = await supabase.from('positions').select('*').eq('user_id', buyOrder.user_id).eq('symbol', buyOrder.stock_code).single()
   
   // 港股T+0：当日买入可当日卖出，不锁定
-  // A股T+1：当日买入次日可卖，锁定到次日
+  // A股T+1：当日买入次日可卖，锁定到次日，available_quantity不增加
   const updateData: any = {
     quantity: (buyPos?.quantity || 0) + matchQty,
-    available_quantity: (buyPos?.available_quantity || 0) + matchQty,
+    // A股T+1：当日买入的股票不可用，港股T+0：当日买入可用
+    available_quantity: (buyPos?.available_quantity || 0) + (isT0Market ? matchQty : 0),
     average_price: buyPos ? (Number(buyPos.average_price) * buyPos.quantity + Number(matchPrice) * matchQty) / ((buyPos.quantity || 0) + matchQty) : matchPrice,
     market_value: ((buyPos?.quantity || 0) + matchQty) * Number(matchPrice)
   }
@@ -203,7 +204,8 @@ async function executeMatch(supabase: any, buyOrder: any, sellOrder: any, matchQ
       symbol: buyOrder.stock_code,
       name: buyOrder.stock_code,
       quantity: matchQty,
-      available_quantity: matchQty,
+      // A股T+1：当日买入的股票不可用，港股T+0：当日买入可用
+      available_quantity: isT0Market ? matchQty : 0,
       average_price: matchPrice,
       market_value: amount
     }
@@ -353,14 +355,16 @@ async function handleSpecialTrade(supabase: any, order: any, tradeType: string) 
  */
 async function handleIPOTrade(supabase: any, order: any) {
   try {
-    // 1. 获取中签率
+    // 1. 获取中签率（兼容中英文规则类型）
     const { data: rule } = await supabase
       .from('trade_rules')
       .select('config')
-      .eq('rule_type', 'IPO')
+      .in('rule_type', ['IPO', '新股申购'])
+      .limit(1)
       .single()
     
     const winRate = rule?.config?.win_rate || 0.005
+    console.log(`IPO 撮合: 中签率=${winRate}, 订单=${order.trade_id}`)
     const isWin = Math.random() < winRate
     
     if (!isWin) {

@@ -175,8 +175,9 @@ export { getRealtimeStock };
  */
 export const getStockQuote = async (symbol: string) => {
   try {
-    // 默认使用 CN 市场，可以根据股票代码规则自动识别
-    const market = symbol.startsWith('00') || symbol.startsWith('60') || symbol.startsWith('30') ? 'CN' : 'HK';
+    // 根据股票代码规则自动识别市场
+    // A股代码6位，港股代码5位
+    const market = symbol.length === 5 ? 'HK' : 'CN';
     const stock = await frontendMarketService.getRealtimeStock(symbol, market);
     return { price: stock.price || 0, symbol };
   } catch (error) {

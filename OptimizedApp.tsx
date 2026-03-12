@@ -25,12 +25,6 @@ const OptimizedAppContent: React.FC = () => {
     <>
       <NetworkStatusBar />
       <Routes>
-        {/* 公共路由 */}
-        <Route path="/*" element={<PublicRoutes />} />
-        
-        {/* 认证路由 */}
-        <Route path="/auth/*" element={<AuthRoutes />} />
-        
         {/* 管理端登录页面 */}
         <Route path="/admin/login" element={<AdminLoginView onLoginSuccess={handleAdminLoginSuccess} />} />
         
@@ -54,8 +48,14 @@ const OptimizedAppContent: React.FC = () => {
           } 
         />
         
+        {/* 认证路由 */}
+        <Route path="/auth/*" element={<AuthRoutes />} />
+        
         {/* 无权限页面 */}
         <Route path="/unauthorized" element={<UnauthorizedView />} />
+        
+        {/* 公共路由 - 放最后！ */}
+        <Route path="/*" element={<PublicRoutes />} />
       </Routes>
     </>
   );

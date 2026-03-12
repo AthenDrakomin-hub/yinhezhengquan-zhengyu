@@ -347,7 +347,7 @@ const AdminDataExport: React.FC = () => {
               onClick={() => { setExportType(type); setResults([]); }}
               className={`py-3 text-xs font-black uppercase tracking-widest rounded-lg transition-colors ${
                 exportType === type
-                  ? 'bg-industrial-800 text-white'
+                  ? 'bg-industrial-800 text-[var(--color-text-primary)]'
                   : 'bg-industrial-100 text-industrial-600 hover:bg-industrial-200'
               }`}
             >
@@ -598,7 +598,7 @@ const AdminDataExport: React.FC = () => {
                       onClick={() => setExportFormat(format)}
                       className={`py-3 text-xs font-black uppercase rounded-lg transition-colors ${
                         exportFormat === format
-                          ? 'bg-industrial-800 text-white'
+                          ? 'bg-industrial-800 text-[var(--color-text-primary)]'
                           : 'bg-industrial-100 text-industrial-600 hover:bg-industrial-200'
                       }`}
                     >

@@ -191,7 +191,7 @@ const AdminTicketDetail: React.FC = () => {
         <p className="text-sm text-industrial-500 mb-4">找不到指定的工单</p>
         <button
           onClick={() => navigate('/admin/tickets')}
-          className="px-4 py-2 bg-industrial-900 text-white rounded-lg text-sm font-bold hover:bg-industrial-800 transition-colors"
+          className="px-4 py-2 bg-industrial-900 text-[var(--color-text-primary)] rounded-lg text-sm font-bold hover:bg-industrial-800 transition-colors"
         >
           返回工单列表
         </button>
@@ -257,7 +257,7 @@ const AdminTicketDetail: React.FC = () => {
                 <button
                   onClick={() => handleUpdateStatus('IN_PROGRESS')}
                   disabled={updatingStatus || ticket.status === 'IN_PROGRESS'}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-bold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-yellow-600 text-[var(--color-text-primary)] rounded-lg text-sm font-bold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {updatingStatus ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -269,7 +269,7 @@ const AdminTicketDetail: React.FC = () => {
                 <button
                   onClick={() => handleUpdateStatus('CLOSED')}
                   disabled={updatingStatus}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-gray-600 text-[var(--color-text-primary)] rounded-lg text-sm font-bold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {updatingStatus ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -284,7 +284,7 @@ const AdminTicketDetail: React.FC = () => {
               <button
                 onClick={() => handleUpdateStatus('IN_PROGRESS')}
                 disabled={updatingStatus}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-[var(--color-text-primary)] rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {updatingStatus ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -323,7 +323,7 @@ const AdminTicketDetail: React.FC = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                         message.senderType === 'admin' 
-                          ? 'bg-accent-red text-white' 
+                          ? 'bg-accent-red text-[var(--color-text-primary)]' 
                           : 'bg-industrial-100 text-industrial-700'
                       }`}>
                         {message.senderType === 'admin' ? '客' : '用'}
@@ -335,7 +335,7 @@ const AdminTicketDetail: React.FC = () => {
                     <div
                       className={`p-3 rounded-lg text-sm ${
                         message.senderType === 'admin'
-                          ? 'bg-accent-red text-white rounded-br-none'
+                          ? 'bg-accent-red text-[var(--color-text-primary)] rounded-br-none'
                           : 'bg-industrial-50 text-industrial-900 rounded-bl-none border border-industrial-200'
                       }`}
                     >
@@ -355,7 +355,7 @@ const AdminTicketDetail: React.FC = () => {
 
           {sending && (
             <div className="flex justify-end">
-              <div className="max-w-[85%] p-3 rounded-lg rounded-br-none bg-accent-red text-white">
+              <div className="max-w-[85%] p-3 rounded-lg rounded-br-none bg-accent-red text-[var(--color-text-primary)]">
                 <div className="flex gap-1">
                   <div className="w-1 h-1 bg-white rounded-full animate-bounce" />
                   <div className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:0.2s]" />
@@ -390,7 +390,7 @@ const AdminTicketDetail: React.FC = () => {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || sending}
-                  className="px-6 py-3 bg-accent-red text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-accent-red text-[var(--color-text-primary)] rounded-lg text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {sending ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

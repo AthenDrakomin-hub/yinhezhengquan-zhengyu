@@ -49,10 +49,7 @@ const AdminNotifications: React.FC = () => {
     try {
       let query = supabase
         .from('user_notifications')
-        .select(`
-          *,
-          profiles!user_notifications_user_id_fkey (username)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(200);
 
@@ -64,9 +61,27 @@ const AdminNotifications: React.FC = () => {
       
       if (error) throw error;
       
+      // 获取所有唯一的 user_id
+      const userIds = [...new Set((data || []).map(item => item.user_id))];
+      
+      // 批量查询用户信息
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', userIds);
+        
+        if (!profileError && profiles) {
+          profiles.forEach(profile => {
+            userMap[profile.id] = profile.username || '未知用户';
+          });
+        }
+      }
+      
       const formattedData = (data || []).map((item: any) => ({
         ...item,
-        username: item.profiles?.username || '未知用户'
+        username: userMap[item.user_id] || '未知用户'
       }));
       
       setNotifications(formattedData);
@@ -193,12 +208,12 @@ const AdminNotifications: React.FC = () => {
 
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
-      'LOW': 'text-slate-400',
-      'NORMAL': 'text-slate-300',
+      'LOW': 'text-[var(--color-text-muted)]',
+      'NORMAL': 'text-[var(--color-text-secondary)]',
       'HIGH': 'text-orange-400',
       'URGENT': 'text-red-400'
     };
-    return colors[priority] || 'text-slate-400';
+    return colors[priority] || 'text-[var(--color-text-muted)]';
   };
 
   const formatTime = (time: string) => {
@@ -218,12 +233,12 @@ const AdminNotifications: React.FC = () => {
       {/* 头部 */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-white">通知管理</h1>
-          <p className="text-sm text-slate-400 mt-1">发送系统通知和管理所有通知记录</p>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">通知管理</h1>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">发送系统通知和管理所有通知记录</p>
         </div>
         <button
           onClick={() => setIsSendModalOpen(true)}
-          className="px-4 py-2 bg-blue-500 text-white text-sm font-bold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-blue-500 text-[var(--color-text-primary)] text-sm font-bold rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
         >
           <ICONS.Plus size={16} />
           发送通知
@@ -232,26 +247,26 @@ const AdminNotifications: React.FC = () => {
 
       {/* 统计 */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">今日发送</p>
-          <p className="text-2xl font-bold text-white">
+        <div className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
+          <p className="text-xs text-[var(--color-text-muted)] mb-1">今日发送</p>
+          <p className="text-2xl font-bold text-[var(--color-text-primary)]">
             {notifications.filter(n => new Date(n.created_at).toDateString() === new Date().toDateString()).length}
           </p>
         </div>
-        <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">未读</p>
+        <div className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
+          <p className="text-xs text-[var(--color-text-muted)] mb-1">未读</p>
           <p className="text-2xl font-bold text-blue-400">
             {notifications.filter(n => !n.is_read).length}
           </p>
         </div>
-        <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">紧急通知</p>
+        <div className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
+          <p className="text-xs text-[var(--color-text-muted)] mb-1">紧急通知</p>
           <p className="text-2xl font-bold text-red-400">
             {notifications.filter(n => n.priority === 'URGENT').length}
           </p>
         </div>
-        <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
-          <p className="text-xs text-slate-400 mb-1">系统通知</p>
+        <div className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
+          <p className="text-xs text-[var(--color-text-muted)] mb-1">系统通知</p>
           <p className="text-2xl font-bold text-green-400">
             {notifications.filter(n => n.notification_type === 'SYSTEM').length}
           </p>
@@ -259,13 +274,13 @@ const AdminNotifications: React.FC = () => {
       </div>
 
       {/* 筛选栏 */}
-      <div className="flex flex-wrap gap-4 items-center p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+      <div className="flex flex-wrap gap-4 items-center p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
         <input
           type="text"
           placeholder="搜索标题、内容或用户..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 min-w-[200px] px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+          className="flex-1 min-w-[200px] px-4 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-blue-500"
         />
         <div className="flex gap-2">
           {['ALL', 'SYSTEM', 'TRADE', 'RISK_WARNING'].map((type) => (
@@ -274,8 +289,8 @@ const AdminNotifications: React.FC = () => {
               onClick={() => { setFilter(type as any); setCurrentPage(1); }}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 filter === type
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-blue-500 text-[var(--color-text-primary)]'
+                  : 'bg-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
               }`}
             >
               {type === 'ALL' ? '全部' : getTypeText(type)}
@@ -290,7 +305,7 @@ const AdminNotifications: React.FC = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
         </div>
       ) : paginatedNotifications.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="text-center py-12 text-[var(--color-text-muted)]">
           <ICONS.Info size={48} className="mx-auto mb-4 opacity-50" />
           <p>暂无通知</p>
         </div>
@@ -303,8 +318,8 @@ const AdminNotifications: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className={`p-4 rounded-xl border transition-all ${
                 notification.is_read
-                  ? 'bg-slate-800/30 border-slate-700/50'
-                  : 'bg-slate-800/50 border-slate-700'
+                  ? 'bg-[var(--color-surface)]/30 border-[var(--color-border)]/50'
+                  : 'bg-[var(--color-surface)] border-[var(--color-border)]'
               }`}
             >
               <div className="flex justify-between items-start">
@@ -320,12 +335,12 @@ const AdminNotifications: React.FC = () => {
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <h3 className="text-white font-bold mb-1">{notification.title}</h3>
-                  <p className="text-sm text-slate-400 line-clamp-2">{notification.content}</p>
+                  <h3 className="text-[var(--color-text-primary)] font-bold mb-1">{notification.title}</h3>
+                  <p className="text-sm text-[var(--color-text-muted)] line-clamp-2">{notification.content}</p>
                 </div>
               </div>
               
-              <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between text-xs text-slate-500">
+              <div className="mt-3 pt-3 border-t border-[var(--color-border)]/50 flex justify-between text-xs text-[var(--color-text-muted)]">
                 <span>接收用户: {notification.username}</span>
                 <span>{formatTime(notification.created_at)}</span>
               </div>
@@ -357,12 +372,12 @@ const AdminNotifications: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-slate-900 rounded-2xl p-6 max-w-md w-full border border-slate-700"
+              className="bg-[var(--color-bg)] rounded-2xl p-6 max-w-md w-full border border-[var(--color-border)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-white">发送系统通知</h2>
-                <button onClick={() => setIsSendModalOpen(false)} className="text-slate-400 hover:text-white">
+                <h2 className="text-lg font-bold text-[var(--color-text-primary)]">发送系统通知</h2>
+                <button onClick={() => setIsSendModalOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                   <ICONS.Plus className="rotate-45" size={20} />
                 </button>
               </div>
@@ -373,8 +388,8 @@ const AdminNotifications: React.FC = () => {
                     onClick={() => setSendForm(prev => ({ ...prev, target: 'all' }))}
                     className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
                       sendForm.target === 'all'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        ? 'bg-blue-500 text-[var(--color-text-primary)]'
+                        : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
                     }`}
                   >
                     全部用户
@@ -383,8 +398,8 @@ const AdminNotifications: React.FC = () => {
                     onClick={() => setSendForm(prev => ({ ...prev, target: 'user' }))}
                     className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
                       sendForm.target === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        ? 'bg-blue-500 text-[var(--color-text-primary)]'
+                        : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
                     }`}
                   >
                     指定用户
@@ -397,7 +412,7 @@ const AdminNotifications: React.FC = () => {
                     placeholder="输入用户ID"
                     value={sendForm.user_id}
                     onChange={(e) => setSendForm(prev => ({ ...prev, user_id: e.target.value }))}
-                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                    className="w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-blue-500"
                   />
                 )}
 
@@ -406,7 +421,7 @@ const AdminNotifications: React.FC = () => {
                   placeholder="通知标题"
                   value={sendForm.title}
                   onChange={(e) => setSendForm(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-blue-500"
                 />
 
                 <textarea
@@ -414,7 +429,7 @@ const AdminNotifications: React.FC = () => {
                   value={sendForm.content}
                   onChange={(e) => setSendForm(prev => ({ ...prev, content: e.target.value }))}
                   rows={4}
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
+                  className="w-full px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-blue-500 resize-none"
                 />
 
                 <div className="flex gap-2">
@@ -424,8 +439,8 @@ const AdminNotifications: React.FC = () => {
                       onClick={() => setSendForm(prev => ({ ...prev, priority: priority as any }))}
                       className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
                         sendForm.priority === priority
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          ? 'bg-blue-500 text-[var(--color-text-primary)]'
+                          : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
                       }`}
                     >
                       {priority === 'LOW' ? '低' : priority === 'NORMAL' ? '普通' : priority === 'HIGH' ? '高' : '紧急'}
@@ -436,7 +451,7 @@ const AdminNotifications: React.FC = () => {
                 <button
                   onClick={handleSendNotification}
                   disabled={sending || !sendForm.title || !sendForm.content}
-                  className="w-full py-3 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-blue-500 text-[var(--color-text-primary)] rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {sending ? (
                     <>

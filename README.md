@@ -13,13 +13,16 @@
 ### 核心功能
 
 - 🔐 用户认证（登录/注册/权限管理）
-- 📊 实时行情数据（新浪财经、东方财富公开 API）
+- 📊 实时行情数据（东方财富、腾讯财经公开 API）
 - 💰 交易下单（股票、大宗商品、IPO 申购）
-- 🎯 涨停板监控（实时监控）
+- 🎯 涨停板监控（QVeris API 实时数据）
 - 📈 市场分析（K线图、技术指标）
 - 📋 IPO 管理（新股申购、中签查询）
 - 🛡️ 风控合规（交易规则、限制管理）
 - 👨‍💼 管理后台（用户管理、数据统计）
+- 💬 智能客服（知识库问答）
+- 🔔 消息通知（实时推送）
+- 📚 投教中心（投资教育内容）
 
 ## 🛠️ 技术栈
 
@@ -62,13 +65,6 @@ VITE_SUPABASE_FUNCTION_URL=https://your-project.supabase.co/functions/v1
 
 # 行情数据配置
 VITE_USE_REAL_MARKET_DATA=true
-
-# Supabase Edge Functions 配置
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# 安全配置
-ADMIN_IP_WHITELIST="103.136.110.139"
 ```
 
 > ⚠️ **Vercel 部署注意**：Vercel 不会读取 `.env` 文件，需要在 Vercel Dashboard → Settings → Environment Variables 中手动配置所有 `VITE_*` 变量。
@@ -107,19 +103,14 @@ npm run preview
 │   └── core/           # 核心组件（Layout、路由等）
 ├── lib/                # 工具库
 │   ├── supabase.ts     # Supabase 客户端
-│   ├── imageConfig.ts  # 图片资源配置（集中管理）
-│   ├── imageUtils.ts   # 图片工具函数
+│   ├── imageConfig.ts  # 图片资源配置
 │   └── constants.tsx   # 常量定义
 ├── routes/             # 路由配置
 ├── contexts/           # React Context
-│   └── ThemeContext.tsx # 主题上下文
 ├── services/           # 业务服务层
 ├── supabase/           # Supabase 配置
 │   ├── functions/      # Edge Functions
 │   └── migrations/     # 数据库迁移
-├── scripts/            # 脚本工具
-├── public/             # 静态资源
-│   └── images/         # 本地图片资源
 └── index.tsx           # 应用入口
 ```
 
@@ -159,17 +150,7 @@ supabase functions deploy
 |--------|------|
 | `SUPABASE_URL` | Supabase 项目 URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服务角色密钥 |
-
-## 🖼️ 图片资源配置
-
-所有图片 URL 已迁移到 `lib/imageConfig.ts` 集中管理：
-
-- **Logo**: `imageConfig.logo.fullUrl`
-- **Banner**: `imageConfig.banners`
-- **服务图标**: `imageConfig.serviceIcons`
-- **培训背景**: `imageConfig.training`
-
-图片资源优先从 Supabase Storage 加载，开发环境回退到 `/images` 本地路径。
+| `QVERIS_API_KEY` | QVeris 行情 API 密钥（涨停数据） |
 
 ## 📊 Edge Functions 列表
 
@@ -177,24 +158,48 @@ supabase functions deploy
 |--------|------|
 | `get-market-data` | 获取实时行情数据 |
 | `sync-ipo` | 同步新股发行数据 |
-| `get-limit-up` | 获取涨停股票数据 |
+| `get-limit-up` | 获取涨停股票数据（QVeris API） |
 | `fetch-stock-f10` | 获取股票基本面数据 |
 | `create-trade-order` | 创建交易订单 |
 | `cancel-trade-order` | 取消交易订单 |
 | `match-trade-order` | 匹配交易订单 |
 | `admin-verify` | 验证管理员权限 |
-| `run-sql` | 执行 SQL 语句 |
+| `exec-sql` | 执行 SQL 语句 |
+
+## 🎯 涨停数据机制
+
+### 数据流
+```
+前端组件 (LimitUpPanel)
+    ↓
+limitUpService.getLimitUpList()
+    ↓
+Supabase Edge Function: get-limit-up
+    ↓
+QVeris API (实时行情)
+    ↓
+涨停判定 → 返回数据
+```
+
+### 涨停判定规则
+| 股票类型 | 代码特征 | 涨停幅度 |
+|---------|---------|---------|
+| 主板 | 60xxxx, 00xxxx | ≥10% |
+| 创业板 | 300xxx, 301xxx | ≥20% |
+| 科创板 | 688xxx, 689xxx | ≥20% |
+| ST股票 | 名称含ST | ≥5% |
+
+### 配置要求
+- 需要在 Supabase Edge Function 环境中配置 `QVERIS_API_KEY`
 
 ## 👥 管理员用户设置
 
 ### 默认用户账号
 
-系统预置了三个测试账号，请在 Supabase SQL Editor 中执行 `scripts/setup_admin_users.sql` 脚本来设置权限。
-
 | 角色 | 邮箱 | 初始密码 | 初始资金 |
 |------|------|----------|----------|
-| 超级管理员 | admin@yinhe.com | Admin123456 | 1,000,000 元 |
-| 管理员 | manager@yinhe.com | Manager123456 | 500,000 元 |
+| 超级管理员 | superadmin@yinhe.com | Admin123456 | 50,000,000 元 |
+| 管理员 | admin@yinhe.com | Admin123456 | 1,000,000 元 |
 | 普通用户 | user@yinhe.com | User123456 | 100,000 元 |
 
 ### 权限说明
@@ -216,20 +221,45 @@ supabase functions deploy
 
 ## 🎨 主题系统
 
-系统支持主题切换功能，当前默认为浅色主题：
+系统使用 CSS 变量实现主题系统，支持浅色/深色主题切换：
 
-- **品牌蓝**: `#2563EB`
-- **中国红**: `#DC2626`
-- **绿色**: `#059669`
+### 核心变量
+- `--color-bg`: 背景色
+- `--color-surface`: 表面色
+- `--color-text-primary`: 主文本色
+- `--color-text-secondary`: 次文本色
+- `--color-text-muted`: 弱化文本色
+- `--color-border`: 边框色
+- `--color-primary`: 主色调
 
-所有颜色通过 CSS 变量控制，位于 `index.css` 中定义。
+### 组件样式规范
+所有组件必须使用 CSS 变量而非硬编码颜色：
+```css
+/* ✅ 正确 */
+color: var(--color-text-primary);
+background: var(--color-surface);
+
+/* ❌ 错误 */
+color: white;
+background: slate-800;
+```
 
 ## 🔒 安全说明
 
-- 使用 Row Level Security (RLS) 保护数据库
+- 使用 Row Level Security (RLS) 保护数据库（部分表已禁用以提升性能）
 - Edge Functions 使用 Service Role Key 进行服务端操作
 - 前端仅使用 Anon Key 进行客户端操作
 - 支持 IP 白名单限制
+
+## 📝 已知问题与解决方案
+
+### 1. Profiles 表 RLS 问题
+- **问题**: Supabase schema cache 可能导致 RPC 函数无法被发现
+- **解决**: 直接查询 profiles 表（RLS 已关闭）
+
+### 2. 管理端样式不一致
+- **问题**: 部分管理端组件使用硬编码颜色
+- **解决**: 统一使用 CSS 变量
 
 ## 📝 开发规范
 
@@ -246,30 +276,34 @@ supabase functions deploy
 - `chore`: 构建/工具
 - `style`: 样式调整
 
-## 🐛 常见问题
+## 📋 生产部署检查清单
 
-### 1. Supabase 连接失败
-检查 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY` 是否正确配置。
+### 前端部署（Vercel）
+- [ ] 配置 `VITE_SUPABASE_URL`
+- [ ] 配置 `VITE_SUPABASE_ANON_KEY`
+- [ ] 配置 `VITE_SUPABASE_FUNCTION_URL`
+- [ ] 配置 `VITE_USE_REAL_MARKET_DATA=true`
+- [ ] 执行 `npm run build` 确认无错误
+- [ ] 部署到 Vercel
 
-### 2. Edge Functions 调用失败
-- 确认 Edge Functions 已部署
-- 检查 `VITE_SUPABASE_FUNCTION_URL` 是否正确
-- 查看函数日志排查问题
+### 后端部署（Supabase）
+- [ ] 部署所有 Edge Functions
+- [ ] 配置 `SUPABASE_URL`
+- [ ] 配置 `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] 配置 `QVERIS_API_KEY`（涨停数据）
+- [ ] 执行数据库迁移
+- [ ] 创建管理员账号
 
-### 3. 图片加载失败
-- 检查 `VITE_SUPABASE_URL` 环境变量是否配置
-- 确认 Supabase Storage 中存在对应图片
-- 开发环境会回退到本地 `/images` 路径
-
-### 4. Vercel 部署后环境变量无效
-- 确保 Vercel Dashboard 中已配置所有 `VITE_*` 变量
-- 重新部署以使环境变量生效
+### 功能验证
+- [ ] 用户登录/注册
+- [ ] 管理端登录
+- [ ] 实时行情数据
+- [ ] 交易下单
+- [ ] 涨停数据展示
+- [ ] 智能客服
+- [ ] 消息通知
+- [ ] 投教中心
 
 ## 📄 License
 
-MIT
-
-## 👥 联系方式
-
-- 项目地址：[GitHub](https://github.com/your-repo)
-- 问题反馈：[Issues](https://github.com/your-repo/issues)
+MIT License

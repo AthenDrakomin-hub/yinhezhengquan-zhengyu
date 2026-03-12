@@ -44,19 +44,26 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
       setUserId(session.user.id);
 
-      // 查询用户权限
+      // 直接查询 profiles 表（RLS 已关闭，可以正常访问）
       const { data, error } = await supabase
         .from('profiles')
         .select('is_admin, admin_level')
         .eq('id', session.user.id)
         .maybeSingle();
 
+      const adminData = data as { is_admin: boolean | null; admin_level: string | null } | null;
+
       if (!alive) return;
 
-      console.log('[Admin] profile:', { data, error });
+      console.log('[Admin] profile:', { adminData, error });
 
-      if (!error && checkIsAdmin(data)) {
-        setAdminLevel(data?.admin_level || 'admin');
+      if (!error && checkIsAdmin(adminData)) {
+        const level = adminData?.admin_level;
+        if (level === 'super_admin' || level === 'admin') {
+          setAdminLevel(level);
+        } else {
+          setAdminLevel('admin');
+        }
       } else {
         setAdminLevel(null);
       }

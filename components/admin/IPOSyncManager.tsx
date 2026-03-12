@@ -189,7 +189,7 @@ export const IPOSyncManager = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-            <Calendar className="w-6 h-6 text-white" />
+            <Calendar className="w-6 h-6 text-[var(--color-text-primary)]" />
           </div>
           <div>
             <h2 className="text-xl font-black text-gray-900">IPO 数据同步管理</h2>
@@ -251,7 +251,7 @@ export const IPOSyncManager = () => {
         <button
           onClick={handleManualSync}
           disabled={isSyncing}
-          className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
+          className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-[var(--color-text-primary)] font-bold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
         >
           {isSyncing ? (
             <>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+// Profile 类型定义
 interface Profile {
   id: string;
   email: string;
@@ -27,7 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 获取用户资料
+  // 获取用户资料（RLS 已关闭，可以直接查询）
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -37,7 +38,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .maybeSingle();
       
       if (!error && data) {
-        setProfile(data);
+        const profileData: Profile = {
+          id: data.id,
+          email: data.email || '',
+          username: data.username || undefined,
+          admin_level: data.admin_level || undefined,
+          status: data.status || undefined,
+        };
+        setProfile(profileData);
       }
     } catch (err) {
       console.error('获取用户资料失败:', err);

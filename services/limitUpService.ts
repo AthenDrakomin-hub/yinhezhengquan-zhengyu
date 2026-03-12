@@ -1,11 +1,9 @@
 /**
  * 涨停板数据服务
- * 通过 Supabase Edge Function 或 yinhedataService 获取实时行情数据
- * 优先从数据库获取，失败时使用模拟数据
+ * 通过 Supabase Edge Function (QVeris API) 获取实时涨停数据
  */
 
 import { supabase } from '../lib/supabase';
-import { yinhedataService } from './yinhedataService';
 
 export interface LimitUpData {
   symbol: string;
@@ -60,7 +58,7 @@ function getDefaultStockList(): string[] {
 }
 
 /**
- * 获取单只股票的涨停板数据（通过 Supabase Edge Function）
+ * 获取单只股票的涨停板数据
  */
 export async function getLimitUpData(symbol: string): Promise<LimitUpData> {
   try {
@@ -78,59 +76,8 @@ export async function getLimitUpData(symbol: string): Promise<LimitUpData> {
 }
 
 /**
- * 生成模拟涨停数据（当外部API不可用时使用）
- */
-function generateMockLimitUpData(symbols: string[]): LimitUpData[] {
-  const stockNames: Record<string, string> = {
-    '600519': '贵州茅台',
-    '000001': '平安银行',
-    '600000': '浦发银行',
-    '000002': '万科A',
-    '600036': '招商银行',
-    '601318': '中国平安',
-    '000333': '美的集团',
-    '600276': '恒瑞医药',
-    '002594': '比亚迪',
-    '600887': '伊利股份',
-    '601888': '中国中免',
-    '002415': '海康威视',
-    '600309': '万华化学',
-    '601012': '隆基绿能',
-    '300750': '宁德时代',
-  };
-
-  return symbols.map((symbol, index) => {
-    const stockType = symbol.startsWith('3') ? 'GEM' : symbol.startsWith('688') ? 'STAR' : 'NORMAL';
-    const preClose = 10 + Math.random() * 100;
-    const limitPercent = stockType === 'GEM' || stockType === 'STAR' ? 0.20 : 0.10;
-    const isLimitUp = index < 3; // 前3只模拟涨停
-    const changePercent = isLimitUp ? limitPercent * 100 : (Math.random() - 0.5) * 20;
-    const currentPrice = preClose * (1 + changePercent / 100);
-    
-    return {
-      symbol,
-      name: stockNames[symbol] || `股票${symbol}`,
-      market: symbol.startsWith('6') ? 'SH' : 'SZ',
-      stockType,
-      currentPrice: Number(currentPrice.toFixed(2)),
-      preClose: Number(preClose.toFixed(2)),
-      limitUpPrice: Number((preClose * (1 + limitPercent)).toFixed(2)),
-      limitDownPrice: Number((preClose * (1 - limitPercent)).toFixed(2)),
-      change: Number((currentPrice - preClose).toFixed(2)),
-      changePercent: Number(changePercent.toFixed(2)),
-      volume: Math.floor(Math.random() * 100000000),
-      turnover: Math.floor(Math.random() * 1000000000),
-      buyOneVolume: Math.floor(Math.random() * 100000),
-      buyOnePrice: Number(currentPrice.toFixed(2)),
-      isLimitUp,
-      timestamp: new Date().toISOString(),
-    };
-  });
-}
-
-/**
  * 获取所有涨停股票列表
- * 优先级：数据库 -> yinhedataService (Edge Function) -> 模拟数据
+ * 通过 Supabase Edge Function 调用 QVeris API 获取实时数据
  *
  * @param symbols - 可选，指定要查询的股票列表。如果不提供，使用默认列表
  * @returns 涨停股票列表
@@ -140,72 +87,27 @@ export async function getLimitUpList(symbols?: string[]): Promise<LimitUpData[]>
   console.log(`🔍 扫描 ${stockList.length} 只股票...`);
 
   try {
-    // 1. 首先尝试从数据库获取
-    const { data: dbData, error: dbError } = await supabase
-      .from('limit_up_stocks')
-      .select('*')
-      .eq('status', 'ACTIVE')
-      .order('update_time', { ascending: false })
-      .limit(50);
+    // 调用 Edge Function 获取涨停数据
+    const { data, error } = await supabase.functions.invoke('get-limit-up', {
+      body: { symbols: stockList }
+    });
 
-    if (!dbError && dbData && dbData.length > 0) {
-      console.log(`✅ 从数据库获取 ${dbData.length} 条数据`);
-      return dbData.map(item => ({
-        symbol: item.symbol,
-        name: item.name,
-        market: item.market,
-        stockType: item.stock_type,
-        currentPrice: item.current_price,
-        preClose: item.pre_close,
-        limitUpPrice: item.limit_up_price,
-        limitDownPrice: item.limit_down_price,
-        change: item.change,
-        changePercent: item.change_percent,
-        volume: item.volume,
-        turnover: item.turnover,
-        buyOneVolume: item.buy_one_volume,
-        buyOnePrice: item.buy_one_price,
-        isLimitUp: item.is_limit_up,
-        timestamp: item.update_time,
-      }));
+    if (error) {
+      console.error('Edge Function 调用失败:', error);
+      throw error;
     }
 
-    // 2. 尝试调用 yinhedataService (Edge Function)
-    try {
-      const yinheData = await yinhedataService.getLimitUpStocks();
-      if (yinheData && yinheData.length > 0) {
-        console.log(`✅ 从 yinhedataService 获取 ${yinheData.length} 条数据`);
-        return yinheData.map((item: any) => ({
-          symbol: item.symbol,
-          name: item.name,
-          market: item.market,
-          stockType: item.stockType,
-          currentPrice: item.currentPrice,
-          preClose: item.preClose,
-          limitUpPrice: item.limitUpPrice,
-          limitDownPrice: item.limitDownPrice,
-          change: item.change,
-          changePercent: item.changePercent,
-          volume: item.volume,
-          turnover: item.turnover,
-          buyOneVolume: 0,
-          buyOnePrice: item.currentPrice,
-          isLimitUp: item.isLimitUp,
-          timestamp: item.timestamp,
-        }));
-      }
-    } catch (yinheError) {
-      console.log('yinhedataService 不可用，使用模拟数据');
+    if (data && data.success && data.data) {
+      console.log(`✅ 从 Edge Function 获取 ${data.data.length} 条涨停数据`);
+      return data.data;
     }
 
-    // 3. 使用模拟数据
-    console.log('⚠️ 外部数据源不可用，使用模拟数据');
-    return generateMockLimitUpData(stockList);
+    console.log('⚠️ 未获取到涨停数据');
+    return [];
     
   } catch (error) {
     console.error('获取涨停板列表失败:', error);
-    // 返回模拟数据
-    return generateMockLimitUpData(stockList);
+    return [];
   }
 }
 

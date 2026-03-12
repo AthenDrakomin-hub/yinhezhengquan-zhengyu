@@ -405,7 +405,7 @@ const TradeRulesManagement: React.FC = () => {
                   type="number"
                   defaultValue={rule.auto_approve_threshold?.max_amount || ''}
                   id="max_amount"
-                  className="w-full bg-gray-800 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-gray-800 rounded-lg px-4 py-2 text-[var(--color-text-primary)]"
                   placeholder="输入金额阈值"
                 />
               </div>
@@ -416,7 +416,7 @@ const TradeRulesManagement: React.FC = () => {
                   type="number"
                   defaultValue={rule.auto_approve_threshold?.max_quantity || ''}
                   id="max_quantity"
-                  className="w-full bg-gray-800 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-gray-800 rounded-lg px-4 py-2 text-[var(--color-text-primary)]"
                   placeholder="输入数量阈值"
                 />
               </div>
@@ -426,7 +426,7 @@ const TradeRulesManagement: React.FC = () => {
                 <select
                   defaultValue={rule.reviewer_level_required}
                   id="reviewer_level"
-                  className="w-full bg-gray-800 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-gray-800 rounded-lg px-4 py-2 text-[var(--color-text-primary)]"
                 >
                   <option value="admin">普通管理员</option>
                   <option value="super_admin">超级管理员</option>
@@ -449,7 +449,7 @@ const TradeRulesManagement: React.FC = () => {
                     reviewer_level_required: reviewerLevel
                   });
                 }}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-[var(--color-text-primary)] py-2 rounded-lg font-medium"
               >
                 保存
               </button>
@@ -458,7 +458,7 @@ const TradeRulesManagement: React.FC = () => {
                   setShowModal(false);
                   setEditingItem(null);
                 }}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg font-medium"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-[var(--color-text-primary)] py-2 rounded-lg font-medium"
               >
                 取消
               </button>
@@ -529,7 +529,7 @@ const TradeRulesManagement: React.FC = () => {
                     bypass_price_limit: bypassLimit
                   });
                 }}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-[var(--color-text-primary)] py-2 rounded-lg font-medium"
               >
                 保存
               </button>
@@ -538,7 +538,7 @@ const TradeRulesManagement: React.FC = () => {
                   setShowModal(false);
                   setEditingItem(null);
                 }}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg font-medium"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-[var(--color-text-primary)] py-2 rounded-lg font-medium"
               >
                 取消
               </button>
@@ -582,8 +582,8 @@ const TradeRulesManagement: React.FC = () => {
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? 'bg-gray-800 text-white border-b-2 border-blue-500'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                ? 'bg-gray-800 text-[var(--color-text-primary)] border-b-2 border-blue-500'
+                : 'text-gray-400 hover:text-[var(--color-text-primary)] hover:bg-gray-800/50'
             }`}
           >
             {tab.label}

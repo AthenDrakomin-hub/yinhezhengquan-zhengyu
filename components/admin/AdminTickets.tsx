@@ -14,7 +14,7 @@ const TICKET_TYPES = [
   { id: 'WITHDRAW', label: '资金问题', color: '#22c55e' },
   { id: 'TECHNICAL', label: '技术问题', color: '#f97316' },
   { id: 'COMPLAINT', label: '投诉建议', color: '#a855f7' },
-  { id: 'OTHER', label: '其他问题', color: '#64748b' }
+  { id: 'OTHER', label: '其他问题', color: 'var(--color-text-muted)' }
 ];
 
 interface TicketWithUser {
@@ -220,15 +220,15 @@ const AdminTickets: React.FC = () => {
     switch (status) {
       case 'OPEN': return { text: '待处理', color: '#3b82f6', bg: '#3b82f620' };
       case 'IN_PROGRESS': return { text: '处理中', color: '#eab308', bg: '#eab30820' };
-      case 'CLOSED': return { text: '已关闭', color: '#64748b', bg: '#64748b20' };
-      default: return { text: status, color: '#64748b', bg: '#64748b20' };
+      case 'CLOSED': return { text: '已关闭', color: 'var(--color-text-muted)', bg: '#64748b20' };
+      default: return { text: status, color: 'var(--color-text-muted)', bg: '#64748b20' };
     }
   };
 
   // 获取工单类型信息
   const getTypeInfo = (type?: string) => {
     const found = TICKET_TYPES.find(t => t.id === type);
-    return found || { label: '未分类', color: '#64748b' };
+    return found || { label: '未分类', color: 'var(--color-text-muted)' };
   };
 
   return (
@@ -236,22 +236,22 @@ const AdminTickets: React.FC = () => {
       {/* 标题和统计 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>工单管理</h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8' }}>管理用户提交的客服工单和对话</p>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '4px' }}>工单管理</h3>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>管理用户提交的客服工单和对话</p>
         </div>
         <div style={{ display: 'flex', gap: '24px' }}>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>总工单数</p>
-            <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>{tickets.length}</p>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>总工单数</p>
+            <p style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{tickets.length}</p>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>排队中</p>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>排队中</p>
             <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#f97316' }}>
               {tickets.filter(t => t.queueStatus === 'WAITING').length}
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>待处理</p>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>待处理</p>
             <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#ef4444' }}>
               {tickets.filter(t => t.status === 'OPEN' && !t.queueStatus).length}
             </p>
@@ -261,15 +261,15 @@ const AdminTickets: React.FC = () => {
 
       {/* 搜索和筛选 */}
       <div style={{
-        background: '#1e293b',
+        background: 'var(--color-surface)',
         borderRadius: '12px',
         padding: '16px',
-        border: '1px solid #334155'
+        border: '1px solid var(--color-border)'
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
           {/* 搜索框 */}
           <div style={{ gridColumn: 'span 2', position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>🔍</span>
+            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}>🔍</span>
             <input
               type="text"
               placeholder="搜索工单ID/主题/用户..."
@@ -278,10 +278,10 @@ const AdminTickets: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '10px 12px 10px 36px',
-                background: '#0f172a',
-                border: '1px solid #334155',
+                background: 'var(--color-surface-active)',
+                border: '1px solid var(--color-border)',
                 borderRadius: '6px',
-                color: 'white',
+                color: 'var(--color-text-primary)',
                 fontSize: '13px',
                 outline: 'none'
               }}
@@ -294,10 +294,10 @@ const AdminTickets: React.FC = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{
               padding: '10px 12px',
-              background: '#0f172a',
-              border: '1px solid #334155',
+              background: 'var(--color-surface-active)',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px',
-              color: 'white',
+              color: 'var(--color-text-primary)',
               fontSize: '13px',
               outline: 'none',
               cursor: 'pointer'
@@ -316,10 +316,10 @@ const AdminTickets: React.FC = () => {
             onChange={(e) => setTypeFilter(e.target.value)}
             style={{
               padding: '10px 12px',
-              background: '#0f172a',
-              border: '1px solid #334155',
+              background: 'var(--color-surface-active)',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px',
-              color: 'white',
+              color: 'var(--color-text-primary)',
               fontSize: '13px',
               outline: 'none',
               cursor: 'pointer'
@@ -332,25 +332,25 @@ const AdminTickets: React.FC = () => {
           </select>
         </div>
         
-        <div style={{ marginTop: '12px', fontSize: '12px', color: '#94a3b8' }}>
-          筛选结果: <span style={{ color: 'white', fontWeight: 'bold' }}>{filteredTickets.length}</span> 条工单
+        <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+          筛选结果: <span style={{ color: 'var(--color-text-primary)', fontWeight: 'bold' }}>{filteredTickets.length}</span> 条工单
         </div>
       </div>
 
       {/* 工单列表 */}
       <div style={{
-        background: '#1e293b',
+        background: 'var(--color-surface)',
         borderRadius: '12px',
-        border: '1px solid #334155',
+        border: '1px solid var(--color-border)',
         overflow: 'hidden'
       }}>
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
-            <p style={{ color: '#64748b', fontSize: '13px' }}>加载中...</p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>加载中...</p>
           </div>
         ) : paginatedTickets.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
-            <p style={{ color: '#64748b', fontSize: '13px' }}>暂无工单</p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>暂无工单</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -364,11 +364,11 @@ const AdminTickets: React.FC = () => {
                   onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
                   style={{
                     padding: '16px 20px',
-                    borderBottom: '1px solid #334155',
+                    borderBottom: '1px solid var(--color-border)',
                     cursor: 'pointer',
                     transition: 'background 0.2s'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#0f172a'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-surface-active)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -401,22 +401,22 @@ const AdminTickets: React.FC = () => {
                             padding: '2px 6px',
                             borderRadius: '999px',
                             background: '#ef4444',
-                            color: 'white'
+                            color: 'var(--color-text-primary)'
                           }}>
                             {ticket.unreadCountUser}条新消息
                           </span>
                         )}
                       </div>
-                      <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '4px' }}>
                         {ticket.subject || '无主题'}
                       </h4>
-                      <p style={{ fontSize: '12px', color: '#94a3b8' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
                         {ticket.guestName ? `访客: ${ticket.guestName}` : ticket.username} · {ticket.email || ticket.guestPhone || ''}
                       </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>{formatTime(ticket.lastMessageAt)}</p>
-                      <p style={{ fontSize: '10px', color: '#64748b' }}>{ticket.messageCount}条消息</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>{formatTime(ticket.lastMessageAt)}</p>
+                      <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{ticket.messageCount}条消息</p>
                       {ticket.assigned_admin_name && (
                         <p style={{ fontSize: '10px', color: '#22c55e', marginTop: '4px' }}>
                           负责人: {ticket.assigned_admin_name}
@@ -433,7 +433,7 @@ const AdminTickets: React.FC = () => {
                         style={{
                           padding: '6px 12px',
                           background: '#22c55e',
-                          color: 'white',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '4px',
                           fontSize: '11px',
@@ -454,7 +454,7 @@ const AdminTickets: React.FC = () => {
                       style={{
                         padding: '6px 12px',
                         background: '#3b82f6',
-                        color: 'white',
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '4px',
                         fontSize: '11px',
@@ -471,8 +471,8 @@ const AdminTickets: React.FC = () => {
                       }}
                       style={{
                         padding: '6px 12px',
-                        background: '#334155',
-                        color: 'white',
+                        background: 'var(--color-border)',
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '4px',
                         fontSize: '11px',
@@ -491,7 +491,7 @@ const AdminTickets: React.FC = () => {
 
         {/* 分页 */}
         {filteredTickets.length > ITEMS_PER_PAGE && (
-          <div style={{ padding: '16px', borderTop: '1px solid #334155' }}>
+          <div style={{ padding: '16px', borderTop: '1px solid var(--color-border)' }}>
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
@@ -517,25 +517,25 @@ const AdminTickets: React.FC = () => {
           padding: '16px'
         }}>
           <div style={{
-            background: '#1e293b',
+            background: 'var(--color-surface)',
             borderRadius: '12px',
-            border: '1px solid #334155',
+            border: '1px solid var(--color-border)',
             width: '100%',
             maxWidth: '400px'
           }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>分配工单</h3>
-              <button onClick={() => setAssignModalOpen(false)} style={{ color: '#64748b', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>分配工单</h3>
+              <button onClick={() => setAssignModalOpen(false)} style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
             <div style={{ padding: '20px' }}>
-              <div style={{ background: '#0f172a', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>工单主题</p>
-                <p style={{ fontSize: '13px', fontWeight: 'bold', color: 'white' }}>{selectedTicket.subject || '无主题'}</p>
+              <div style={{ background: 'var(--color-surface-active)', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>工单主题</p>
+                <p style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{selectedTicket.subject || '无主题'}</p>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '8px' }}>
                   分配给管理员
                 </label>
                 <select
@@ -544,10 +544,10 @@ const AdminTickets: React.FC = () => {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#0f172a',
-                    border: '1px solid #334155',
+                    background: 'var(--color-surface-active)',
+                    border: '1px solid var(--color-border)',
                     borderRadius: '6px',
-                    color: 'white',
+                    color: 'var(--color-text-primary)',
                     fontSize: '13px',
                     outline: 'none'
                   }}
@@ -567,8 +567,8 @@ const AdminTickets: React.FC = () => {
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: '#334155',
-                    color: 'white',
+                    background: 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '13px',
@@ -584,8 +584,8 @@ const AdminTickets: React.FC = () => {
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: assignToAdminId ? '#3b82f6' : '#334155',
-                    color: 'white',
+                    background: assignToAdminId ? '#3b82f6' : 'var(--color-border)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '13px',

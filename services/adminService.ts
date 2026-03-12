@@ -64,7 +64,7 @@ export const adminService = {
 
       let query = supabase
         .from('admin_operation_logs')
-        .select('*, admin:profiles!admin_id(username)', { count: 'exact' })
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (filters?.adminId) query = query.eq('admin_id', filters.adminId);
@@ -239,7 +239,7 @@ export const adminService = {
     try {
       let query = supabase
         .from('trades')
-        .select('*, user:profiles!user_id(username)')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 

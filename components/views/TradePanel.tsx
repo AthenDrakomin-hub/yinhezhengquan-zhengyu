@@ -59,7 +59,7 @@ type TradeModeKey = typeof TRADE_MODES[number]['key'];
 // ===================== 组件Props =====================
 interface TradePanelProps {
   account: UserAccount | null;
-  onExecute: (type: TradeType, symbol: string, name: string, price: number, quantity: number, logoUrl?: string) => Promise<boolean>;
+  onExecute: (type: TradeType, symbol: string, name: string, price: number, quantity: number, logoUrl?: string, marketType?: string) => Promise<boolean>;
   initialStock?: Stock | null;
 }
 
@@ -94,6 +94,10 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
       sparkline: []
     }
   );
+  
+  // --- 五档盘口状态（真实数据）---
+  const [orderBookData, setOrderBookData] = useState<{ asks: { price: number; volume: number }[]; bids: { price: number; volume: number }[] } | null>(null);
+  
   const [tradeSide, setTradeSide] = useState<'BUY' | 'SELL'>(() => {
     if (sideFromUrl === 'SELL') return 'SELL';
     return 'BUY';
@@ -125,6 +129,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     normalLoaded: false,
     ipoLoaded: false,
     limitUpLoaded: false,
+    urlSymbolLoaded: false, // 追踪URL股票是否已加载
   });
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -164,8 +169,46 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     safeAccount.conditionalOrders.filter(o => o.status === 'ACTIVE' || o.status === 'RUNNING'),
   [safeAccount.conditionalOrders]);
 
-  // 盘口数据（缓存，仅股票切换时更新，杜绝闪烁）
+  // ===================== 获取五档盘口数据 =====================
+  useEffect(() => {
+    const fetchOrderBook = async () => {
+      try {
+        const { frontendMarketService } = await import('../../services/frontendMarketService');
+        const market = selectedStock.symbol.length === 5 ? 'HK' : 'CN';
+        const data = await frontendMarketService.getOrderBook(selectedStock.symbol, market);
+        if (data) {
+          setOrderBookData(data);
+        }
+      } catch (error) {
+        console.warn('获取五档数据失败:', error);
+      }
+    };
+    
+    fetchOrderBook();
+    
+    // 每5秒刷新一次五档数据
+    const interval = setInterval(fetchOrderBook, 5000);
+    return () => clearInterval(interval);
+  }, [selectedStock.symbol]);
+
+  // 盘口数据（优先真实数据，无数据时使用模拟）
   const orderBook = useMemo(() => {
+    if (orderBookData) {
+      return {
+        asks: orderBookData.asks.map((item, index) => ({
+          level: 5 - index,
+          price: item.price,
+          volume: item.volume,
+        })).slice(0, 5),
+        bids: orderBookData.bids.map((item, index) => ({
+          level: index + 1,
+          price: item.price,
+          volume: item.volume,
+        })).slice(0, 5),
+      };
+    }
+    
+    // 无真实数据时使用模拟数据
     const basePrice = selectedStock.price;
     return {
       asks: Array.from({ length: 5 }, (_, i) => {
@@ -177,7 +220,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
         return { level, price: basePrice - level * 0.05, volume: Math.floor(Math.random() * 1000) + 100 };
       }),
     };
-  }, [selectedStock.price]);
+  }, [orderBookData, selectedStock.price]);
 
   // 过滤股票列表
   const filteredStockList = useMemo(() => {
@@ -241,12 +284,21 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     if (initRef.current.limitUpLoaded) return;
     try {
       setLimitUpLoading(true);
-      const { getMarketList } = await import('../../services/marketService');
-      const marketData = await getMarketList('CN');
-      // 处理返回结果（可能是数组或分页对象）
-      const stocks = Array.isArray(marketData) ? marketData : (marketData as any).stocks || [];
-      // 过滤涨停个股（涨跌幅≥9.8%）
-      const limitUpStocks = stocks.filter((stock: any) => stock.changePercent >= 9.8).slice(0, 20);
+      // 直接使用 limitUpService 获取涨停数据
+      const { getLimitUpList } = await import('../../services/limitUpService');
+      const limitUpData = await getLimitUpList();
+      
+      // 转换数据格式为 Stock 类型
+      const limitUpStocks = limitUpData.map((item: any) => ({
+        symbol: item.symbol,
+        name: item.name,
+        price: item.currentPrice || item.price,
+        change: item.change || 0,
+        changePercent: item.changePercent || item.change_percent || 0,
+        market: item.market === 'SH' ? 'CN' : item.market === 'SZ' ? 'CN' : item.market,
+        sparkline: []
+      })).filter((stock: any) => stock.changePercent >= 9.5); // 涨停股：涨幅>=9.5%（主板10%，创业板/科创板20%）
+      
       setLimitUpList(limitUpStocks);
       initRef.current.limitUpLoaded = true;
     } catch (err) {
@@ -346,6 +398,9 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
       return false;
     }
     
+    // 根据当前模式确定市场类型
+    const marketType = currentMode === '港股' ? 'HK_SHARE' : 'A_SHARE';
+    
     setIsSubmitting(true);
     try {
       const { validateTradeRisk } = await import('../../services/marketService');
@@ -358,7 +413,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
         }
       }
       
-      const success = await onExecute(tradeType, symbol, name, price, quantity, logoUrl);
+      const success = await onExecute(tradeType, symbol, name, price, quantity, logoUrl, marketType);
       if (success) {
         setQuantity('');
         setBlockQuantity('');
@@ -372,7 +427,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     } finally {
       setIsSubmitting(false);
     }
-  }, [onExecute, safeAccount.balance]);
+  }, [onExecute, safeAccount.balance, currentMode]);
 
   // ===================== 生命周期控制（无循环）=====================
   // 模式切换时加载对应数据
@@ -407,7 +462,7 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     }
   }, [selectedStock, priceFromUrl]);
 
-  // 当股票列表加载完成后，根据URL参数选择股票
+  // 当股票列表加载完成后，根据URL参数选择股票（作为备选方案）
   useEffect(() => {
     if (symbolFromUrl && stockList.length > 0) {
       const stockFromUrl = stockList.find(s => s.symbol === symbolFromUrl);
@@ -423,11 +478,46 @@ const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, 
     }
   }, [symbolFromUrl, stockList, priceFromUrl]);
 
+  // 【核心修复】URL参数中有股票代码时，直接获取该股票数据
+  useEffect(() => {
+    if (!symbolFromUrl) return;
+    
+    // 使用ref追踪是否已加载，避免重复加载和依赖警告
+    if (initRef.current.urlSymbolLoaded) return;
+    
+    const fetchStockFromUrl = async () => {
+      try {
+        setLoading(true);
+        const { getRealtimeStock } = await import('../../services/marketService');
+        // 根据股票代码判断市场：A股6位，港股5位
+        const market = symbolFromUrl.length === 5 ? 'HK' : 'CN';
+        const stock = await getRealtimeStock(symbolFromUrl, market);
+        
+        if (stock) {
+          setSelectedStock(stock);
+          // 如果URL中有价格，使用URL价格；否则使用股票当前价格
+          if (priceFromUrl) {
+            setPrice(priceFromUrl);
+          } else {
+            setPrice(stock.price.toString());
+          }
+          initRef.current.urlSymbolLoaded = true;
+        }
+      } catch (error) {
+        console.error('从URL参数加载股票失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStockFromUrl();
+  }, [symbolFromUrl, priceFromUrl]); // 只依赖 symbolFromUrl 和 priceFromUrl
+
   // 组件挂载仅执行一次初始化
   useEffect(() => {
     loadMarketList('CN');
     return () => {
-      initRef.current = { normalLoaded: false, ipoLoaded: false, limitUpLoaded: false };
+      initRef.current = { normalLoaded: false, ipoLoaded: false, limitUpLoaded: false, urlSymbolLoaded: false };
     };
   }, [loadMarketList]);
 

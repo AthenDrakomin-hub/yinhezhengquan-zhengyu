@@ -29,12 +29,7 @@ export const getCachedMarketOverview = withCache(
  * 在应用启动时预加载常用数据
  */
 export const warmupCache = async () => {
-  const popularSymbols = ['SH000001', 'SZ399001', 'SH600000', 'SZ000001'];
-  
-  await Promise.allSettled(
-    popularSymbols.map(symbol => getCachedStockQuote(symbol))
-  );
-  
+  // 移除硬编码热门股票，改为只预热市场概览
   await getCachedMarketOverview();
 };
 
