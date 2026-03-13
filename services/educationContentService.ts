@@ -187,6 +187,8 @@ export async function updateLearningProgress(
         completed,
         completed_at: completed ? new Date().toISOString() : null,
         last_accessed_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,content_id'
       });
 
     if (error) throw error;

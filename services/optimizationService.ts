@@ -40,6 +40,8 @@ export const cacheService = {
       market: key.split(':')[1] || 'CN',
       data: value,
       expires_at: expiresAt.toISOString(),
+    }, {
+      onConflict: 'cache_key'
     });
   },
 

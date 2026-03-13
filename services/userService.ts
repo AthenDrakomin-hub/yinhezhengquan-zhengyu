@@ -326,6 +326,8 @@ export const userService = {
         config_type: 'trading_preferences',
         config_value: settings,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,config_type'
       });
 
     if (error) {
@@ -353,6 +355,8 @@ export const userService = {
         config_type: 'personal_preferences',
         config_value: settings,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,config_type'
       });
 
     if (error) {
@@ -521,6 +525,8 @@ export const userService = {
         config_type: 'security_settings',
         config_value: settings,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,config_type'
       });
 
     if (error) {
@@ -560,6 +566,8 @@ export const userService = {
           lastPasswordChange: new Date().toISOString().split('T')[0]
         },
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,config_type'
       });
 
     return { success: true };

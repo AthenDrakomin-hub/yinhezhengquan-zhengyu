@@ -232,6 +232,8 @@ export const adminService = {
           market,
           ...info,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'symbol'
         })
         .select()
         .single();

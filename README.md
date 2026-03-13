@@ -24,6 +24,49 @@
 - 🔔 消息通知（实时推送）
 - 📚 投教中心（投资教育内容）
 
+## 📦 共享模块 (_shared)
+
+Edge Functions 使用统一的共享模块，位于 `supabase/functions/_shared/`：
+
+```
+supabase/functions/_shared/
+├── mod.ts           # 统一入口
+├── types.ts         # 类型定义
+├── response.ts      # 响应工具（jsonResponse, errorResponse等）
+├── auth.ts          # 认证模块
+├── admin.ts         # 管理员验证
+├── validation.ts    # 验证工具
+├── cache.ts         # Redis 缓存（含清除函数）
+├── database.ts      # 数据库操作
+└── trading.ts       # 交易核心逻辑
+```
+
+### 共享模块使用情况
+
+| 函数 | 使用共享模块 | 说明 |
+|------|-------------|------|
+| `sync-ipo` | ✅ | jsonResponse, optionsResponse, clearIPOCache |
+| `sync-stock-data` | ✅ | jsonResponse, optionsResponse, clearStockCache, clearMarketCache |
+| `fetch-galaxy-news` | ✅ | jsonResponse, optionsResponse, getCache, setCache, clearNewsCache |
+| `stock-search` | ✅ | jsonResponse, getCache, setCache, CacheTTL |
+| `proxy-market` | ✅ | jsonResponse, optionsResponse, CORS_HEADERS |
+| `fetch-stock-f10` | ✅ | jsonResponse, optionsResponse, getCache, setCache, CacheTTL |
+| `admin-verify` | ✅ | 完整使用共享模块 |
+| `admin-operations` | ✅ | 完整使用共享模块 |
+| 其他交易函数 | ✅ | 完整使用共享模块 |
+
+### 缓存清除函数
+
+共享模块提供以下缓存清除函数，在数据同步后自动调用：
+
+- `clearIPOCache()` - 清除 IPO 相关缓存
+- `clearStockCache(symbol?)` - 清除股票基础信息缓存
+- `clearMarketCache(market?, symbol?)` - 清除行情缓存
+- `clearNewsCache()` - 清除新闻缓存
+- `clearAllCache()` - 清除所有缓存（谨慎使用）
+
+---
+
 ## 🛠️ 技术栈
 
 | 层级 | 技术 | 版本 |
@@ -156,7 +199,7 @@ supabase functions deploy
 
 | 函数名 | 功能 |
 |--------|------|
-| `proxy-market` | 行情数据统一代理（核心函数） |
+| `proxy-market` | 行情数据统一代理（含成交明细，已合并 fetch-trade-ticks） |
 | `health-check` | 服务健康检查与告警 |
 | `clear-cache` | 管理端缓存清除 |
 | `sync-ipo` | 同步新股发行数据（定时任务） |
@@ -164,7 +207,6 @@ supabase functions deploy
 | `get-limit-up` | 获取涨停股票数据（QVeris API） |
 | `fetch-galaxy-news` | 获取银河证券新闻 |
 | `fetch-stock-f10` | 获取股票基本面数据 |
-| `proxy-market` | 统一行情数据代理（报价+成交明细+K线） |
 | `stock-search` | 股票搜索 |
 | `create-a-share-order` | A股交易（买入/卖出） |
 | `create-hk-order` | 港股交易（买入/卖出） |
@@ -223,6 +265,7 @@ supabase functions deploy
 | `news` | 财经快讯 | `pageSize` | `[{id, title, content, time, source}]` |
 | `stock_news` | 个股相关新闻 | `symbols[]`, `pageSize` | `[{id, title, content, url}]` |
 | `stock_notice` | 个股公告 | `symbols[]`, `pageSize` | `[{id, title, date, type, url}]` |
+| `ticks` | 成交明细 | `symbols[]`, `market` | `[{time, price, volume, direction}]` |
 | `limitup` | 涨停板股票 | - | `[{symbol, name, price, changePercent, industry}]` |
 
 ### 调用示例
@@ -469,9 +512,11 @@ SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;
 **定时任务说明：**
 | 任务名称 | 执行频率 | 功能 |
 |---------|---------|------|
-| `sync-stock-data-every-minute` | 每分钟 | 同步股票基础数据 |
-| `sync-ipo-every-minute` | 每分钟 | 同步新股发行数据 |
-| `fetch-galaxy-news-every-minute` | 每分钟 | 同步银河证券新闻 |
+| `sync-stock-data-every-5min` | 每5分钟 | 同步热门股票和用户自选股基础数据 |
+| `sync-ipo-daily` | 每天早8点 | 同步新股发行数据 |
+| `fetch-galaxy-news-every-30min` | 每30分钟 | 刷新新闻缓存 |
+
+> 💡 **频率优化建议**：根据数据更新特性调整频率，避免消耗过多 Edge Function 调用配额。
 
 ## 🎯 涨停数据机制
 

@@ -755,6 +755,8 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
                      data.riskAssessment.riskTolerance === 'moderate' ? 'C3-稳健型' : 'C5-进取型',
           balance: 100000.00,
           total_equity: 100000.00,
+        }, {
+          onConflict: 'id'
         });
       if (profileError) throw profileError;
 
@@ -837,6 +839,8 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
                      formData.riskAssessment.riskTolerance === 'moderate' ? 'C3-稳健型' : 'C5-进取型',
           balance: 100000.00,
           total_equity: 100000.00,
+        }, {
+          onConflict: 'id'
         });
       if (profileError) throw profileError;
 

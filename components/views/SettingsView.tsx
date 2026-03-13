@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ICONS } from '../../lib/constants';
+import { useUserSettings } from '../../contexts/UserSettingsContext';
 import { TradingSettings, PersonalSettings, OrderStrategy } from '../../lib/types';
 
 interface SettingsViewProps {
@@ -24,24 +25,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Local settings state
-  const [tradingSettings, setTradingSettings] = useState<TradingSettings>({
-    fastOrderMode: true,
-    defaultStrategy: OrderStrategy.NORMAL,
-    defaultLeverage: 10,
-    autoStopLoss: false
-  });
-
-  const [personalSettings, setPersonalSettings] = useState<PersonalSettings>({
-    language: 'zh-CN',
-    fontSize: 'standard',
-    hapticFeedback: true,
-    soundEffects: true,
-    theme: isDarkMode ? 'dark' : 'light'
-  });
+  // 使用全局设置Context
+  const { 
+    settings, 
+    isLoading, 
+    updateTradingSettings, 
+    updatePersonalSettings 
+  } = useUserSettings();
 
   const handleUpdateTradingSettings = (updates: Partial<TradingSettings>) => {
-    setTradingSettings(prev => ({ ...prev, ...updates }));
+    updateTradingSettings(updates);
   };
 
   const handleUpdatePersonalSettings = (updates: Partial<PersonalSettings>) => {
@@ -50,7 +43,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
         toggleTheme();
       }
     }
-    setPersonalSettings(prev => ({ ...prev, ...updates }));
+    updatePersonalSettings(updates);
   };
 
   const navItems: SettingsNavItem[] = [
@@ -136,8 +129,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onBack, isDarkMode, toggleT
         <div className="flex-1 overflow-y-auto p-6 no-scrollbar">
           {/* 传递必要的 props 给子路由 */}
           <Outlet context={{
-            tradingSettings,
-            personalSettings,
+            tradingSettings: settings.trading,
+            personalSettings: settings.personal,
             onUpdateTradingSettings: handleUpdateTradingSettings,
             onUpdatePersonalSettings: handleUpdatePersonalSettings,
             isDarkMode,

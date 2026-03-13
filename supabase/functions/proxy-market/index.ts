@@ -1,136 +1,98 @@
+/**
+ * 行情数据代理 Edge Function
+ * 
+ * @module proxy-market
+ * @description 代理东方财富 API，提供统一行情接口，内置 Redis 缓存
+ * 
+ * 支持的 action：
+ * - batch: 批量行情（简洁版）
+ * - realtime: 单只股票实时行情
+ * - quote: 完整个股行情
+ * - orderbook: 五档盘口
+ * - kline: K线数据
+ * - ticks: 成交明细（已合并原 fetch-trade-ticks）
+ * - limitup: 涨停板列表
+ * - news: 财经快讯
+ * - stock_news: 个股新闻
+ * - stock_notice: 个股公告
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Redis 配置（从环境变量获取，不会暴露给前端）
-const REDIS_URL = Deno.env.get('UPSTASH_REDIS_REST_URL')!
-const REDIS_TOKEN = Deno.env.get('UPSTASH_REDIS_REST_TOKEN')!
-
-// 缓存时间（秒）
-const CACHE_TTL = {
-  realtime: 30,      // 实时行情 30秒
-  batch: 30,         // 批量行情 30秒
-  quote: 30,         // 完整行情 30秒
-  limitup: 60,       // 涨停列表 60秒
-  orderbook: 5,      // 五档盘口 5秒
-  kline: 300,        // K线数据 5分钟
-  news: 60,          // 财经快讯 60秒
-  stock_news: 120,   // 个股新闻 2分钟
-  stock_notice: 300, // 个股公告 5分钟
-  hk_quote: 30,      // 港股行情 30秒
-}
-
-// Redis 操作
-async function redisGet(key: string): Promise<string | null> {
-  if (!REDIS_URL || !REDIS_TOKEN) return null
+import {
+  // 响应工具
+  jsonResponse,
+  optionsResponse,
   
-  try {
-    const response = await fetch(`${REDIS_URL}/get/${encodeURIComponent(`galaxy:${key}`)}`, {
-      headers: { 'Authorization': `Bearer ${REDIS_TOKEN}` }
-    })
-    const data = await response.json()
-    return data.result
-  } catch {
-    return null
-  }
-}
-
-async function redisSet(key: string, value: string, ttl: number): Promise<void> {
-  if (!REDIS_URL || !REDIS_TOKEN) return
-  
-  try {
-    await fetch(`${REDIS_URL}/setex/${encodeURIComponent(`galaxy:${key}`)}/${ttl}/${encodeURIComponent(value)}`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${REDIS_TOKEN}` }
-    })
-  } catch {
-    // 静默失败
-  }
-}
+  // 缓存工具
+  getCache,
+  setCache,
+  CacheTTL,
+  MarketCachePrefix,
+} from '../_shared/mod.ts'
 
 // ==================== 东方财富 API ====================
 
-// 批量行情（简洁版）
 async function fetchBatchQuote(secids: string): Promise<any> {
   const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&fields=f2,f3,f4,f12,f14&secids=${secids}`
   const response = await fetch(url, { headers: { 'Referer': 'https://quote.eastmoney.com/' } })
   return response.json()
 }
 
-// 完整个股行情（含开高低收等）
 async function fetchFullQuote(secid: string): Promise<any> {
   const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}&fields=f57,f58,f43,f169,f170,f46,f44,f51,f168,f47,f48,f60,f45,f52,f50,f49,f171,f113&fltt=2`
   const response = await fetch(url, { headers: { 'Referer': 'https://quote.eastmoney.com/' } })
   return response.json()
 }
 
-// 五档盘口
 async function fetchOrderBook(secid: string): Promise<any> {
   const url = `https://push2.eastmoney.com/api/qt/stock/get?fltt=2&fields=f2,f3,f4,f12,f14,f19,f20,f21,f22,f23,f24,f25,f26,f27,f28,f29,f30,f31,f32,f33,f34,f35,f36,f37,f38,f39,f40&secid=${secid}`
   const response = await fetch(url, { headers: { 'Referer': 'https://quote.eastmoney.com/' } })
   return response.json()
 }
 
-// K线数据
 async function fetchKline(secid: string, days: number): Promise<any> {
   const url = `https://push2his.eastmoney.com/api/qt/stock/kline/get?cb=&secid=${secid}&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57,f58&klt=101&fqt=1&end=20500101&lmt=${days}&ut=fa5fd1943c7b386f172d6893dbfba10b`
   const response = await fetch(url, { headers: { 'Referer': 'https://quote.eastmoney.com/' } })
   return response.json()
 }
 
-// 涨停板
 async function fetchLimitUpStocks(): Promise<any> {
   const url = 'https://push2.eastmoney.com/api/qt/clist/get?fid=f3&po=1&pz=100&pn=1&np=1&fltt=2&inft=4&fields=f12,f14,f2,f3,f62,f184,f66,f69,f72,f75,f78,f81,f84,f87,f204,f205,f124,f128,f136&fs=b:MK0021,b:MK0022,b:MK0023,b:MK0024'
   const response = await fetch(url, { headers: { 'Referer': 'https://quote.eastmoney.com/' } })
   return response.json()
 }
 
-// 财经快讯
 async function fetchNews(pageSize: number): Promise<any> {
   const url = `https://np-listapi.eastmoney.com/comm/web/getFastNewsList?client=web&biz=web_724&fastColumn=102&sortEnd=0&pageSize=${pageSize}&req_trace=${Date.now()}`
   const response = await fetch(url, { headers: { 'Referer': 'https://www.eastmoney.com/' } })
   return response.json()
 }
 
-// 个股相关新闻
 async function fetchStockNews(symbol: string, pageSize: number): Promise<any> {
-  // 通过搜索股票名称获取相关新闻
   const url = `https://searchapi.eastmoney.com/bussiness/web/QuotationLabelSearch?keyword=${symbol}&type=news&page_index=1&page_size=${pageSize}&sortEnd=${Date.now()}`
   const response = await fetch(url, { headers: { 'Referer': 'https://so.eastmoney.com/' } })
   return response.json()
 }
 
-// 个股公告
 async function fetchStockNotice(symbol: string, pageSize: number): Promise<any> {
-  // 根据市场确定 ann_type
-  let annType = 'SHA,SA' // A股
+  let annType = 'SHA,SA'
   if (symbol.length === 5) {
-    annType = 'HKSZ,HK' // 港股
+    annType = 'HKSZ,HK'
   }
-  
   const url = `https://np-anotice-stock.eastmoney.com/api/security/ann?cb=&sr=-1&page_size=${pageSize}&page_index=1&ann_type=${annType}&stock_list=${symbol}&f_node=0&s_node=0`
   const response = await fetch(url, { headers: { 'Referer': 'https://data.eastmoney.com/' } })
   return response.json()
 }
 
-// 港股特有数据（如买卖盘）
-async function fetchHKOrderBook(symbol: string): Promise<any> {
-  const url = `https://push2.eastmoney.com/api/qt/stock/get?fltt=2&secid=116.${symbol}&fields=f2,f3,f4,f12,f14,f19,f20,f21,f22,f23,f24,f25,f26,f27,f28,f29,f30,f31,f32,f33,f34,f35,f36,f37,f38`
-  const response = await fetch(url, { headers: { 'Referer': 'https://quote.eastmoney.com/hk/' } })
-  return response.json()
-}
-
-// 成交明细（从分钟K线提取）
 async function fetchTradeTicks(secid: string, limit: number): Promise<any> {
   const url = `https://push2.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57&klt=1&fqt=1&end=20500101&lmt=${limit}&ut=fa5fd1943c7b386f172d6893dbfba10b`
   const response = await fetch(url, { headers: { 'Referer': 'https://quote.eastmoney.com/' } })
   return response.json()
 }
 
-// 辅助函数：构建 secid
+// ==================== 辅助函数 ====================
+
 function buildSecid(symbol: string, market: string): string {
   if (market === 'HK') return `116.${symbol}`
   return symbol.startsWith('6') ? `1.${symbol}` : `0.${symbol}`
@@ -140,11 +102,10 @@ function buildSecid(symbol: string, market: string): string {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return optionsResponse()
   }
 
   try {
-    // 支持 GET 请求的 URL 参数和 POST 请求的 body
     let action: string, symbols: string[], market: string, days: number, pageSize: number
     
     if (req.method === 'GET') {
@@ -165,11 +126,11 @@ serve(async (req) => {
 
     // ==================== 批量行情 ====================
     if (action === 'batch') {
-      const cacheKey = `batch:${market}:${symbols.sort().join(',')}`
+      const cacheKey = `${MarketCachePrefix.BATCH}${market}:${symbols.sort().join(',')}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const secids = symbols.map((s: string) => buildSecid(s, market)).join(',')
@@ -185,20 +146,20 @@ serve(async (req) => {
         sparkline: [],
       })) || []
       
-      const result = JSON.stringify({ success: true, data: stocks })
-      await redisSet(cacheKey, result, CACHE_TTL.batch)
+      const result = { success: true, data: stocks }
+      await setCache(cacheKey, result, CacheTTL.BATCH)
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
-    // ==================== 单只股票实时行情（简洁版）====================
+    // ==================== 单只股票实时行情 ====================
     if (action === 'realtime') {
       const symbol = symbols[0]
-      const cacheKey = `realtime:${market}:${symbol}`
+      const cacheKey = `${MarketCachePrefix.QUOTE}${market}:${symbol}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const secid = buildSecid(symbol, market)
@@ -215,20 +176,20 @@ serve(async (req) => {
         sparkline: [],
       } : null
       
-      const result = JSON.stringify({ success: true, data: stock })
-      if (stock) await redisSet(cacheKey, result, CACHE_TTL.realtime)
+      const result = { success: true, data: stock }
+      if (stock) await setCache(cacheKey, result, CacheTTL.QUOTE)
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== 完整个股行情 ====================
     if (action === 'quote') {
       const symbol = symbols[0]
-      const cacheKey = `quote:${market}:${symbol}`
+      const cacheKey = `${MarketCachePrefix.QUOTE}${market}:${symbol}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const secid = buildSecid(symbol, market)
@@ -251,20 +212,20 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
       } : null
       
-      const result = JSON.stringify({ success: true, data: quote })
-      if (quote) await redisSet(cacheKey, result, CACHE_TTL.quote)
+      const result = { success: true, data: quote }
+      if (quote) await setCache(cacheKey, result, CacheTTL.QUOTE)
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== 五档盘口 ====================
     if (action === 'orderbook') {
       const symbol = symbols[0]
-      const cacheKey = `orderbook:${market}:${symbol}`
+      const cacheKey = `${MarketCachePrefix.ORDER_BOOK}${market}:${symbol}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const secid = buildSecid(symbol, market)
@@ -288,25 +249,25 @@ serve(async (req) => {
         ].filter((a: any) => a.price > 0),
       } : null
       
-      const result = JSON.stringify({ 
+      const result = { 
         success: true, 
         data: orderBook,
         message: orderBook ? undefined : '非交易时间暂无五档数据'
-      })
+      }
       
-      await redisSet(cacheKey, result, orderBook ? CACHE_TTL.orderbook : 60)
+      await setCache(cacheKey, result, orderBook ? CacheTTL.ORDER_BOOK : 60)
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== K线数据 ====================
     if (action === 'kline') {
       const symbol = symbols[0]
-      const cacheKey = `kline:${market}:${symbol}:${days || 30}`
+      const cacheKey = `${MarketCachePrefix.KLINE}${market}:${symbol}:${days || 30}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const secid = buildSecid(symbol, market)
@@ -318,20 +279,20 @@ serve(async (req) => {
         return parseFloat(parts[2]) || 0
       }).filter((p: number) => p > 0)
       
-      const result = JSON.stringify({ success: true, data: prices })
-      if (prices.length > 0) await redisSet(cacheKey, result, CACHE_TTL.kline)
+      const result = { success: true, data: prices }
+      if (prices.length > 0) await setCache(cacheKey, result, CacheTTL.KLINE)
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
-    // ==================== 成交明细 ====================
+    // ==================== 成交明细（已合并原 fetch-trade-ticks）====================
     if (action === 'ticks') {
       const symbol = symbols[0]
-      const cacheKey = `ticks:${market}:${symbol}`
+      const cacheKey = `${MarketCachePrefix.TICKS}${market}:${symbol}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const secid = buildSecid(symbol, market)
@@ -354,19 +315,19 @@ serve(async (req) => {
         return null
       }).filter((t: any) => t && t.price > 0 && t.volume > 0)
       
-      const result = JSON.stringify({ success: true, data: ticks, count: ticks.length })
-      if (ticks.length > 0) await redisSet(cacheKey, result, CACHE_TTL.orderbook) // 5秒缓存
+      const result = { success: true, data: ticks, count: ticks.length }
+      if (ticks.length > 0) await setCache(cacheKey, result, CacheTTL.TICKS)
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== 涨停板 ====================
     if (action === 'limitup') {
       const cacheKey = 'limitup:all'
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const data = await fetchLimitUpStocks()
@@ -381,21 +342,21 @@ serve(async (req) => {
         lastLimitUpTime: item.f78 || '',
         openCount: item.f84 || 0,
         industry: item.f128 || '',
-      }))?.filter((s: any) => s.changePercent >= 9.5) || [] // 过滤实际涨停
+      }))?.filter((s: any) => s.changePercent >= 9.5) || []
       
-      const result = JSON.stringify({ success: true, data: stocks })
-      await redisSet(cacheKey, result, CACHE_TTL.limitup)
+      const result = { success: true, data: stocks }
+      await setCache(cacheKey, result, CacheTTL.NEWS) // 使用60秒缓存
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== 财经快讯 ====================
     if (action === 'news') {
-      const cacheKey = `news:${pageSize}`
+      const cacheKey = `${MarketCachePrefix.NEWS}${pageSize}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const data = await fetchNews(pageSize)
@@ -418,10 +379,10 @@ serve(async (req) => {
         }
       }) || []
       
-      const result = JSON.stringify({ success: true, data: news })
-      await redisSet(cacheKey, result, CACHE_TTL.news)
+      const result = { success: true, data: news }
+      await setCache(cacheKey, result, CacheTTL.NEWS)
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== 个股相关新闻 ====================
@@ -429,9 +390,9 @@ serve(async (req) => {
       const symbol = symbols[0]
       const cacheKey = `stock_news:${symbol}:${pageSize}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const data = await fetchStockNews(symbol, pageSize)
@@ -446,10 +407,10 @@ serve(async (req) => {
         relatedStocks: item.codes || [],
       })) || []
       
-      const result = JSON.stringify({ success: true, data: news })
-      await redisSet(cacheKey, result, CACHE_TTL.stock_news)
+      const result = { success: true, data: news }
+      await setCache(cacheKey, result, CacheTTL.NEWS * 2) // 2分钟
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== 个股公告 ====================
@@ -457,9 +418,9 @@ serve(async (req) => {
       const symbol = symbols[0]
       const cacheKey = `stock_notice:${symbol}:${pageSize}`
       
-      const cached = await redisGet(cacheKey)
+      const cached = await getCache<any>(cacheKey)
       if (cached) {
-        return new Response(cached, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' }, status: 200 })
+        return jsonResponse({ ...cached, _cache: 'HIT' })
       }
       
       const data = await fetchStockNotice(symbol, pageSize)
@@ -473,26 +434,20 @@ serve(async (req) => {
         url: `https://data.eastmoney.com/notices/detail/${item.art_code}.html`,
       })) || []
       
-      const result = JSON.stringify({ success: true, data: notices })
-      await redisSet(cacheKey, result, CACHE_TTL.stock_notice)
+      const result = { success: true, data: notices }
+      await setCache(cacheKey, result, CacheTTL.NEWS * 5) // 5分钟
       
-      return new Response(result, { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' }, status: 200 })
+      return jsonResponse({ ...result, _cache: 'MISS' })
     }
     
     // ==================== 无效 action ====================
-    return new Response(JSON.stringify({ 
+    return jsonResponse({ 
       error: 'Invalid action', 
       validActions: ['batch', 'realtime', 'quote', 'orderbook', 'kline', 'ticks', 'limitup', 'news', 'stock_news', 'stock_notice'] 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    }, 400)
     
   } catch (error: any) {
     console.error('[proxy-market] Error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
+    return jsonResponse({ success: false, error: error.message }, 500)
   }
 })

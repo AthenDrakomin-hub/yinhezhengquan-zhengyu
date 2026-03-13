@@ -81,8 +81,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ account, onOpenAnalysis, onOp
 
   const navItems: ProfileNavItem[] = [
     { id: 'overview', label: '个人概览', path: '/client/profile', type: 'menu' },
-    { id: 'transactions', label: '交易记录', path: '/client/transactions', type: 'menu' },
-    { id: 'funds', label: '资金流水', path: '/client/funds', type: 'menu' },
+    { id: 'transactions', label: '交易记录', path: '/client/profile/transactions', type: 'menu' },
+    { id: 'funds', label: '资金流水', path: '/client/profile/funds', type: 'menu' },
     { id: 'compliance', label: '合规中心', path: '/client/profile/compliance', type: 'menu' },
     { id: 'education', label: '投教中心', path: '/client/profile/education', type: 'menu' },
     { id: 'analysis', label: '资产分析', path: '', type: 'action', icon: ICONS.Chart },

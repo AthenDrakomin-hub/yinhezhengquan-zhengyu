@@ -1,12 +1,14 @@
-import React, { lazy, Suspense, createContext, useContext, useState, useEffect } from 'react';
+import React, { lazy, Suspense, createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, useRouteTheme } from '../contexts/ThemeContext';
+import { useUserSettings, triggerHaptic } from '../contexts/UserSettingsContext';
 import { supabase } from '../lib/supabase';
 import { soundLibrary } from '../lib/sound';
 import { marketApi } from '../services/marketApi';
 import Layout from '../components/core/Layout';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import TradeConfirmModal from '../components/shared/TradeConfirmModal';
 import type { UserAccount, Stock } from '../lib/types';
 import { TradeType } from '../lib/types';
 import { tradeService } from '../services/tradeService';
@@ -304,11 +306,11 @@ const ClientRoutes: React.FC = () => {
               <Route path="profile" element={<ProfileViewWrapper />}>
                 <Route index element={<ProfileOverviewWrapper />} />
                 <Route path="overview" element={<ProfileOverviewWrapper />} />
+                <Route path="transactions" element={<TransactionHistoryWrapper />} />
+                <Route path="funds" element={<FundFlowsWrapper />} />
                 <Route path="compliance" element={<ComplianceCenter onBack={() => navigate('/client/profile')} onOpenShield={() => navigate('/client/compliance/shield')} />} />
                 <Route path="education" element={<EducationCenterView onBack={() => navigate('/client/profile')} />} />
               </Route>
-              <Route path="transactions" element={<TransactionHistoryWrapper />} />
-              <Route path="funds" element={<FundFlowsWrapper />} />
               <Route path="trading-preferences" element={<TradingPreferencesView />} />
               <Route path="settings" element={<SettingsWrapper onLogout={handleLogout} />}>
                 <Route index element={<SettingsOverview />} />
@@ -417,8 +419,21 @@ const DashboardWrapper: React.FC = () => {
 const TradePanelWrapper: React.FC = () => {
   const { account, refresh } = useUserAccount();
   const { user } = useAuth();
+  const { isFastOrderMode, isSoundEnabled, isHapticEnabled } = useUserSettings();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingTrade, setPendingTrade] = useState<{
+    type: TradeType;
+    symbol: string;
+    name: string;
+    price: number;
+    quantity: number;
+    logoUrl?: string;
+    marketType?: string;
+  } | null>(null);
+  const [resolveRef, setResolveRef] = useState<((value: boolean) => void) | null>(null);
   
-  const handleExecuteTrade = async (
+  // 实际执行交易
+  const executeTrade = useCallback(async (
     type: TradeType,
     symbol: string,
     name: string,
@@ -442,15 +457,22 @@ const TradePanelWrapper: React.FC = () => {
         price,
         quantity,
         logoUrl,
-        marketType: marketType || 'A_SHARE', // 使用传入的市场类型，默认A股
+        marketType: marketType || 'A_SHARE',
       });
 
       if (result && result.success) {
         // 刷新用户账户数据
         await refresh();
         
-        // 播放交易成功音效
-        soundLibrary.playSend();
+        // 播放交易成功音效（根据设置）
+        if (isSoundEnabled) {
+          soundLibrary.playSend();
+        }
+        
+        // 触感反馈（根据设置）
+        if (isHapticEnabled) {
+          triggerHaptic('medium');
+        }
         
         // 显示结果
         if (result.status === 'PENDING_APPROVAL') {
@@ -470,14 +492,89 @@ const TradePanelWrapper: React.FC = () => {
       alert('交易执行失败: ' + (error.message || '请重试'));
       return false;
     }
-  };
+  }, [user?.id, refresh, isSoundEnabled, isHapticEnabled]);
+  
+  // 处理交易请求
+  const handleExecuteTrade = useCallback(async (
+    type: TradeType,
+    symbol: string,
+    name: string,
+    price: number,
+    quantity: number,
+    logoUrl?: string,
+    marketType?: string
+  ): Promise<boolean> => {
+    // 触感反馈
+    if (isHapticEnabled) {
+      triggerHaptic('light');
+    }
+    
+    // 如果开启极速模式，直接执行交易
+    if (isFastOrderMode) {
+      return executeTrade(type, symbol, name, price, quantity, logoUrl, marketType);
+    }
+    
+    // 否则显示确认弹窗
+    return new Promise((resolve) => {
+      setPendingTrade({ type, symbol, name, price, quantity, logoUrl, marketType });
+      setShowConfirmModal(true);
+      setResolveRef(() => resolve);
+    });
+  }, [isFastOrderMode, isHapticEnabled, executeTrade]);
+  
+  // 确认弹窗确认
+  const handleConfirm = useCallback(async () => {
+    if (!pendingTrade) return;
+    
+    const result = await executeTrade(
+      pendingTrade.type,
+      pendingTrade.symbol,
+      pendingTrade.name,
+      pendingTrade.price,
+      pendingTrade.quantity,
+      pendingTrade.logoUrl,
+      pendingTrade.marketType
+    );
+    
+    setShowConfirmModal(false);
+    setPendingTrade(null);
+    if (resolveRef) {
+      resolveRef(result);
+      setResolveRef(null);
+    }
+  }, [pendingTrade, executeTrade, resolveRef]);
+  
+  // 确认弹窗取消
+  const handleCancel = useCallback(() => {
+    setShowConfirmModal(false);
+    setPendingTrade(null);
+    if (resolveRef) {
+      resolveRef(false);
+      setResolveRef(null);
+    }
+  }, [resolveRef]);
   
   return (
-    <TradePanel
-      account={account}
-      onExecute={handleExecuteTrade}
-      initialStock={null}
-    />
+    <>
+      <TradePanel
+        account={account}
+        onExecute={handleExecuteTrade}
+        initialStock={null}
+      />
+      <TradeConfirmModal
+        isOpen={showConfirmModal}
+        tradeInfo={pendingTrade ? {
+          type: pendingTrade.type,
+          symbol: pendingTrade.symbol,
+          name: pendingTrade.name,
+          price: pendingTrade.price,
+          quantity: pendingTrade.quantity,
+          amount: pendingTrade.price * pendingTrade.quantity
+        } : null}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+    </>
   );
 };
 

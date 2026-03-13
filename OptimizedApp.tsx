@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminProvider } from './contexts/AdminContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { UserSettingsProvider } from './contexts/UserSettingsContext';
 import { ToastProvider } from './components/common/Toast';
 import NetworkStatusBar from './components/shared/NetworkStatusBar';
 import PublicRoutes from './routes/PublicRoutes';
@@ -66,11 +67,13 @@ const OptimizedApp: React.FC = () => {
     <AuthProvider>
       <AdminProvider>
         <ThemeProvider>
-          <ToastProvider>
-            <BrowserRouter>
-              <OptimizedAppContent />
-            </BrowserRouter>
-          </ToastProvider>
+          <UserSettingsProvider>
+            <ToastProvider>
+              <BrowserRouter>
+                <OptimizedAppContent />
+              </BrowserRouter>
+            </ToastProvider>
+          </UserSettingsProvider>
         </ThemeProvider>
       </AdminProvider>
     </AuthProvider>
