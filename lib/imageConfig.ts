@@ -107,7 +107,9 @@ export const imageConfig = {
   // ==================== 头像 ====================
   avatars: {
     agent: '/logo.png',
-    default: '/logo.png',
+    default: '/avatar-default.png',
+    // 默认头像 URL（用于用户未设置头像时）
+    userDefault: '/avatar-default.png',
   },
 
   // ==================== 公章和协议（使用本地文件）====================

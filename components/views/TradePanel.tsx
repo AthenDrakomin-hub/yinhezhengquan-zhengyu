@@ -56,7 +56,6 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
   const [submitting, setSubmitting] = useState(false);
   
   // 弹窗
-  const [showTip, setShowTip] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   
   // 交易结果
@@ -510,42 +509,6 @@ const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStoc
                 </button>
               </>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* 夜市委托提示弹窗 */}
-      {showTip && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
-          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold text-[#333333]">夜市委托助手功能开启中</h3>
-                <button onClick={() => setShowTip(false)} className="text-[#999999]">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <p className="text-sm text-[#666666] mb-4">
-                交易日16:00开启，非交易时间正常下单
-              </p>
-              <div className="flex items-center gap-2 mb-4">
-                <input type="checkbox" id="no-tip" className="w-4 h-4" />
-                <label htmlFor="no-tip" className="text-sm text-[#666666]">不再提示</label>
-              </div>
-              <div className="flex gap-3">
-                <button className="flex-1 py-2.5 border border-[#E5E5E5] rounded-lg text-sm text-[#666666]">
-                  了解更多
-                </button>
-                <button 
-                  onClick={() => setShowTip(false)}
-                  className="flex-1 py-2.5 bg-[#3B82F6] text-white rounded-lg text-sm font-medium"
-                >
-                  立即使用
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

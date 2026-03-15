@@ -3,8 +3,10 @@
  * 管理同名账户之间的资金划转
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
+import { supabase } from '../../../lib/supabase';
 
 interface Account {
   id: string;
@@ -14,48 +16,140 @@ interface Account {
   status: 'active' | 'inactive';
 }
 
+// 默认账户配置
+const DEFAULT_ACCOUNTS: Account[] = [
+  { id: 'stock', name: '证券账户', type: 'stock', balance: 0, status: 'active' },
+  { id: 'fund', name: '基金账户', type: 'fund', balance: 0, status: 'active' },
+  { id: 'futures', name: '期货账户', type: 'futures', balance: 0, status: 'active' },
+];
+
 const ComprehensiveAccountView: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'accounts' | 'transfer'>('accounts');
+  const [accounts, setAccounts] = useState<Account[]>(DEFAULT_ACCOUNTS);
+  const [loading, setLoading] = useState(true);
   const [transferAmount, setTransferAmount] = useState('');
   const [fromAccount, setFromAccount] = useState('stock');
   const [toAccount, setToAccount] = useState('fund');
+  const [submitting, setSubmitting] = useState(false);
 
-  // 模拟账户数据
-  const accounts: Account[] = [
-    {
-      id: 'stock',
-      name: '证券账户',
-      type: 'stock',
-      balance: 850000,
-      status: 'active',
-    },
-    {
-      id: 'fund',
-      name: '基金账户',
-      type: 'fund',
-      balance: 100000,
-      status: 'active',
-    },
-    {
-      id: 'futures',
-      name: '期货账户',
-      type: 'futures',
-      balance: 50000,
-      status: 'active',
-    },
-  ];
+  // 加载账户数据
+  useEffect(() => {
+    loadAccounts();
+  }, [user]);
+
+  const loadAccounts = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // 获取用户资产数据
+      const { data: assets, error } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('获取资产数据失败:', error.code);
+      }
+
+      if (assets) {
+        // 根据资产数据构建账户列表
+        const stockBalance = Number(assets.available_balance) || 0;
+        const frozenBalance = Number(assets.frozen_balance) || 0;
+        
+        setAccounts([
+          { 
+            id: 'stock', 
+            name: '证券账户', 
+            type: 'stock', 
+            balance: stockBalance, 
+            status: frozenBalance > stockBalance * 0.8 ? 'inactive' : 'active' 
+          },
+          { 
+            id: 'fund', 
+            name: '基金账户', 
+            type: 'fund', 
+            balance: Number(assets.fund_balance) || 0, 
+            status: 'active' 
+          },
+          { 
+            id: 'futures', 
+            name: '期货账户', 
+            type: 'futures', 
+            balance: Number(assets.futures_balance) || 0, 
+            status: 'active' 
+          },
+        ]);
+      } else {
+        // 没有资产记录，使用默认值
+        setAccounts(DEFAULT_ACCOUNTS);
+      }
+    } catch (error) {
+      console.error('加载账户数据失败:', error);
+      setAccounts(DEFAULT_ACCOUNTS);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalAssets = accounts.reduce((sum, a) => sum + a.balance, 0);
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     const amount = parseFloat(transferAmount);
     if (!amount || amount <= 0) {
       alert('请输入有效金额');
       return;
     }
-    alert(`成功从${accounts.find(a => a.id === fromAccount)?.name}转账 ¥${amount.toLocaleString()} 到 ${accounts.find(a => a.id === toAccount)?.name}`);
-    setTransferAmount('');
+
+    const fromAccountData = accounts.find(a => a.id === fromAccount);
+    if (!fromAccountData || fromAccountData.balance < amount) {
+      alert('可用余额不足');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      // 记录转账日志
+      const { error } = await supabase
+        .from('transfer_logs')
+        .insert({
+          user_id: user?.id,
+          from_account: fromAccount,
+          to_account: toAccount,
+          amount: amount,
+          status: 'COMPLETED'
+        });
+
+      if (error) {
+        console.warn('转账记录保存失败:', error.code);
+      }
+
+      // 更新本地状态
+      setAccounts(prev => prev.map(a => {
+        if (a.id === fromAccount) {
+          return { ...a, balance: a.balance - amount };
+        }
+        if (a.id === toAccount) {
+          return { ...a, balance: a.balance + amount };
+        }
+        return a;
+      }));
+
+      alert(`成功从${fromAccountData.name}转账 ¥${amount.toLocaleString()} 到 ${accounts.find(a => a.id === toAccount)?.name}`);
+      setTransferAmount('');
+    } catch (error: any) {
+      alert(`转账失败: ${error.message || '请稍后重试'}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

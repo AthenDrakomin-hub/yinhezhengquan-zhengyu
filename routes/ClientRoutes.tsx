@@ -76,6 +76,10 @@ const PermissionSettings = lazy(() => import('../components/client/settings/Perm
 const FeedbackView = lazy(() => import('../components/client/settings/FeedbackView'));
 const DataCollectionSettings = lazy(() => import('../components/client/settings/DataCollectionSettings'));
 const ThirdPartySharingSettings = lazy(() => import('../components/client/settings/ThirdPartySharingSettings'));
+const NotificationSettingsView = lazy(() => import('../components/client/settings/NotificationSettingsView'));
+const TradeAlertView = lazy(() => import('../components/client/notifications/TradeAlertView'));
+const PriceAlertView = lazy(() => import('../components/client/notifications/PriceAlertView'));
+const SystemAnnouncementView = lazy(() => import('../components/client/notifications/SystemAnnouncementView'));
 
 // 法律条款页面
 const UserAgreementView = lazy(() => import('../components/client/legal/UserAgreementView'));
@@ -96,6 +100,7 @@ const VipBenefitsView = lazy(() => import('../components/client/vip/VipBenefitsV
 const WatchlistAlertsView = lazy(() => import('../components/client/alerts/WatchlistAlertsView'));
 const IPOReserveView = lazy(() => import('../components/client/ipo/IPOReserveView'));
 const ComprehensiveAccountView = lazy(() => import('../components/client/account/ComprehensiveAccountView'));
+const TodoListView = lazy(() => import('../components/client/todo/TodoListView'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -333,7 +338,6 @@ const ClientRoutes: React.FC = () => {
               <Route path="stock/:symbol" element={<StockDetailView />} />
               <Route path="trade" element={<TradePanelWrapper />} />
               <Route path="wealth" element={<WealthViewWrapper />} />
-              <Route path="profile" element={<ProfileViewWrapper />} />
               
               {/* 高级功能路由 */}
               <Route path="analysis" element={<AnalysisWrapper />} />
@@ -367,6 +371,7 @@ const ClientRoutes: React.FC = () => {
                 <Route path="funds" element={<FundFlowsWrapper />} />
                 <Route path="compliance" element={<ComplianceCenter onBack={() => navigate('/client/profile')} onOpenShield={() => navigate('/client/compliance/shield')} />} />
                 <Route path="education" element={<EducationCenterView onBack={() => navigate('/client/profile')} />} />
+                <Route path="todos" element={<TodoListView onBack={() => navigate('/client/profile')} />} />
               </Route>
               <Route path="trading-preferences" element={<TradingPreferencesView />} />
               <Route path="settings" element={<SettingsWrapper onLogout={handleLogout} />}>
@@ -386,6 +391,10 @@ const ClientRoutes: React.FC = () => {
                 <Route path="feedback" element={<FeedbackView />} />
                 <Route path="privacy/data" element={<DataCollectionSettings />} />
                 <Route path="privacy/sharing" element={<ThirdPartySharingSettings />} />
+                <Route path="notification" element={<NotificationSettingsView />} />
+                <Route path="trade-alerts" element={<TradeAlertView />} />
+                <Route path="price-alerts" element={<PriceAlertView />} />
+                <Route path="system-announcements" element={<SystemAnnouncementView />} />
               </Route>
               <Route path="news/:newsId" element={<NewsDetailView />} />
               <Route path="hotspot" element={<HotspotView />} />

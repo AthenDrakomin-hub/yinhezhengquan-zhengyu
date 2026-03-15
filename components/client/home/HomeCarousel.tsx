@@ -125,15 +125,16 @@ const HomeCarousel: React.FC<HomeCarouselProps> = ({
         className="relative aspect-[2.5/1] min-h-[140px] md:min-h-[180px]"
         onClick={() => onSlideClick?.(currentSlide)}
       >
-        {/* 背景渐变 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460]" />
+        {/* 图片背景 */}
+        <img 
+          src={currentSlide.image} 
+          alt={currentSlide.title}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
         
-        {/* 装饰元素 */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 -right-10 w-32 h-32 bg-[#E63946]/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 -left-10 w-24 h-24 bg-[#0066CC]/20 rounded-full blur-2xl" />
-        </div>
-
+        {/* 渐变遮罩层 - 确保文字可读 */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+        
         {/* 内容区域 */}
         <div className="absolute inset-0 flex items-center p-4 md:p-6 z-10">
           <div className="flex-1">
@@ -145,33 +146,26 @@ const HomeCarousel: React.FC<HomeCarouselProps> = ({
             )}
             
             {/* 标题 */}
-            <h3 className="text-white text-lg md:text-xl font-bold leading-tight mb-1">
+            <h3 className="text-white text-lg md:text-xl font-bold leading-tight mb-1 drop-shadow-lg">
               {currentSlide.title}
             </h3>
             
             {/* 副标题 */}
             {currentSlide.subtitle && (
-              <p className="text-white/70 text-xs md:text-sm">
+              <p className="text-white/90 text-xs md:text-sm drop-shadow-md">
                 {currentSlide.subtitle}
               </p>
             )}
             
             {/* 查看详情按钮 */}
             {currentSlide.link && (
-              <div className="mt-3 inline-flex items-center gap-1 text-white/80 text-xs">
+              <div className="mt-3 inline-flex items-center gap-1 text-white/90 text-xs hover:text-white transition-colors">
                 <span>查看详情</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
             )}
-          </div>
-
-          {/* 右侧装饰图标 */}
-          <div className="hidden md:flex items-center justify-center w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm">
-            <svg className="w-10 h-10 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
           </div>
         </div>
 

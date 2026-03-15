@@ -1,6 +1,6 @@
 /**
  * 图片诊断页面
- * 用于检查和测试 Supabase 存储桶中的图片是否可以正常加载
+ * 用于检查和测试图片资源是否可以正常加载
  */
 
 import React, { useState } from 'react';
@@ -74,7 +74,7 @@ const ImageDiagnosticPage: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">图片加载诊断页面</h1>
-          <p className="text-gray-600">用于检查 Supabase 存储桶中的图片是否可以正常加载</p>
+          <p className="text-gray-600">用于检查图片资源是否可以正常加载</p>
           
           <button
             onClick={testAllImages}

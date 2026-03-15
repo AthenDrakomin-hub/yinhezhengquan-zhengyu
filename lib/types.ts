@@ -248,3 +248,78 @@ export interface AdminUser {
   user_id: string;
   created_at: string;
 }
+
+// ==================== 用户待办事项类型 ====================
+
+/** 待办事项类型 */
+export type TodoType = 
+  | 'RISK_ASSESSMENT'    // 风险测评过期
+  | 'IPO_SUBSCRIPTION'   // 新股申购
+  | 'DOCUMENT_UPDATE'    // 资料更新
+  | 'AGREEMENT_SIGN'     // 协议签署
+  | 'VERIFICATION'       // 身份验证
+  | 'TRADE_REVIEW'       // 交易复盘
+  | 'SYSTEM';            // 系统任务
+
+/** 待办事项优先级 */
+export type TodoPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+/** 待办事项状态 */
+export type TodoStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED' | 'EXPIRED';
+
+/** 待办事项关联类型 */
+export type TodoRelatedType = 'risk_assessment' | 'ipo' | 'document' | 'agreement' | 'trade' | 'notification';
+
+/** 用户待办事项 */
+export interface UserTodo {
+  id: string;
+  user_id: string;
+  todo_type: TodoType;
+  title: string;
+  description?: string;
+  related_type?: TodoRelatedType;
+  related_id?: string;
+  priority: TodoPriority;
+  status: TodoStatus;
+  completed_at?: string;
+  action_url?: string;
+  action_text?: string;
+  expires_at?: string;
+  remind_at?: string;
+  is_reminded?: boolean;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 创建待办事项请求 */
+export interface CreateTodoRequest {
+  todo_type: TodoType;
+  title: string;
+  description?: string;
+  related_type?: TodoRelatedType;
+  related_id?: string;
+  priority?: TodoPriority;
+  action_url?: string;
+  action_text?: string;
+  expires_at?: string;
+  remind_at?: string;
+  metadata?: Record<string, any>;
+}
+
+/** 更新待办事项请求 */
+export interface UpdateTodoRequest {
+  status?: TodoStatus;
+  priority?: TodoPriority;
+  description?: string;
+  action_url?: string;
+  action_text?: string;
+}
+
+/** 待办事项统计 */
+export interface TodoStats {
+  total_count: number;
+  pending_count: number;
+  high_priority_count: number;
+  expired_count: number;
+}

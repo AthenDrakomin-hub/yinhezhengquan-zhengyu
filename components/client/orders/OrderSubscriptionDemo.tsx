@@ -251,7 +251,7 @@ export default function OrderSubscriptionDemo() {
       <div className="mt-4 bg-white rounded-xl p-4 shadow-sm">
         <h3 className="text-sm font-bold text-[#333333] mb-3">使用说明</h3>
         <div className="space-y-2 text-xs text-[#666666]">
-          <p>1. 本组件使用 Supabase Realtime 功能监听数据库变化</p>
+          <p>1. 本组件使用实时数据推送功能监听订单变化</p>
           <p>2. 订单状态更新时会自动推送到前端，无需刷新页面</p>
           <p>3. 成交记录会在撮合成功后实时显示</p>
           <p>4. 启用浏览器通知可以在后台接收提醒</p>
@@ -260,7 +260,7 @@ export default function OrderSubscriptionDemo() {
         <div className="mt-4 p-3 bg-[#F5F5F5] rounded-lg">
           <p className="text-xs font-medium text-[#333333] mb-2">技术实现：</p>
           <ul className="text-xs text-[#666666] space-y-1">
-            <li>• Supabase Realtime (PostgreSQL WAL)</li>
+            <li>• 实时数据推送服务</li>
             <li>• WebSocket 长连接</li>
             <li>• 自动重连机制</li>
             <li>• 浏览器 Notification API</li>

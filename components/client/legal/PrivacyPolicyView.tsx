@@ -3,8 +3,10 @@
  * 符合《中华人民共和国个人信息保护法》要求
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
+import { supabase } from '../../../lib/supabase';
 
 interface PrivacyPolicyViewProps {
   onBack?: () => void;
@@ -12,6 +14,53 @@ interface PrivacyPolicyViewProps {
 
 const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onBack }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [signDate, setSignDate] = useState<string>('--');
+
+  // 获取用户注册时间作为签署时间
+  useEffect(() => {
+    const fetchUserSignDate = async () => {
+      if (user) {
+        try {
+          // 从 profiles 获取注册时间
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('created_at')
+            .eq('id', user.id)
+            .single();
+          
+          if (data?.created_at) {
+            const date = new Date(data.created_at);
+            setSignDate(date.toLocaleDateString('zh-CN', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }));
+          } else if (user.created_at) {
+            // 如果 profiles 没有数据，使用 auth.users 的 created_at
+            const date = new Date(user.created_at);
+            setSignDate(date.toLocaleDateString('zh-CN', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }));
+          }
+        } catch (error) {
+          // 使用 auth 用户的 created_at
+          if (user.created_at) {
+            const date = new Date(user.created_at);
+            setSignDate(date.toLocaleDateString('zh-CN', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }));
+          }
+        }
+      }
+    };
+
+    fetchUserSignDate();
+  }, [user]);
 
   const handleBack = () => {
     if (onBack) {
@@ -36,6 +85,16 @@ const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onBack }) => {
       {/* 内容区域 */}
       <div className="p-4 pb-20">
         <div className="bg-white rounded-xl shadow-sm p-5">
+          {/* 签署时间 */}
+          {user && (
+            <div className="bg-[#E3F2FD] rounded-lg p-3 mb-4 border border-[#90CAF9]">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#1565C0]">您的签署时间</span>
+                <span className="text-sm font-medium text-[#0D47A1]">{signDate}</span>
+              </div>
+            </div>
+          )}
+          
           {/* 更新日期 */}
           <p className="text-xs text-[#999999] mb-4 text-right">更新日期：2024年1月1日</p>
           

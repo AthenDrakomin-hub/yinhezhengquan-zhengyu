@@ -263,10 +263,10 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({
         {/* 功能列表 */}
         <div className="space-y-3 mb-6">
           {[
-            { icon: '📊', text: '实时行情与自选股管理' },
-            { icon: '💹', text: '便捷的股票交易流程' },
-            { icon: '📱', text: '资产状况一目了然' },
-            { icon: '⚙️', text: '个性化设置与偏好' },
+            { icon: '📈', text: '沪深行情与自选股管理' },
+            { icon: '💹', text: '股票交易与新股申购' },
+            { icon: '💰', text: '财富管理与银证转账' },
+            { icon: '🤖', text: 'AI智能选股与客服' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-3">
               <span className="text-xl">{item.icon}</span>
@@ -344,41 +344,41 @@ export const useOnboarding = (key: string = 'onboarding-completed') => {
   };
 };
 
-// 默认引导步骤
+// 默认引导步骤 - 匹配客户端底部导航栏
 export const defaultTourSteps: TourStep[] = [
   {
     id: 'overview',
     target: '[data-tour="overview-tab"]',
     title: '首页总览',
-    content: '查看您的资产概况、持仓统计和今日盈亏情况，快速了解投资状态。',
+    content: '查看您的资产概况、持仓统计和今日盈亏情况，快速了解投资状态。还可查看银河观点、市场快讯等资讯。',
     position: 'right'
   },
   {
     id: 'quotes',
     target: '[data-tour="quotes-tab"]',
     title: '实时行情',
-    content: '查看实时行情、搜索股票、管理自选股列表，掌握市场动态。',
+    content: '查看沪深A股、港股实时行情，搜索股票、管理自选股列表，掌握市场动态。',
     position: 'right'
   },
   {
     id: 'trade',
     target: '[data-tour="trade-tab"]',
-    title: '极速交易',
-    content: '进行股票买入和卖出操作，支持条件单、批量委托等高级功能。',
+    title: '股票交易',
+    content: '进行股票买入和卖出操作，支持条件单、新股申购、大宗交易等高级功能。',
     position: 'right'
   },
   {
-    id: 'assets',
-    target: '[data-tour="assets-tab"]',
-    title: '资产中心',
-    content: '查看详细的资产分布、资金流水和持仓明细，全面管理您的投资组合。',
+    id: 'wealth',
+    target: '[data-tour="wealth-tab"]',
+    title: '财富中心',
+    content: '查看资产分布、资金流水，管理基金、理财产品，进行银证转账等资金操作。',
     position: 'right'
   },
   {
-    id: 'settings',
-    target: '[data-tour="settings-tab"]',
-    title: '系统设置',
-    content: '个性化设置，包括交易偏好、通知提醒、安全设置等。',
+    id: 'profile',
+    target: '[data-tour="profile-tab"]',
+    title: '个人中心',
+    content: '管理个人资料、安全设置、通知偏好，查看交易记录，联系客服等。',
     position: 'bottom'
   }
 ];

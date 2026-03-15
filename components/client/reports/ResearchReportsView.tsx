@@ -72,15 +72,19 @@ const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => 
               报告正文
             </h3>
             <div className="prose prose-invert max-w-none text-xs leading-loose text-[var(--color-text-secondary)] font-medium space-y-4">
-              <p>基于 2026 年量子算力节点的监测数据，本报告认为该行业已进入"溢价重估"阶段。分布式算力的需求曲线在 Q1 呈现出 45 度以上的斜率，主要受碳中和背景下能源链优化的推动。</p>
-              <p>我们建议投资者重点关注具有"算力+储能"双重护城河的标的。这类企业在维持高毛利的同时，能有效对冲能源成本的波动风险。</p>
-              <h4 className="text-sm font-black text-[var(--color-text-primary)] mt-4">一、行业背景分析</h4>
-              <p>随着数字化转型加速，算力需求持续攀升。根据工信部数据，2025年全国算力规模预计达到300 EFLOPS，其中智能算力占比将超过50%。这一趋势为算力基础设施企业带来广阔发展空间。</p>
-              <h4 className="text-sm font-black text-[var(--color-text-primary)] mt-4">二、重点标的分析</h4>
-              <p>本报告重点分析了具有核心竞争力的算力企业，从技术壁垒、商业模式、财务指标三个维度进行综合评估。筛选出的标的具备持续成长潜力。</p>
-              <h4 className="text-sm font-black text-[var(--color-text-primary)] mt-4">三、投资建议</h4>
-              <p>建议投资者采取"核心+卫星"配置策略，核心仓位配置行业龙头，卫星仓位关注细分领域机会。同时注意控制仓位，保持流动性。</p>
-              <p className="text-[var(--color-text-muted)] italic">风险提示：量子纠错算法的突破可能导致旧有算力节点加速折旧；地缘博弈对全球算力流通的影响具有不确定性。本报告仅供参考，不构成投资建议。</p>
+              {selectedReport.content ? (
+                <div className="whitespace-pre-wrap">{selectedReport.content}</div>
+              ) : (
+                <>
+                  <p>{selectedReport.summary}</p>
+                  <p className="text-[var(--color-text-muted)] italic mt-4">
+                    完整报告内容请联系您的客户经理获取，或等待管理员上传完整研报文档。
+                  </p>
+                </>
+              )}
+              <p className="text-[var(--color-text-muted)] italic text-[10px] mt-4 border-t border-[var(--color-border)] pt-4">
+                风险提示：本报告仅供参考，不构成投资建议。投资有风险，入市需谨慎。
+              </p>
             </div>
           </div>
 

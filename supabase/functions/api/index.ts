@@ -12,8 +12,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 // CORS 头
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info, accept, origin, x-requested-with',
+  'Access-Control-Max-Age': '86400',
+  'Access-Control-Allow-Credentials': 'true',
 }
 
 // 响应辅助函数
@@ -251,7 +253,7 @@ async function getAllData() {
 serve(async (req) => {
   // 处理 CORS 预检请求
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { status: 204, headers: corsHeaders })
   }
   
   try {

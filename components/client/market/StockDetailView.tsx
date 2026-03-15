@@ -1,7 +1,7 @@
 /**
  * 个股详情页面
  * 展示股票详细信息、K线图、五档行情、成交明细、公司资料等
- * 数据来源：银禾数据 API、Edge Functions、Supabase 数据库
+ * 数据来源：行情数据接口
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';

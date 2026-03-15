@@ -1,4 +1,10 @@
+/**
+ * 新股申购页面
+ * 支持查看IPO列表和一键申购
+ */
+
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getIPOList } from '../../../services/ipoService';
 import { ICONS } from '../../../lib/constants';
 
@@ -7,6 +13,7 @@ interface IPOViewProps {
 }
 
 const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
+  const navigate = useNavigate();
   const [ipoList, setIpoList] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'LISTED' | 'UPCOMING' | 'CANCELLED' | 'ONGOING'>('ALL');
   const [loading, setLoading] = useState<boolean>(true);
@@ -44,10 +51,6 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
     }
     
     // 根据股票代码判断申购单位
-    // 沪市主板（60开头）：1000股
-    // 深市主板（00开头）：500股
-    // 创业板（30开头）：500股
-    // 科创板（688开头）：500股
     const unit = ipo.symbol.startsWith('60') ? 1000 : 500;
     const marketName = ipo.symbol.startsWith('60') ? '沪市主板' : 
                        ipo.symbol.startsWith('688') ? '科创板' :
@@ -62,7 +65,6 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
     try {
       setExecuting(ipo.symbol);
       
-      // 调用 create-ipo-order 专用接口
       const { supabase } = await import('../../../lib/supabase');
       const { data, error } = await supabase.functions.invoke('create-ipo-order', {
         body: {
@@ -92,163 +94,253 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
     }
   };
 
-  // 加载中状态
-  if (loading && ipoList.length === 0) {
-    return React.createElement('div', { className: 'flex flex-col items-center justify-center h-full p-8' },
-      React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E63946]' }),
-      React.createElement('p', { className: 'mt-4 text-[var(--color-text-muted)]' }, '正在加载IPO数据...')
-    );
-  }
+  // 获取状态标签样式
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'ONGOING':
+        return { bg: 'bg-[#E63946]', text: 'text-white', label: '申购中' };
+      case 'UPCOMING':
+        return { bg: 'bg-[#F97316]', text: 'text-white', label: '待申购' };
+      case 'LISTED':
+        return { bg: 'bg-[#22C55E]', text: 'text-white', label: '已上市' };
+      case 'CANCELLED':
+        return { bg: 'bg-[#6B7280]', text: 'text-white', label: '已取消' };
+      default:
+        return { bg: 'bg-[#6B7280]', text: 'text-white', label: status };
+    }
+  };
 
-  // 错误状态
-  if (error && ipoList.length === 0) {
-    return React.createElement('div', { className: 'flex flex-col items-center justify-center h-full p-8' },
-      React.createElement(ICONS.AlertCircle, { className: 'w-16 h-16 text-red-500 mb-4' }),
-      React.createElement('p', { className: 'text-red-500 mb-4' }, error),
-      React.createElement('button', {
-        onClick: () => loadIPOData(),
-        className: 'px-6 py-3 bg-[#E63946] text-[#1E1E1E] font-black rounded-xl hover:opacity-90'
-      }, '重试')
-    );
-  }
+  // 格式化日期
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('zh-CN');
+  };
 
-  // 主渲染
-  return React.createElement('div', { className: 'flex flex-col h-full p-6' },
-    // 顶部栏
-    React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-      React.createElement('div', { className: 'flex items-center gap-4' },
-        onBack && React.createElement('button', {
-          onClick: onBack,
-          className: 'w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)] transition-all'
-        },
-          React.createElement('svg', {
-            xmlns: 'http://www.w3.org/2000/svg',
-            width: '20',
-            height: '20',
-            viewBox: '0 0 24 24',
-            fill: 'none',
-            stroke: 'currentColor',
-            strokeWidth: '2.5',
-            strokeLinecap: 'round',
-            strokeLinejoin: 'round'
-          }, React.createElement('path', { d: 'm15 18-6-6 6-6' }))
-        ),
-        React.createElement('div', null,
-          React.createElement('h1', { className: 'text-2xl font-black' }, '新股申购'),
-          React.createElement('p', { className: 'text-[var(--color-text-muted)] text-sm mt-1' }, '从Supabase数据库获取A股新股发行信息，支持一键申购')
-        )
-      ),
-      React.createElement('div', { className: 'flex items-center gap-3' },
-        // 筛选按钮
-        React.createElement('div', { className: 'flex gap-2' },
-          (['ALL', 'ONGOING', 'UPCOMING', 'LISTED', 'CANCELLED'] as const).map(status => 
-            React.createElement('button', {
-              key: status,
-              onClick: () => setFilterStatus(status),
-              className: `px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
-                filterStatus === status
-                  ? 'bg-[#E63946] text-[#1E1E1E]'
-                  : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-              }`
-            }, status === 'ALL' ? '全部' : 
-               status === 'ONGOING' ? '申购中' : 
-               status === 'UPCOMING' ? '待申购' : 
-               status === 'LISTED' ? '已上市' : '已取消'
-            )
-          )
-        ),
-        // 刷新按钮
-        React.createElement('button', {
-          onClick: () => loadIPOData(),
-          disabled: loading,
-          className: 'flex items-center gap-2 px-4 py-2 bg-[var(--color-surface)] text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-surface-hover)] disabled:opacity-50'
-        },
-          React.createElement(ICONS.RefreshCw, { className: `w-4 h-4 ${loading ? 'animate-spin' : ''}` }),
-          loading ? '刷新中...' : '刷新数据'
-        )
-      )
-    ),
+  return (
+    <div className="min-h-screen bg-[#F5F5F5]">
+      {/* 顶部导航 */}
+      <header className="sticky top-0 z-30 bg-[#0066CC] px-4 py-3">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => onBack?.() || navigate(-1)}
+            className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center"
+          >
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div className="flex-1">
+            <h1 className="text-white text-lg font-semibold">新股申购</h1>
+            <p className="text-white/70 text-xs">实时获取A股新股发行信息</p>
+          </div>
+          <button
+            onClick={loadIPOData}
+            disabled={loading}
+            className="px-3 py-1.5 bg-white/20 text-white text-xs rounded-lg flex items-center gap-1"
+          >
+            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            刷新
+          </button>
+        </div>
+      </header>
 
-    // 空数据
-    ipoList.length === 0 ? 
-      React.createElement('div', { className: 'flex-1 flex flex-col items-center justify-center' },
-        React.createElement(ICONS.AlertCircle, { className: 'w-16 h-16 text-[var(--color-text-muted)] mb-4' }),
-        React.createElement('p', { className: 'text-[var(--color-text-muted)]' }, '暂无IPO数据')
-      )
-    :
-    // 表格
-    React.createElement('div', { className: 'flex-1 overflow-auto' },
-      React.createElement('div', { className: 'glass-card rounded-2xl overflow-hidden' },
-        React.createElement('table', { className: 'w-full min-w-[1400px] border-collapse' },
-          // 表头
-          React.createElement('thead', null,
-            React.createElement('tr', { className: 'border-b border-[var(--color-border)]' },
-              ['证券代码','申购代码','证券简称','上网发行日期','上市日期','发行数量(万股)','上网发行数量(万股)','发行价格(元)','市盈率','申购操作'].map((text, idx) => 
-                React.createElement('th', {
-                  key: idx,
-                  className: `text-left py-4 px-3 text-[12px] font-black text-[var(--color-text-primary)] tracking-wider whitespace-nowrap ${idx === 0 || idx === 1 ? 'w-24' : ''}`
-                }, text)
-              )
-            )
-          ),
-          // 表体
-          React.createElement('tbody', null,
-            ipoList.map((ipo, index) => 
-              React.createElement('tr', {
-                key: `${ipo.symbol}-${index}`,
-                className: 'border-b border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-all'
-              },
-                // 证券代码
-                React.createElement('td', { className: 'py-4 px-3 text-left font-mono text-sm font-black whitespace-nowrap' }, ipo.symbol || '-'),
-                // 申购代码
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm font-black text-[#E63946] whitespace-nowrap' }, ipo.subscription_code || ipo.symbol || '-'),
-                // 证券简称
-                React.createElement('td', { className: 'py-4 px-3 text-left' },
-                  React.createElement('div', { className: 'font-bold' }, ipo.name),
-                  React.createElement('div', { className: 'text-xs text-[var(--color-text-muted)] mt-1' },
-                    ipo.market === 'SH' ? '沪市' : ipo.market === 'SZ' ? '深市' : ipo.market
-                  )
-                ),
-                // 发行日期
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm' },
-                  ipo.issue_date ? new Date(ipo.issue_date).toLocaleDateString() : '-'
-                ),
-                // 上市日期
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm' },
-                  ipo.listing_date ? new Date(ipo.listing_date).toLocaleDateString() : '待上市'
-                ),
-                // 发行数量
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm' },
-                  ipo.issue_volume ? ipo.issue_volume.toLocaleString() : '-'
-                ),
-                // 网上发行数量
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm' },
-                  ipo.online_issue_volume ? ipo.online_issue_volume.toLocaleString() : '-'
-                ),
-                // 发行价格
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm font-black' },
-                  ipo.ipo_price && ipo.ipo_price > 0 ? `¥${ipo.ipo_price.toFixed(2)}` : '待定'
-                ),
-                // 市盈率
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm' },
-                  ipo.pe_ratio ? ipo.pe_ratio.toFixed(2) : '-'
-                ),
-                // 申购操作
-                React.createElement('td', { className: 'py-4 px-3 text-center' },
-                  React.createElement('div', { className: 'w-28 mx-auto' },
-                    React.createElement('button', {
-                      onClick: () => handleApply(ipo),
-                      disabled: ipo.status !== 'ONGOING' && ipo.status !== 'UPCOMING' || executing === ipo.symbol,
-                      className: 'w-full py-2.5 rounded-xl bg-[#E63946] text-[#1E1E1E] font-black text-xs uppercase hover:bg-[#00b88f] disabled:opacity-50'
-                    }, executing === ipo.symbol ? '申购中...' : '申购')
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
+      {/* 筛选标签 */}
+      <div className="bg-white px-4 py-3 border-b border-[#E5E5E5]">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          {[
+            { key: 'ALL', label: '全部' },
+            { key: 'ONGOING', label: '申购中' },
+            { key: 'UPCOMING', label: '待申购' },
+            { key: 'LISTED', label: '已上市' },
+            { key: 'CANCELLED', label: '已取消' }
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setFilterStatus(item.key as any)}
+              className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
+                filterStatus === item.key
+                  ? 'bg-[#E63946] text-white'
+                  : 'bg-[#F5F5F5] text-[#666666]'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 内容区域 */}
+      <div className="p-4 pb-20">
+        {/* 加载中 */}
+        {loading && ipoList.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#0066CC] border-t-transparent"></div>
+            <p className="text-sm text-[#999999] mt-3">加载中...</p>
+          </div>
+        )}
+
+        {/* 错误状态 */}
+        {error && ipoList.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <svg className="w-16 h-16 text-[#CCCCCC] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-[#999999] text-sm mb-4">{error}</p>
+            <button
+              onClick={loadIPOData}
+              className="px-6 py-2 bg-[#0066CC] text-white text-sm rounded-lg"
+            >
+              重试
+            </button>
+          </div>
+        )}
+
+        {/* 空数据 */}
+        {!loading && ipoList.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <svg className="w-16 h-16 text-[#CCCCCC] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-[#999999] text-sm">暂无新股数据</p>
+          </div>
+        )}
+
+        {/* IPO卡片列表 */}
+        <div className="space-y-3">
+          {ipoList.map((ipo, index) => {
+            const statusStyle = getStatusStyle(ipo.status);
+            const unit = ipo.symbol?.startsWith('60') ? 1000 : 500;
+            const marketName = ipo.symbol?.startsWith('60') ? '沪市' : 
+                              ipo.symbol?.startsWith('688') ? '科创板' :
+                              ipo.symbol?.startsWith('00') ? '深市' :
+                              ipo.symbol?.startsWith('30') ? '创业板' : '';
+            
+            return (
+              <div key={`${ipo.symbol}-${index}`} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                {/* 卡片头部 */}
+                <div className="flex items-center justify-between p-4 border-b border-[#F0F0F0]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0066CC] to-[#004C99] flex items-center justify-center text-white text-lg font-bold">
+                      {ipo.name?.charAt(0) || 'N'}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#333333]">{ipo.name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${statusStyle.bg} ${statusStyle.text}`}>
+                          {statusStyle.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-[#999999]">
+                        <span>{ipo.symbol}</span>
+                        <span>·</span>
+                        <span>{marketName}</span>
+                        {ipo.subscription_code && (
+                          <>
+                            <span>·</span>
+                            <span className="text-[#E63946]">申购码 {ipo.subscription_code}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 详细信息 */}
+                <div className="p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* 发行价 */}
+                    <div>
+                      <p className="text-xs text-[#999999] mb-1">发行价格</p>
+                      <p className="text-lg font-bold text-[#333333]">
+                        {ipo.ipo_price && ipo.ipo_price > 0 ? `¥${ipo.ipo_price.toFixed(2)}` : '待定'}
+                      </p>
+                    </div>
+                    {/* 市盈率 */}
+                    <div>
+                      <p className="text-xs text-[#999999] mb-1">市盈率</p>
+                      <p className="text-lg font-bold text-[#333333]">
+                        {ipo.pe_ratio ? ipo.pe_ratio.toFixed(2) : '-'}
+                      </p>
+                    </div>
+                    {/* 发行日期 */}
+                    <div>
+                      <p className="text-xs text-[#999999] mb-1">申购日期</p>
+                      <p className="text-sm font-medium text-[#333333]">
+                        {formatDate(ipo.issue_date)}
+                      </p>
+                    </div>
+                    {/* 上市日期 */}
+                    <div>
+                      <p className="text-xs text-[#999999] mb-1">上市日期</p>
+                      <p className="text-sm font-medium text-[#333333]">
+                        {formatDate(ipo.listing_date) || '待上市'}
+                      </p>
+                    </div>
+                    {/* 发行数量 */}
+                    <div>
+                      <p className="text-xs text-[#999999] mb-1">发行数量</p>
+                      <p className="text-sm font-medium text-[#333333]">
+                        {ipo.issue_volume ? `${ipo.issue_volume.toLocaleString()}万股` : '-'}
+                      </p>
+                    </div>
+                    {/* 网上发行 */}
+                    <div>
+                      <p className="text-xs text-[#999999] mb-1">网上发行</p>
+                      <p className="text-sm font-medium text-[#333333]">
+                        {ipo.online_issue_volume ? `${ipo.online_issue_volume.toLocaleString()}万股` : '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 申购提示 */}
+                  {ipo.status === 'ONGOING' && (
+                    <div className="mt-3 p-3 bg-[#FFF7ED] rounded-lg">
+                      <p className="text-xs text-[#F97316]">
+                        💡 {marketName}最低申购 {unit} 股，需资金 ¥{((ipo.ipo_price || 0) * unit).toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 操作按钮 */}
+                <div className="px-4 pb-4">
+                  <button
+                    onClick={() => handleApply(ipo)}
+                    disabled={(ipo.status !== 'ONGOING' && ipo.status !== 'UPCOMING') || executing === ipo.symbol}
+                    className={`w-full py-3 rounded-xl font-bold text-sm transition-colors ${
+                      ipo.status === 'ONGOING'
+                        ? 'bg-[#E63946] text-white hover:bg-[#D62828]'
+                        : ipo.status === 'UPCOMING'
+                        ? 'bg-[#F97316] text-white hover:bg-[#EA580C]'
+                        : 'bg-[#E5E5E5] text-[#999999]'
+                    } disabled:opacity-50`}
+                  >
+                    {executing === ipo.symbol 
+                      ? '申购中...' 
+                      : ipo.status === 'ONGOING' 
+                      ? '立即申购' 
+                      : ipo.status === 'UPCOMING'
+                      ? '预约申购'
+                      : '暂不可申购'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 底部提示 */}
+        {ipoList.length > 0 && (
+          <div className="mt-4 text-center">
+            <p className="text-xs text-[#999999]">
+              数据仅供参考，请以交易所公告为准
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

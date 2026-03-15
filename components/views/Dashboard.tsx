@@ -24,6 +24,8 @@ import {
   HotNewsItem,
   FinancialCalendarItem,
 } from '../../services/hotspotService';
+import { getPublishedEducationTopics } from '../../services/educationService';
+import type { EducationTopic } from '../../lib/types';
 import HomeCarousel from '../client/home/HomeCarousel';
 
 // 功能入口配置 - 移除极速开户（已登录用户不需要）
@@ -32,6 +34,7 @@ const featureGrid = [
   { id: 'video', label: '视频专区', icon: '📹', bgColor: 'bg-[#F97316]', path: '/client/video' },
   { id: 'etf', label: 'ETF专区', icon: '📊', bgColor: 'bg-[#EAB308]', badge: 'HOT', path: '/client/etf' },
   { id: 'ipo', label: '新股申购', icon: '🎯', bgColor: 'bg-[#E63946]', badge: 'NEW', path: '/client/ipo' },
+  { id: 'block-trade', label: '大宗交易', icon: '🔀', bgColor: 'bg-[#8B5CF6]', path: '/client/block-trade' },
   { id: 'margin', label: '融资融券', icon: '💰', bgColor: 'bg-[#F97316]', path: '/client/margin' },
   { id: 'calendar', label: '财富日历', icon: '📅', bgColor: 'bg-[#EAB308]', badge: '10', path: '/client/calendar' },
   { id: 'market', label: '沪深市场', icon: '📈', bgColor: 'bg-[#E63946]', path: '/client/market' },
@@ -59,12 +62,14 @@ const defaultViewpointData = [
 // Tab 类型
 type NewsTabType = 'viewpoint' | 'news' | 'hot_news' | 'financial_calendar';
 
-// 默认Banner数据
-const defaultBanner = {
-  tag: '贵金属',
-  title: '黄金上涨大周期还有多长？',
-  expert: '许之彦',
-  avatar: '👨‍💼',
+// 投教分类映射
+const EDUCATION_CATEGORY_LABELS: Record<string, string> = {
+  BASICS: '基础知识',
+  STRATEGY: '投资策略',
+  RISK: '风险控制',
+  TOOLS: '交易工具',
+  MARKET: '市场分析',
+  PSYCHOLOGY: '投资心理',
 };
 
 interface DashboardProps {
@@ -95,6 +100,9 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
   const [activeTab, setActiveTab] = useState<NewsTabType>('viewpoint');
   const [showAllFeatures, setShowAllFeatures] = useState(false);
   
+  // 热门投教文章
+  const [hotEducationArticles, setHotEducationArticles] = useState<EducationTopic[]>([]);
+  
   // 新用户引导
   const {
     showWelcome,
@@ -113,10 +121,11 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
       setLoadingNews(true);
       try {
         // 并行加载所有数据
-        const [homeNews, hotNewsData, calendarData] = await Promise.all([
+        const [homeNews, hotNewsData, calendarData, educationData] = await Promise.all([
           getHomeNewsData(),
           getHotNews(20),
           getFinancialCalendar(20),
+          getPublishedEducationTopics(),
         ]);
         
         if (homeNews.galaxyNews && homeNews.galaxyNews.length > 0) {
@@ -130,6 +139,10 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
         }
         if (calendarData && calendarData.length > 0) {
           setFinancialCalendar(calendarData);
+        }
+        // 设置热门投教文章（取前3篇）
+        if (educationData && educationData.length > 0) {
+          setHotEducationArticles(educationData.slice(0, 3));
         }
       } catch (error) {
         console.error('加载新闻数据失败:', error);
@@ -234,43 +247,72 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
         </div>
       </section>
 
-      {/* Banner卡片 */}
-      <section className="mx-4 mt-3">
-        <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-xl p-4 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <span className="inline-block bg-[#E63946] text-white text-[10px] px-1.5 py-0.5 rounded font-medium mb-2">
-                {defaultBanner.tag}
-              </span>
-              <h3 className="text-white text-base font-semibold leading-tight">
-                {defaultBanner.title}
-              </h3>
-              <p className="text-white/60 text-xs mt-2">
-                投资有风险，入市需谨慎
-              </p>
-            </div>
-            <div className="flex flex-col items-center ml-3">
-              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-2xl">
-                {defaultBanner.avatar}
+      {/* 热门投教文章卡片 */}
+      {hotEducationArticles.length > 0 && (
+        <section className="mx-4 mt-3">
+          <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📚</span>
+                <h3 className="text-white text-sm font-semibold">投教中心 · 热门精选</h3>
               </div>
-              <span className="text-white/80 text-xs mt-1 writing-vertical">{defaultBanner.expert}</span>
+              <button 
+                onClick={() => navigate('/client/education')}
+                className="text-white/60 text-xs flex items-center gap-1"
+              >
+                更多
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              {hotEducationArticles.map((article, index) => (
+                <div
+                  key={article.id}
+                  onClick={() => navigate(`/client/education/${article.id}`)}
+                  className="flex items-center gap-3 p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/15 transition-colors"
+                >
+                  <span className="text-lg font-bold text-white/60 w-5">{index + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-white text-sm font-medium truncate">{article.title}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      {article.category && (
+                        <span className="text-white/50 text-xs">
+                          {EDUCATION_CATEGORY_LABELS[article.category] || article.category}
+                        </span>
+                      )}
+                      {article.views !== undefined && (
+                        <span className="text-white/40 text-xs">{article.views}次阅读</span>
+                      )}
+                    </div>
+                  </div>
+                  <svg className="w-4 h-4 text-white/40 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* 行情状态卡片 */}
+      {/* 智能选股入口卡片 */}
       <section className="mx-4 mt-3">
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-[#F0F0F0]">
+        <div className="bg-gradient-to-r from-[#E63946] to-[#FF6B6B] rounded-xl shadow-sm overflow-hidden cursor-pointer" onClick={() => navigate('/client/smart-pick')}>
+          <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
-              <span className={`text-xs font-medium ${marketStatus.color}`}>{marketStatus.status}</span>
-              <span className="text-sm font-semibold text-[#333333]">反转又反转</span>
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <ICONS.Brain className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-white">智能选股</span>
+                <p className="text-xs text-white/70 mt-0.5">AI驱动，精准筛选优质标的</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-[#666666]">
-              <span className="text-xs">融资余额</span>
-              <span className="text-xs text-[#999999]">03-12</span>
-              <svg className="w-4 h-4 text-[#999999]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2 text-white/80">
+              <span className="text-xs">立即体验</span>
+              <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
@@ -401,24 +443,36 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
                 return (
                   <div 
                     key={item.id} 
-                    className="px-4 py-3 cursor-pointer hover:bg-[#FAFAFA]"
+                    className="px-4 py-3 cursor-pointer hover:bg-[#FAFAFA] transition-colors"
                   >
-                    <div className="flex gap-3">
-                      <span className="text-xs text-[#999999] shrink-0 w-12">{item.time || item.date || ''}</span>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      {/* 时间列 - 固定宽度右对齐 */}
+                      <span className="text-xs text-[#999999] shrink-0 w-12 text-right pt-0.5 font-mono">
+                        {item.time || item.date || ''}
+                      </span>
+                      
+                      {/* 内容区域 */}
+                      <div className="flex-1 min-w-0">
+                        {/* 标签和标题在同一行 */}
                         <div className="flex items-start gap-2">
-                          <span className={`flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded ${tag.color}`}>
+                          <span className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded leading-tight ${tag.color}`}>
                             {tag.text}
                           </span>
-                          <p className="text-sm text-[#333333] leading-relaxed flex-1">
+                          <p className="text-sm text-[#333333] leading-[1.6] flex-1 min-w-0">
                             {item.title || item.content}
                           </p>
                         </div>
-                        {item.keywords && (
-                          <p className="text-xs text-[#999999] mt-1 ml-10">{item.keywords}</p>
-                        )}
-                        {item.heat && (
-                          <span className="text-[10px] text-[#F97316] mt-1 ml-10 inline-block">🔥 {item.heat}</span>
+                        
+                        {/* 关键词和热度 */}
+                        {(item.keywords || item.heat) && (
+                          <div className="flex items-center gap-2 mt-1.5 ml-10">
+                            {item.keywords && (
+                              <span className="text-[10px] text-[#999999]">{item.keywords}</span>
+                            )}
+                            {item.heat && (
+                              <span className="text-[10px] text-[#F97316]">🔥 {item.heat}</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

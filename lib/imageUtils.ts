@@ -109,8 +109,19 @@ export function getServiceIconUrl(key: keyof typeof imageConfig.serviceIcons): s
  * 获取头像 URL
  * @param type 头像类型
  */
-export function getAvatarUrl(type: 'agent' | 'default' = 'default'): string {
+export function getAvatarUrl(type: 'agent' | 'default' | 'userDefault' = 'default'): string {
   return imageConfig.avatars[type] || imageConfig.avatars.default;
+}
+
+/**
+ * 获取用户头像 URL（带默认头像兜底）
+ * @param avatarUrl 用户自定义头像 URL，如果为空则返回默认头像
+ */
+export function getUserAvatarUrl(avatarUrl?: string | null): string {
+  if (!avatarUrl || avatarUrl.trim() === '') {
+    return imageConfig.avatars.userDefault || imageConfig.avatars.default;
+  }
+  return avatarUrl;
 }
 
 /**

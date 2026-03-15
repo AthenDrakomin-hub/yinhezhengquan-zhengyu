@@ -7,6 +7,7 @@ import StockIcon from '../../shared/StockIcon';
 import { userService } from '../../../services/userService';
 import { uploadUserAvatar } from '../../../services/supabaseStorageService';
 import { supabase } from '../../../lib/supabase';
+import { imageConfig } from '../../../lib/imageConfig';
 
 interface ProfileData {
   nickname: string;
@@ -106,6 +107,9 @@ const AvatarModal: React.FC<AvatarModalProps> = ({ currentAvatar, onUpload, onCl
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // 默认头像 URL
+  const defaultAvatarUrl = imageConfig.avatars.userDefault;
+  
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -158,13 +162,17 @@ const AvatarModal: React.FC<AvatarModalProps> = ({ currentAvatar, onUpload, onCl
         {/* 预览区域 */}
         <div className="flex justify-center mb-4">
           <div className="relative w-32 h-32 rounded-full overflow-hidden bg-[var(--color-bg)] border-4 border-[var(--color-border)]">
-            {preview ? (
-              <img src={preview} alt="头像预览" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <ICONS.User size={48} className="text-[var(--color-text-muted)]" />
-              </div>
-            )}
+            <img 
+              src={preview || defaultAvatarUrl} 
+              alt="头像预览" 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.src !== defaultAvatarUrl) {
+                  target.src = defaultAvatarUrl;
+                }
+              }}
+            />
             {uploading && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
@@ -448,15 +456,18 @@ const ProfileDetailView: React.FC = () => {
             className="relative group cursor-pointer"
             onClick={() => setAvatarModal(true)}
           >
-            {profileData.avatar_url ? (
-              <img 
-                src={profileData.avatar_url} 
-                alt="用户头像" 
-                className="w-24 h-24 rounded-full object-cover ring-4 ring-[var(--color-primary)]/20"
-              />
-            ) : (
-              <StockIcon name={profileData.nickname || 'User'} size="lg" className="ring-4 ring-[var(--color-primary)]/20" />
-            )}
+            <img 
+              src={profileData.avatar_url || imageConfig.avatars.userDefault} 
+              alt="用户头像" 
+              className="w-24 h-24 rounded-full object-cover ring-4 ring-[var(--color-primary)]/20"
+              onError={(e) => {
+                // 如果加载失败，使用默认头像
+                const target = e.target as HTMLImageElement;
+                if (target.src !== imageConfig.avatars.userDefault) {
+                  target.src = imageConfig.avatars.userDefault;
+                }
+              }}
+            />
             <div className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--color-primary)] rounded-full border-4 border-[var(--color-bg)] flex items-center justify-center text-white shadow-lg group-hover:opacity-90 transition-all">
               <ICONS.Camera size={14} />
             </div>

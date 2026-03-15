@@ -121,10 +121,10 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#F5F5F5] text-[#333333]">
+    <div className="flex h-screen overflow-hidden bg-[#F5F5F5] text-[#333333]">
       
       {/* --- PC 端侧边导航栏 - 可折叠 --- */}
-      <aside className={`hidden md:flex flex-col ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-[#E5E5E5] sticky top-0 h-screen z-40 transition-all duration-300`}>
+      <aside className={`hidden md:flex flex-col ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-[#E5E5E5] h-screen z-40 transition-all duration-300`}>
         {/* Logo 区域 - 已移除logo */}
         <div className={`p-4 border-b border-[#E5E5E5] flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <button 
@@ -181,7 +181,7 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
       </aside>
 
       {/* --- 主容器 --- */}
-      <div className="flex-1 flex flex-col relative w-full min-w-0">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative min-w-0">
         
         {/* 待激活状态横幅 */}
         {account?.status === 'PENDING' && (
@@ -200,7 +200,7 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
             
             {/* 首页显示搜索框，其他页面显示标题 */}
             {isDashboard ? (
-              <div className="flex-1 flex items-center gap-2 bg-[#F5F5F5] rounded-full px-3 py-2">
+              <div className="flex-1 flex items-center gap-2 bg-[#F5F5F5] rounded-full px-3 py-2 max-w-md">
                 <svg className="w-4 h-4 text-[#999999] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -229,16 +229,11 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
               </h2>
             )}
             
+            {/* 弹性空白，推送右侧按钮到最右边 */}
+            <div className="flex-1" />
+            
             {/* 右侧按钮组 */}
             <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
-            {/* 智能选股按钮 */}
-            <button 
-              onClick={() => setShowSmartPicker(true)}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-[#FFEBEE] text-[#E63946] rounded-xl text-sm font-medium hover:bg-[#E63946] hover:text-white transition-all"
-            >
-              <ICONS.Brain size={16} />
-              智能选股
-            </button>
             
             {/* 管理后台入口 */}
             {userRole === 'admin' && (
@@ -282,7 +277,7 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
         </header>
 
         {/* 主内容区 */}
-        <main className="flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-8 w-full">
+        <main className="flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-4 w-full min-h-0">
           <div className="max-w-md mx-auto md:max-w-7xl md:px-6">
             <AnimatePresence mode="wait">
               <motion.div

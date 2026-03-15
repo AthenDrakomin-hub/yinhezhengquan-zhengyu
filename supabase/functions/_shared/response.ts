@@ -7,8 +7,10 @@ import { TradeResponse, ErrorCodes, ErrorCode } from './types.ts'
 // CORS 头
 export const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept, origin, x-requested-with',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+  'Access-Control-Allow-Credentials': 'true',
 }
 
 // 别名导出（兼容不同命名风格）
@@ -45,9 +47,13 @@ export function errorResponse(
 
 /**
  * OPTIONS 预检响应
+ * 返回 204 No Content 状态码，符合 CORS 规范
  */
 export function optionsResponse(): Response {
-  return new Response('ok', { headers: CORS_HEADERS })
+  return new Response(null, { 
+    status: 204,
+    headers: CORS_HEADERS 
+  })
 }
 
 /**
