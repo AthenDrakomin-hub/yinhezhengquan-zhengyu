@@ -99,7 +99,7 @@ export const userService = {
     if (userIds.length > 0) {
       const { data: assetsResult, error: assetsError } = await supabase
         .from('assets')
-        .select('user_id, total_asset, available_balance, frozen_balance')
+        .select('user_id, total_asset, available_cash, frozen_cash')
         .in('user_id', userIds);
       
       if (assetsError) {
@@ -129,9 +129,9 @@ export const userService = {
         role: profile.role || 'USER',
         risk_level: profile.risk_level || '稳健型',
         status: profile.status || 'ACTIVE',
-        balance: asset?.available_balance || 0,
+        balance: asset?.available_cash || 0,
         total_asset: asset?.total_asset || 0,
-        frozen_balance: asset?.frozen_balance || 0,
+        frozen_balance: asset?.frozen_cash || 0,
         created_at: profile.created_at
       };
     });
@@ -174,8 +174,8 @@ export const userService = {
       .insert({
         user_id: profileData.id,
         total_asset: userData.initial_balance,
-        available_balance: userData.initial_balance,
-        frozen_balance: 0
+        available_cash: userData.initial_balance,
+        frozen_cash: 0
       });
 
     if (assetError) throw assetError;
@@ -254,7 +254,7 @@ export const userService = {
 
     if (fetchError) throw fetchError;
 
-    const currentBalance = assetData.available_balance;
+    const currentBalance = assetData.available_cash;
     let newBalance = currentBalance;
 
     if (type === 'RECHARGE') {
@@ -270,8 +270,8 @@ export const userService = {
     const { error: updateError } = await supabase
       .from('assets')
       .update({
-        available_balance: newBalance,
-        total_asset: newBalance + assetData.frozen_balance,
+        available_cash: newBalance,
+        total_asset: newBalance + assetData.frozen_cash,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId);

@@ -31,6 +31,7 @@ const AdminSearchConfig = lazy(() => import('../components/admin/AdminSearchConf
 const AdminFeatureConfig = lazy(() => import('../components/admin/AdminFeatureConfig'));
 const AdminMarketConfig = lazy(() => import('../components/admin/AdminMarketConfig'));
 const AdminWealthProducts = lazy(() => import('../components/admin/AdminWealthProducts'));
+const AdminDownloads = lazy(() => import('../components/admin/AdminDownloads'));
 
 
 // 使用 CSS 变量的加载指示器
@@ -77,6 +78,7 @@ const AdminRoutes: React.FC = () => {
             <Route path="feature-config" element={<AdminFeatureConfig />} />
             <Route path="market-config" element={<AdminMarketConfig />} />
             <Route path="wealth-products" element={<AdminWealthProducts />} />
+            <Route path="downloads" element={<AdminDownloads />} />
 
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Route>

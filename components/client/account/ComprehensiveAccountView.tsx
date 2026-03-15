@@ -61,7 +61,7 @@ const ComprehensiveAccountView: React.FC = () => {
 
       if (assets) {
         // 根据资产数据构建账户列表
-        const stockBalance = Number(assets.available_balance) || 0;
+        const stockBalance = Number(assets.available_cash) || 0;
         const frozenBalance = Number(assets.frozen_balance) || 0;
         
         setAccounts([

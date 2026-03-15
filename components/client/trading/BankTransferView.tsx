@@ -46,12 +46,12 @@ const BankTransferView: React.FC = () => {
       // 获取证券账户余额
       const { data: assets } = await supabase
         .from('assets')
-        .select('available_balance')
+        .select('available_cash')
         .eq('user_id', user.id)
         .single();
       
       if (assets) {
-        setStockBalance(Number(assets.available_balance) || 0);
+        setStockBalance(Number(assets.available_cash) || 0);
       }
 
       // 获取银行卡列表（真实数据）

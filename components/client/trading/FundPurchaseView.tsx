@@ -95,12 +95,12 @@ const FundPurchaseView: React.FC = () => {
     try {
       const { data } = await supabase
         .from('assets')
-        .select('available_balance')
+        .select('available_cash')
         .eq('user_id', user.id)
         .single();
       
       if (data) {
-        setBalance(Number(data.available_balance) || 0);
+        setBalance(Number(data.available_cash) || 0);
       }
     } catch (error) {
       console.warn('获取余额失败');

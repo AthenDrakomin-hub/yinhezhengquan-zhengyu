@@ -75,6 +75,7 @@ const AdminLayout: React.FC = () => {
     { id: 'feature-config', label: '功能入口', icon: '📱', path: '/admin/feature-config', minLevel: 'super_admin' },
     { id: 'market-config', label: '市场配置', icon: '📈', path: '/admin/market-config', minLevel: 'super_admin' },
     { id: 'wealth-products', label: '理财产品', icon: '🏦', path: '/admin/wealth-products', minLevel: 'admin' },
+    { id: 'downloads', label: '下载管理', icon: ICONS.Download, path: '/admin/downloads', minLevel: 'admin' },
     { id: 'content', label: '内容管理', icon: ICONS.Book, path: '/admin/content', minLevel: 'admin' },
     { id: 'audit-logs', label: '审计日志', icon: ICONS.FileText, path: '/admin/audit-logs', minLevel: 'super_admin' },
     { id: 'data-export', label: '数据导出', icon: ICONS.Download, path: '/admin/data-export', minLevel: 'super_admin' },

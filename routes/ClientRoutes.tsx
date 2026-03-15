@@ -218,7 +218,7 @@ const UserAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: user.email || '',
         username: user.user_metadata?.username || user.email?.split('@')[0] || '用户',
         status: 'ACTIVE',
-        balance: Number(assets?.available_balance) || 0,
+        balance: Number(assets?.available_cash) || 0,
         holdings: (positions || []).map(p => {
           const symbol = p.symbol || p.stock_code;
           const currentPrice = stockPrices[symbol] || Number(p.current_price || p.average_price);
