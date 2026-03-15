@@ -44,8 +44,8 @@ const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => 
         <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar pb-20">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-[#00D4AA] uppercase tracking-[0.3em]">{selectedReport.category}</span>
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded ${selectedReport.sentiment === '看多' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 'bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]'}`}>
+              <span className="text-[10px] font-black text-[#E63946] uppercase tracking-[0.3em]">{selectedReport.category}</span>
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded ${selectedReport.sentiment === '看多' ? 'bg-[#E63946]/10 text-[#E63946]' : 'bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]'}`}>
                 观点：{selectedReport.sentiment}
               </span>
             </div>
@@ -100,9 +100,9 @@ const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => 
                     <div className="text-[10px] text-[var(--color-text-muted)]">2.3 MB · PDF文档</div>
                   </div>
                 </div>
-                <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#00D4AA] transition-colors" />
+                <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#E63946] transition-colors" />
               </button>
-              <button className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[#00D4AA] transition-colors group">
+              <button className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[#E63946] transition-colors group">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
                     <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h2M8 17h2M12 13l2 2 4-4"/></svg>
@@ -112,7 +112,7 @@ const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => 
                     <div className="text-[10px] text-[var(--color-text-muted)]">156 KB · Excel表格</div>
                   </div>
                 </div>
-                <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#00D4AA] transition-colors" />
+                <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#E63946] transition-colors" />
               </button>
             </div>
           </div>
@@ -139,7 +139,7 @@ const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => 
             onClick={() => setFilter(cat)}
             className={`whitespace-nowrap px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
               filter === cat 
-                ? 'bg-[#00D4AA] text-[#0A1628]' 
+                ? 'bg-[#E63946] text-[#1E1E1E]' 
                 : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
             }`}
           >
@@ -165,15 +165,15 @@ const ResearchReportsView: React.FC<ResearchReportsViewProps> = ({ onBack }) => 
               className="galaxy-card p-5 space-y-3 border-l-4 border-transparent hover:border-[var(--color-primary)] transition-all cursor-pointer group"
             >
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black text-[#00D4AA] uppercase tracking-[0.2em]">{report.category}</span>
+                <span className="text-[9px] font-black text-[#E63946] uppercase tracking-[0.2em]">{report.category}</span>
                 <span className="text-[9px] text-[var(--color-text-muted)] font-bold">{report.date}</span>
               </div>
-              <h4 className="text-sm font-black text-[var(--color-text-primary)] group-hover:text-[#00D4AA] leading-snug transition-colors">{report.title}</h4>
+              <h4 className="text-sm font-black text-[var(--color-text-primary)] group-hover:text-[#E63946] leading-snug transition-colors">{report.title}</h4>
               <p className="text-[10px] text-[var(--color-text-secondary)] line-clamp-2 leading-relaxed">{report.summary}</p>
               <div className="flex justify-between items-center pt-3 border-t border-[var(--color-border)] mt-2">
                 <span className="text-[9px] text-[var(--color-text-secondary)] font-bold italic">{report.author}</span>
                 <div className="flex items-center gap-1">
-                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${report.sentiment === '看多' ? 'bg-[#00D4AA]/10 text-[#00D4AA]' : 'bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]'}`}>
+                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${report.sentiment === '看多' ? 'bg-[#E63946]/10 text-[#E63946]' : 'bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]'}`}>
                     {report.sentiment}
                   </span>
                   <ICONS.ArrowRight size={10} className="text-[var(--color-text-muted)] group-hover:translate-x-1 transition-transform" />

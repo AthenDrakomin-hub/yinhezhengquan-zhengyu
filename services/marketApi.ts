@@ -1,15 +1,10 @@
 /**
- * 统一行情 API 服务模块
- * 所有行情数据请求都通过 proxy-market Edge Function 代理
+ * 行情 API 服务模块
  * 
- * 支持的 action:
- * - batch: 批量行情
- * - realtime: 单只股票行情
- * - quote: 完整个股详情（含开高低收等）
- * - orderbook: 五档盘口
- * - kline: K线数据
- * - news: 财经快讯
- * - limitup: 涨停板
+ * 数据策略：
+ * - 所有行情数据通过 proxy-market Edge Function 代理
+ * - 自动缓存，减少重复请求
+ * - 统一错误处理和降级机制
  */
 
 import { supabase } from '@/lib/supabase';
@@ -72,7 +67,7 @@ export interface LimitUpStock {
   turnoverRate: number;
   firstLimitUpTime: string;
   lastLimitUpTime: string;
-  openCount: number; // 开板次数
+  openCount: number;
   industry: string;
 }
 
@@ -95,6 +90,37 @@ export interface StockNotice {
   url: string;
 }
 
+// ==================== 本地缓存 ====================
+
+interface CacheItem<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheItem<any>>();
+
+function getCached<T>(key: string, ttl: number): T | null {
+  const item = cache.get(key);
+  if (item && Date.now() - item.timestamp < ttl) {
+    return item.data as T;
+  }
+  return null;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+// 缓存时间配置
+const CACHE_TTL = {
+  QUOTE: 10 * 1000,      // 行情 10秒
+  BATCH: 10 * 1000,      // 批量行情 10秒
+  ORDER_BOOK: 5 * 1000,  // 五档 5秒
+  KLINE: 60 * 1000,      // K线 1分钟
+  NEWS: 30 * 1000,       // 新闻 30秒
+  LIMITUP: 30 * 1000,    // 涨停板 30秒
+};
+
 // ==================== 请求去重 ====================
 
 const pendingRequests = new Map<string, Promise<any>>();
@@ -110,64 +136,83 @@ async function dedupe<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
 
 // ==================== Edge Function 调用 ====================
 
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-  cached?: boolean;
-}
+const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-market`;
 
-async function callProxy<T>(action: string, params: Record<string, any>): Promise<ProxyResponse<T>> {
+async function callEdgeFunction<T>(params: Record<string, any>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('proxy-market', {
-    body: { action, ...params }
+    body: params,
   });
-  
+
   if (error) {
-    console.error(`[marketApi] ${action} 调用失败:`, error);
+    console.error('[marketApi] Edge Function 调用失败:', error);
     throw error;
   }
-  
-  return data as ProxyResponse<T>;
+
+  if (!data?.success) {
+    throw new Error(data?.error || '获取数据失败');
+  }
+
+  return data.data;
 }
 
 // ==================== 核心 API ====================
 
 export const marketApi = {
   /**
-   * 批量获取股票行情（简洁版）
+   * 批量获取股票行情
    */
   async getBatchStocks(symbols: string[], market: 'CN' | 'HK'): Promise<SimpleStock[]> {
     if (symbols.length === 0) return [];
     
     const cacheKey = `batch:${market}:${symbols.sort().join(',')}`;
+    const cached = getCached<SimpleStock[]>(cacheKey, CACHE_TTL.BATCH);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<SimpleStock[]>('batch', { symbols, market });
-      return result.success ? result.data : [];
+      try {
+        const stocks = await callEdgeFunction<SimpleStock[]>({
+          action: 'batch',
+          symbols,
+          market,
+        });
+        setCache(cacheKey, stocks);
+        return stocks;
+      } catch (error) {
+        console.warn('[marketApi] 批量行情获取失败，返回空数组');
+        return [];
+      }
     });
   },
   
   /**
-   * 获取单只股票实时行情（简洁版）
+   * 获取单只股票实时行情
    */
   async getRealtimeStock(symbol: string, market: 'CN' | 'HK'): Promise<SimpleStock | null> {
-    const cacheKey = `realtime:${market}:${symbol}`;
-    
-    return dedupe(cacheKey, async () => {
-      const result = await callProxy<SimpleStock>('realtime', { symbols: [symbol], market });
-      return result.success ? result.data : null;
-    });
+    const results = await this.getBatchStocks([symbol], market);
+    return results[0] || null;
   },
   
   /**
-   * 获取完整个股行情（含开高低收成交量等）
+   * 获取完整个股行情
    */
   async getStockQuote(symbol: string, market: 'CN' | 'HK'): Promise<StockQuote | null> {
     const cacheKey = `quote:${market}:${symbol}`;
+    const cached = getCached<StockQuote>(cacheKey, CACHE_TTL.QUOTE);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<StockQuote>('quote', { symbols: [symbol], market });
-      return result.success ? result.data : null;
+      try {
+        const quote = await callEdgeFunction<StockQuote>({
+          action: 'quote',
+          code: symbol,
+          market,
+        });
+        setCache(cacheKey, quote);
+        return quote;
+      } catch (error) {
+        console.warn('[marketApi] 个股行情获取失败');
+        return null;
+      }
     });
   },
   
@@ -176,10 +221,22 @@ export const marketApi = {
    */
   async getOrderBook(symbol: string, market: 'CN' | 'HK'): Promise<OrderBook | null> {
     const cacheKey = `orderbook:${market}:${symbol}`;
+    const cached = getCached<OrderBook>(cacheKey, CACHE_TTL.ORDER_BOOK);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<OrderBook>('orderbook', { symbols: [symbol], market });
-      return result.success ? result.data : null;
+      try {
+        const orderBook = await callEdgeFunction<OrderBook>({
+          action: 'orderbook',
+          code: symbol,
+          market,
+        });
+        setCache(cacheKey, orderBook);
+        return orderBook;
+      } catch (error) {
+        console.warn('[marketApi] 五档盘口获取失败');
+        return null;
+      }
     });
   },
   
@@ -188,10 +245,49 @@ export const marketApi = {
    */
   async getKline(symbol: string, market: 'CN' | 'HK', days: number = 30): Promise<number[]> {
     const cacheKey = `kline:${market}:${symbol}:${days}`;
+    const cached = getCached<number[]>(cacheKey, CACHE_TTL.KLINE);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<number[]>('kline', { symbols: [symbol], market, days });
-      return result.success ? result.data : [];
+      try {
+        const kline = await callEdgeFunction<any[]>({
+          action: 'kline',
+          code: symbol,
+          market,
+          days,
+        });
+        // 提取收盘价作为 sparkline
+        const closes = kline?.map((k: any) => k.close || k[4] || 0) || [];
+        setCache(cacheKey, closes);
+        return closes;
+      } catch (error) {
+        console.warn('[marketApi] K线数据获取失败');
+        return [];
+      }
+    });
+  },
+  
+  /**
+   * 获取成交明细
+   */
+  async getTradeTicks(symbol: string, market: 'CN' | 'HK'): Promise<TradeTick[]> {
+    const cacheKey = `ticks:${market}:${symbol}`;
+    const cached = getCached<TradeTick[]>(cacheKey, CACHE_TTL.ORDER_BOOK);
+    if (cached) return cached;
+    
+    return dedupe(cacheKey, async () => {
+      try {
+        const ticks = await callEdgeFunction<TradeTick[]>({
+          action: 'ticks',
+          code: symbol,
+          market,
+        });
+        setCache(cacheKey, ticks);
+        return ticks || [];
+      } catch (error) {
+        console.warn('[marketApi] 成交明细获取失败');
+        return [];
+      }
     });
   },
   
@@ -200,10 +296,21 @@ export const marketApi = {
    */
   async getNews(pageSize: number = 20): Promise<NewsItem[]> {
     const cacheKey = `news:${pageSize}`;
+    const cached = getCached<NewsItem[]>(cacheKey, CACHE_TTL.NEWS);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<NewsItem[]>('news', { pageSize });
-      return result.success ? result.data : [];
+      try {
+        const news = await callEdgeFunction<NewsItem[]>({
+          action: 'news',
+          pageSize,
+        });
+        setCache(cacheKey, news);
+        return news || [];
+      } catch (error) {
+        console.warn('[marketApi] 财经快讯获取失败');
+        return [];
+      }
     });
   },
   
@@ -211,11 +318,21 @@ export const marketApi = {
    * 获取涨停板股票
    */
   async getLimitUpStocks(): Promise<LimitUpStock[]> {
-    const cacheKey = 'limitup:all';
+    const cacheKey = 'limitup';
+    const cached = getCached<LimitUpStock[]>(cacheKey, CACHE_TTL.LIMITUP);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<LimitUpStock[]>('limitup', {});
-      return result.success ? result.data : [];
+      try {
+        const stocks = await callEdgeFunction<LimitUpStock[]>({
+          action: 'limitup',
+        });
+        setCache(cacheKey, stocks);
+        return stocks || [];
+      } catch (error) {
+        console.warn('[marketApi] 涨停板数据获取失败');
+        return [];
+      }
     });
   },
   
@@ -224,10 +341,22 @@ export const marketApi = {
    */
   async getStockNews(symbol: string, pageSize: number = 10): Promise<StockNews[]> {
     const cacheKey = `stock_news:${symbol}:${pageSize}`;
+    const cached = getCached<StockNews[]>(cacheKey, CACHE_TTL.NEWS);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<StockNews[]>('stock_news', { symbols: [symbol], pageSize });
-      return result.success ? result.data : [];
+      try {
+        const news = await callEdgeFunction<StockNews[]>({
+          action: 'stock_news',
+          code: symbol,
+          pageSize,
+        });
+        setCache(cacheKey, news);
+        return news || [];
+      } catch (error) {
+        console.warn('[marketApi] 个股新闻获取失败');
+        return [];
+      }
     });
   },
   
@@ -236,31 +365,30 @@ export const marketApi = {
    */
   async getStockNotice(symbol: string, pageSize: number = 10): Promise<StockNotice[]> {
     const cacheKey = `stock_notice:${symbol}:${pageSize}`;
+    const cached = getCached<StockNotice[]>(cacheKey, CACHE_TTL.NEWS);
+    if (cached) return cached;
     
     return dedupe(cacheKey, async () => {
-      const result = await callProxy<StockNotice[]>('stock_notice', { symbols: [symbol], pageSize });
-      return result.success ? result.data : [];
+      try {
+        const notices = await callEdgeFunction<StockNotice[]>({
+          action: 'stock_notice',
+          code: symbol,
+          pageSize,
+        });
+        setCache(cacheKey, notices);
+        return notices || [];
+      } catch (error) {
+        console.warn('[marketApi] 个股公告获取失败');
+        return [];
+      }
     });
   },
   
   /**
-   * 获取港股行情（支持买卖盘）
+   * 获取港股行情
    */
   async getHKQuote(symbol: string): Promise<StockQuote | null> {
     return this.getStockQuote(symbol, 'HK');
-  },
-  
-  /**
-   * 获取成交明细（通过 proxy-market）
-   */
-  async getTradeTicks(symbol: string, market: 'CN' | 'HK'): Promise<TradeTick[]> {
-    try {
-      const result = await callProxy<TradeTick[]>('ticks', { symbols: [symbol], market });
-      return result.success ? result.data : [];
-    } catch (err) {
-      console.warn('[marketApi] 获取成交明细失败:', err);
-      return [];
-    }
   },
   
   /**
@@ -268,114 +396,51 @@ export const marketApi = {
    */
   async checkHealth(): Promise<boolean> {
     try {
-      const result = await callProxy<SimpleStock>('realtime', { symbols: ['600519'], market: 'CN' });
-      return result.success;
+      const result = await this.getBatchStocks(['600519'], 'CN');
+      return result.length > 0;
     } catch {
       return false;
     }
   },
 };
 
-// ==================== 缓存管理（管理端使用）====================
+// ==================== 缓存管理 ====================
 
 export const cacheAdmin = {
-  /**
-   * 清除特定股票的所有缓存
-   */
   async clearStockCache(symbol: string, market: 'CN' | 'HK' = 'CN'): Promise<{ success: boolean; deleted: number }> {
-    try {
-      const { data, error } = await supabase.functions.invoke('clear-cache', {
-        body: { symbol, market }
-      });
-      
-      if (error) throw error;
-      return { success: true, deleted: data.deleted };
-    } catch (err) {
-      console.error('[cacheAdmin] 清除股票缓存失败:', err);
-      return { success: false, deleted: 0 };
+    let deleted = 0;
+    for (const key of cache.keys()) {
+      if (key.includes(symbol) && key.includes(market)) {
+        cache.delete(key);
+        deleted++;
+      }
     }
+    return { success: true, deleted };
   },
   
-  /**
-   * 清除特定缓存键
-   */
   async clearKeys(keys: string[]): Promise<{ success: boolean; deleted: number }> {
-    try {
-      const { data, error } = await supabase.functions.invoke('clear-cache', {
-        body: { keys }
-      });
-      
-      if (error) throw error;
-      return { success: true, deleted: data.deleted };
-    } catch (err) {
-      console.error('[cacheAdmin] 清除缓存键失败:', err);
-      return { success: false, deleted: 0 };
+    let deleted = 0;
+    for (const key of keys) {
+      if (cache.delete(key)) deleted++;
     }
+    return { success: true, deleted };
   },
   
-  /**
-   * 按模式清除缓存
-   * 支持的模式: all, quote, batch, realtime, orderbook, kline, news, stock_news, stock_notice, limitup
-   */
   async clearPattern(pattern: string): Promise<{ success: boolean; deleted: number }> {
-    try {
-      const { data, error } = await supabase.functions.invoke('clear-cache', {
-        body: { pattern }
-      });
-      
-      if (error) throw error;
-      return { success: true, deleted: data.deleted };
-    } catch (err) {
-      console.error('[cacheAdmin] 清除模式缓存失败:', err);
-      return { success: false, deleted: 0 };
+    let deleted = 0;
+    for (const key of cache.keys()) {
+      if (pattern === 'all' || key.includes(pattern)) {
+        cache.delete(key);
+        deleted++;
+      }
     }
+    return { success: true, deleted };
   },
   
-  /**
-   * 清除所有缓存（谨慎使用）
-   */
   async clearAll(): Promise<{ success: boolean }> {
-    try {
-      const { data, error } = await supabase.functions.invoke('clear-cache', {
-        body: { pattern: 'all' }
-      });
-      
-      if (error) throw error;
-      return { success: true };
-    } catch (err) {
-      console.error('[cacheAdmin] 清除所有缓存失败:', err);
-      return { success: false };
-    }
+    cache.clear();
+    return { success: true };
   },
 };
 
-// ==================== 兼容旧 API 的适配器 ====================
-
-export const marketServiceAdapter = {
-  /**
-   * 兼容旧的 getMarketData 接口
-   */
-  async getMarketData(marketType: string, stockCodes: string[]): Promise<any[]> {
-    const market = marketType === 'HK' ? 'HK' : 'CN';
-    const stocks = await marketApi.getBatchStocks(stockCodes, market);
-    
-    return stocks.map(stock => ({
-      symbol: stock.symbol,
-      name: stock.name,
-      price: stock.price.toFixed(2),
-      change: stock.change.toFixed(2),
-      changePercent: stock.changePercent.toFixed(2),
-      sparkline: stock.sparkline,
-    }));
-  },
-  
-  /**
-   * 兼容旧的行情获取接口
-   */
-  async getQuote(symbol: string, market: 'CN' | 'HK'): Promise<StockQuote | null> {
-    return marketApi.getStockQuote(symbol, market);
-  },
-};
-
-// 默认导出
 export default marketApi;

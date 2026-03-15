@@ -108,7 +108,7 @@ const FaceUpload: React.FC<FaceUploadProps> = ({
           人脸数据采集
         </h3>
         {faceKey && (
-          <span className="text-[10px] font-black text-[#00D4AA] bg-[#00D4AA]/10 px-2 py-1 rounded">
+          <span className="text-[10px] font-black text-[#E63946] bg-[#E63946]/10 px-2 py-1 rounded">
             已上传
           </span>
         )}
@@ -161,7 +161,7 @@ const FaceUpload: React.FC<FaceUploadProps> = ({
         <button
           onClick={handleCameraCapture}
           disabled={uploading}
-          className="flex-1 py-3 px-4 bg-[#00D4AA] text-[var(--color-bg)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#00D4AA]/90 transition-all disabled:opacity-50"
+          className="flex-1 py-3 px-4 bg-[#E63946] text-[var(--color-bg)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#E63946]/90 transition-all disabled:opacity-50"
         >
           <ICONS.Camera size={16} className="inline-block mr-2" />
           拍照

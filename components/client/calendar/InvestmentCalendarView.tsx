@@ -86,8 +86,8 @@ const InvestmentCalendarView: React.FC<InvestmentCalendarViewProps> = ({ onBack 
           <h1 className="text-sm font-black uppercase tracking-[0.2em]">投资日历</h1>
         </div>
         <div className="flex items-center gap-2 bg-[var(--color-surface)] px-3 py-1.5 rounded-xl border border-[var(--color-border)]">
-           <span className="w-1.5 h-1.5 bg-[#00D4AA] rounded-full animate-pulse" />
-           <span className="text-[9px] font-black text-[#00D4AA] uppercase tracking-widest">Live Syncing</span>
+           <span className="w-1.5 h-1.5 bg-[#E63946] rounded-full animate-pulse" />
+           <span className="text-[9px] font-black text-[#E63946] uppercase tracking-widest">Live Syncing</span>
         </div>
       </header>
 
@@ -97,7 +97,7 @@ const InvestmentCalendarView: React.FC<InvestmentCalendarViewProps> = ({ onBack 
           {['CN', 'HK'].map(m => (
             <div key={m} className="galaxy-card p-4 text-center space-y-1">
                <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{m} 市场</p>
-               <p className="text-xs font-black text-[#00D4AA]">正常交易</p>
+               <p className="text-xs font-black text-[#E63946]">正常交易</p>
             </div>
           ))}
         </div>
@@ -125,11 +125,11 @@ const InvestmentCalendarView: React.FC<InvestmentCalendarViewProps> = ({ onBack 
               const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
               return (
-                <div key={d} className={`h-12 border-b border-r border-[var(--color-border)] p-1 flex flex-col ${status.isWeekend ? 'bg-[var(--color-surface)]/40' : ''} ${isToday ? 'bg-[#00D4AA]/10' : ''}`}>
-                  <span className={`text-[10px] font-black ${isToday ? 'text-[#00D4AA]' : status.isWeekend ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>{d}</span>
+                <div key={d} className={`h-12 border-b border-r border-[var(--color-border)] p-1 flex flex-col ${status.isWeekend ? 'bg-[var(--color-surface)]/40' : ''} ${isToday ? 'bg-[#E63946]/10' : ''}`}>
+                  <span className={`text-[10px] font-black ${isToday ? 'text-[#E63946]' : status.isWeekend ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>{d}</span>
                   {status.events.length > 0 && (
                     <div className="mt-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#00D4AA]" title={status.events.map(e => e.title).join(', ')} />
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#E63946]" title={status.events.map(e => e.title).join(', ')} />
                     </div>
                   )}
                 </div>

@@ -1,11 +1,13 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminProvider } from './contexts/AdminContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { UserSettingsProvider } from './contexts/UserSettingsContext';
 import { ToastProvider } from './components/common/Toast';
 import NetworkStatusBar from './components/shared/NetworkStatusBar';
+import { GlobalHotkeysProvider } from './components/shared/Hotkeys';
+import { SkipLink } from './components/shared/Accessibility';
 import PublicRoutes from './routes/PublicRoutes';
 import AuthRoutes from './routes/AuthRoutes';
 import ClientRoutes from './routes/ClientRoutes';
@@ -13,6 +15,7 @@ import AdminRoutes from './routes/AdminRoutes';
 import AdminLoginView from './components/admin/AdminLoginView';
 import { ProtectedRoute } from './components/shared/ProtectedRoute';
 import UnauthorizedView from './components/shared/UnauthorizedView';
+import { initializePreload } from './utils/preload';
 
 const OptimizedAppContent: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +27,9 @@ const OptimizedAppContent: React.FC = () => {
 
   return (
     <>
+      {/* 无障碍跳转链接 */}
+      <SkipLink targetId="main-content" label="跳转到主要内容" />
+      
       <NetworkStatusBar />
       <Routes>
         {/* 管理端登录页面 */}
@@ -63,15 +69,22 @@ const OptimizedAppContent: React.FC = () => {
 };
 
 const OptimizedApp: React.FC = () => {
+  // 初始化预加载机制
+  useEffect(() => {
+    initializePreload();
+  }, []);
+
   return (
     <AuthProvider>
       <AdminProvider>
         <ThemeProvider>
           <UserSettingsProvider>
             <ToastProvider>
-              <BrowserRouter>
-                <OptimizedAppContent />
-              </BrowserRouter>
+              <GlobalHotkeysProvider>
+                <BrowserRouter>
+                  <OptimizedAppContent />
+                </BrowserRouter>
+              </GlobalHotkeysProvider>
             </ToastProvider>
           </UserSettingsProvider>
         </ThemeProvider>

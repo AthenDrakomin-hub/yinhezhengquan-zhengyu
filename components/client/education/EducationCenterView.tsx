@@ -156,7 +156,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
             onClick={e => e.stopPropagation()}
           >
             {/* 头部 */}
-            <div className="relative h-48 bg-gradient-to-br from-[#00D4AA] to-[#0A1628] overflow-hidden">
+            <div className="relative h-48 bg-gradient-to-br from-[#E63946] to-[#1E1E1E] overflow-hidden">
               {selectedArticle.image ? (
                 <LazyImage
                   src={selectedArticle.image}
@@ -238,7 +238,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
                   <ICONS.FileText size={14} /> 相关学习资料
                 </h4>
                 <div className="space-y-2">
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[#00D4AA] transition-colors group">
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[#E63946] transition-colors group">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
                         <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
@@ -248,11 +248,11 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
                         <div className="text-[10px] text-[var(--color-text-muted)]">1.2 MB · PDF文档</div>
                       </div>
                     </div>
-                    <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#00D4AA] transition-colors" />
+                    <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#E63946] transition-colors" />
                   </button>
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[#00D4AA] transition-colors group">
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[#E63946] transition-colors group">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--color-secondary-light)] flex items-center justify-center">
                         <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 11v6M9 14h6"/></svg>
                       </div>
                       <div className="text-left">
@@ -260,7 +260,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
                         <div className="text-[10px] text-[var(--color-text-muted)]">256 KB · Word文档</div>
                       </div>
                     </div>
-                    <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#00D4AA] transition-colors" />
+                    <ICONS.Download size={16} className="text-[var(--color-text-muted)] group-hover:text-[#E63946] transition-colors" />
                   </button>
                 </div>
               </div>
@@ -276,14 +276,14 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
                   <HeartIcon size={18} />
                   <span>{selectedArticle.likes || 0}</span>
                 </button>
-                <button className="flex items-center gap-2 text-sm font-bold text-[var(--color-text-secondary)] hover:text-[#00D4AA] transition">
+                <button className="flex items-center gap-2 text-sm font-bold text-[var(--color-text-secondary)] hover:text-[#E63946] transition">
                   <ShareIcon size={18} />
                   <span>分享</span>
                 </button>
               </div>
               <button
                 onClick={() => setShowArticleDetail(false)}
-                className="px-6 py-2 bg-[#00D4AA] text-[#0A1628] text-sm font-black rounded-lg hover:bg-[#00B894] transition"
+                className="px-6 py-2 bg-[#E63946] text-[#1E1E1E] text-sm font-black rounded-lg hover:bg-[#C62836] transition"
               >
                 返回列表
               </button>
@@ -297,7 +297,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] pb-8 text-[var(--color-text-primary)]">
       {/* 头部 */}
-      <div className="bg-gradient-to-br from-[#0A1628] to-[#1A2638] text-white px-6 py-8">
+      <div className="bg-gradient-to-br from-[#1E1E1E] to-[#1A2638] text-white px-6 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-4 mb-4">
             {onBack && (
@@ -322,7 +322,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
               placeholder="搜索投教文章..."
               value={searchKeyword}
               onChange={e => setSearchKeyword(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#00D4AA] transition"
+              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#E63946] transition"
             />
           </div>
         </div>
@@ -336,7 +336,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
               onClick={() => setSelectedCategory('ALL')}
               className={`shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition ${
                 selectedCategory === 'ALL'
-                  ? 'bg-[#00D4AA] text-[#0A1628]'
+                  ? 'bg-[#E63946] text-[#1E1E1E]'
                   : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
               }`}
             >
@@ -348,7 +348,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
                 onClick={() => setSelectedCategory(cat.value)}
                 className={`shrink-0 px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${
                   selectedCategory === cat.value
-                    ? 'bg-[#00D4AA] text-[#0A1628]'
+                    ? 'bg-[#E63946] text-[#1E1E1E]'
                     : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
                 }`}
               >
@@ -364,7 +364,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
       <div className="max-w-6xl mx-auto px-6 mt-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[#00D4AA]" />
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--color-border)] border-t-[#E63946]" />
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center py-20">
@@ -408,7 +408,7 @@ const EducationCenterView: React.FC<EducationCenterViewProps> = ({ onBack }) => 
 
                 {/* 内容 */}
                 <div className="p-4">
-                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 line-clamp-2 group-hover:text-[#00D4AA] transition">
+                  <h3 className="font-bold text-[var(--color-text-primary)] mb-2 line-clamp-2 group-hover:text-[#E63946] transition">
                     {article.title}
                   </h3>
                   <p className="text-xs text-[var(--color-text-muted)] line-clamp-2 mb-3">

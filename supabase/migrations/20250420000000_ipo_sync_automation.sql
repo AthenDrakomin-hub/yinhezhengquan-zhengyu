@@ -100,7 +100,7 @@ BEGIN
     -- 如果 pg_net 不可用，函数会抛出异常
     BEGIN
         PERFORM net.http_post(
-            url := 'https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo',
+            url := 'https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo',
             headers := jsonb_build_object(
                 'Content-Type', 'application/json',
                 'x-api-key', 'yinhe-ipo-sync-2024',
@@ -160,7 +160,7 @@ END $$;
 --    - 调度: 0 0 * * * (每天 UTC 00:00)
 --    - 命令: 
 --      SELECT net.http_post(
---          url := 'https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo',
+--          url := 'https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo',
 --          headers := '{"Content-Type": "application/json", "x-api-key": "yinhe-ipo-sync-2024"}'::jsonb,
 --          body := '{}'::jsonb
 --      );
@@ -169,7 +169,7 @@ END $$;
 -- 
 -- GitHub Actions / Vercel Cron Jobs
 -- 调用: curl -X POST -H "x-api-key: yinhe-ipo-sync-2024" 
---       https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo
+--       https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo
 
 -- 【查询命令】
 -- 

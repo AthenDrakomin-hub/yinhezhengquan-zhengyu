@@ -31,7 +31,7 @@ const SettingsOverview: React.FC = () => {
       icon: ICONS.User,
       path: '/client/settings/profile-detail',
       status: '已完成认证',
-      statusColor: 'text-[#00D4AA]',
+      statusColor: 'text-[#E63946]',
     },
     {
       id: 'security',
@@ -40,7 +40,7 @@ const SettingsOverview: React.FC = () => {
       icon: ICONS.Shield,
       path: '/client/settings/security',
       status: '已开启2FA',
-      statusColor: 'text-[#00D4AA]',
+      statusColor: 'text-[#E63946]',
     },
     {
       id: 'trading-preferences',
@@ -49,7 +49,7 @@ const SettingsOverview: React.FC = () => {
       icon: ICONS.Zap,
       path: '/client/settings/trading-preferences',
       status: tradingSettings?.fastOrderMode ? '极速模式开启' : '标准模式',
-      statusColor: tradingSettings?.fastOrderMode ? 'text-[#00D4AA]' : 'text-[var(--color-text-muted)]',
+      statusColor: tradingSettings?.fastOrderMode ? 'text-[#E63946]' : 'text-[var(--color-text-muted)]',
     },
     {
       id: 'personalized',
@@ -58,12 +58,12 @@ const SettingsOverview: React.FC = () => {
       icon: ICONS.Eye,
       path: '/client/settings/personalized',
       status: personalSettings?.hapticFeedback ? '触感反馈开启' : '触感反馈关闭',
-      statusColor: personalSettings?.hapticFeedback ? 'text-[#00D4AA]' : 'text-[var(--color-text-muted)]',
+      statusColor: personalSettings?.hapticFeedback ? 'text-[#E63946]' : 'text-[var(--color-text-muted)]',
     },
   ];
 
   const quickStats = [
-    { label: '风险等级', value: riskLevel || 'C3', color: 'text-[#00D4AA]' },
+    { label: '风险等级', value: riskLevel || 'C3', color: 'text-[#E63946]' },
     { label: '当前主题', value: isDarkMode ? '深色' : '浅色', color: 'text-[var(--color-text-primary)]' },
     { label: '语言', value: personalSettings?.language === 'zh-CN' ? '简体中文' : 'English', color: 'text-[var(--color-text-primary)]' },
     { label: '系统版本', value: 'v2.10', color: 'text-[var(--color-text-muted)]' },
@@ -94,12 +94,12 @@ const SettingsOverview: React.FC = () => {
                 className="galaxy-card p-5 text-left hover:border-[var(--color-primary)]/30 transition-all group"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[#00D4AA]/10 group-hover:border-[#00D4AA]/30 transition-all">
-                    <Icon size={22} className="text-[var(--color-text-muted)] group-hover:text-[#00D4AA] transition-colors" />
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[#E63946]/10 group-hover:border-[#E63946]/30 transition-all">
+                    <Icon size={22} className="text-[var(--color-text-muted)] group-hover:text-[#E63946] transition-colors" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-black text-sm text-[var(--color-text-primary)] group-hover:text-[#00D4AA] transition-colors">
+                      <h4 className="font-black text-sm text-[var(--color-text-primary)] group-hover:text-[#E63946] transition-colors">
                         {card.title}
                       </h4>
                       <ICONS.ArrowRight size={16} className="text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
@@ -120,11 +120,11 @@ const SettingsOverview: React.FC = () => {
         <div className="galaxy-card p-4 space-y-3">
           <button 
             onClick={() => navigate('/client/settings/about')}
-            className="w-full p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-between hover:border-[#00D4AA]/30 transition-all group"
+            className="w-full p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-between hover:border-[#E63946]/30 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[#00D4AA]/10">
-                <ICONS.Headset size={18} className="text-[var(--color-text-muted)] group-hover:text-[#00D4AA]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[#E63946]/10">
+                <ICONS.Headset size={18} className="text-[var(--color-text-muted)] group-hover:text-[#E63946]" />
               </div>
               <div>
                 <h4 className="font-black text-sm text-[var(--color-text-primary)]">关于与帮助</h4>
@@ -136,11 +136,11 @@ const SettingsOverview: React.FC = () => {
 
           <button 
             onClick={() => navigate('/client/compliance')}
-            className="w-full p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-between hover:border-[#00D4AA]/30 transition-all group"
+            className="w-full p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-between hover:border-[#E63946]/30 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[#00D4AA]/10">
-                <ICONS.FileText size={18} className="text-[var(--color-text-muted)] group-hover:text-[#00D4AA]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[#E63946]/10">
+                <ICONS.FileText size={18} className="text-[var(--color-text-muted)] group-hover:text-[#E63946]" />
               </div>
               <div>
                 <h4 className="font-black text-sm text-[var(--color-text-primary)]">合规中心</h4>
@@ -153,11 +153,11 @@ const SettingsOverview: React.FC = () => {
       </div>
 
       {/* 安全提示 */}
-      <div className="p-4 bg-[#00D4AA]/5 rounded-2xl border border-[#00D4AA]/20">
+      <div className="p-4 bg-[#E63946]/5 rounded-2xl border border-[#E63946]/20">
         <div className="flex items-start gap-3">
-          <ICONS.Shield size={18} className="text-[#00D4AA] shrink-0 mt-0.5" />
+          <ICONS.Shield size={18} className="text-[#E63946] shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-black text-[#00D4AA] uppercase tracking-widest mb-1">安全提示</p>
+            <p className="text-xs font-black text-[#E63946] uppercase tracking-widest mb-1">安全提示</p>
             <p className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed">
               建议您定期更换密码并开启双重验证，以保护账户安全。银河证券日斗单元采用银行级加密技术保护您的资产和交易数据。
             </p>

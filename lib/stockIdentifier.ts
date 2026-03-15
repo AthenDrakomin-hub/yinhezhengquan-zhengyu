@@ -257,7 +257,7 @@ export function getInitialColor(name: string, market: 'CN' | 'HK' = 'CN'): { bg:
   
   // A股根据首字生成颜色
   const colors = [
-    { bg: 'rgba(0, 212, 170, 0.15)', text: '#00D4AA' },
+    { bg: 'rgba(0, 212, 170, 0.15)', text: '#E63946' },
     { bg: 'rgba(37, 99, 235, 0.15)', text: '#2563EB' },
     { bg: 'rgba(220, 38, 38, 0.15)', text: '#DC2626' },
     { bg: 'rgba(5, 150, 105, 0.15)', text: '#059669' },

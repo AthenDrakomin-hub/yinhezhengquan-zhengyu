@@ -50,12 +50,10 @@ export const chatService = {
         };
       }
 
-      // 没有活动工单，创建新的
-      const newTicketId = `T-${Date.now().toString().slice(-6)}`;
+      // 没有活动工单，创建新的（id 由数据库自动生成 UUID）
       const { data: newTicket, error: createError } = await supabase
         .from('support_tickets')
         .insert({
-          id: newTicketId,
           subject: '咨询',
           status: 'OPEN',
           user_id: userId,
@@ -131,12 +129,10 @@ export const chatService = {
         };
       }
 
-      // 没有活动工单，创建新的
-      const newTicketId = `T-${Date.now().toString().slice(-6)}`;
+      // 没有活动工单，创建新的（id 由数据库自动生成 UUID）
       const { data: newTicket, error: createError } = await supabase
         .from('support_tickets')
         .insert({
-          id: newTicketId,
           subject: subject,
           status: 'OPEN',
           user_id: userId,

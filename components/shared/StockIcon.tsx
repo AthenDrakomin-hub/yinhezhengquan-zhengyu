@@ -35,7 +35,7 @@ const StockIcon: React.FC<StockIconProps> = ({ name, logoUrl, size = 'md', class
   // Fallback: Stylized initial with industrial gradient
   const initial = name.charAt(0);
   return (
-    <div className={`${sizeClasses[size]} bg-gradient-to-br from-[#00D4AA]/20 to-[#00D4AA]/5 border border-[#00D4AA]/30 flex items-center justify-center text-[#00D4AA] font-black uppercase tracking-tighter flex-shrink-0 ${className}`}>
+    <div className={`${sizeClasses[size]} bg-gradient-to-br from-[#E63946]/20 to-[#E63946]/5 border border-[#E63946]/30 flex items-center justify-center text-[#E63946] font-black uppercase tracking-tighter flex-shrink-0 ${className}`}>
       {initial}
     </div>
   );

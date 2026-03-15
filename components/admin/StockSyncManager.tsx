@@ -72,7 +72,7 @@ const StockSyncManager: React.FC = () => {
           <button
             onClick={() => syncActiveStocks(false)}
             disabled={syncing}
-            className="flex-1 py-3 px-4 bg-[#00D4AA] text-[#0A1628] font-bold rounded-xl
+            className="flex-1 py-3 px-4 bg-[#E63946] text-[#1E1E1E] font-bold rounded-xl
                        disabled:opacity-50 disabled:cursor-not-allowed
                        hover:bg-[#00E5BB] transition-colors"
           >
@@ -98,7 +98,7 @@ const StockSyncManager: React.FC = () => {
             placeholder="输入股票代码，如 600519"
             className="flex-1 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)]
                        rounded-xl text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]
-                       focus:outline-none focus:border-[#00D4AA]"
+                       focus:outline-none focus:border-[#E63946]"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 syncSingleStock((e.target as HTMLInputElement).value);
@@ -125,12 +125,12 @@ const StockSyncManager: React.FC = () => {
       {result && (
         <div className={`mt-4 p-4 rounded-xl ${
           result.success 
-            ? 'bg-[#00D4AA]/10 border border-[#00D4AA]/30' 
+            ? 'bg-[#E63946]/10 border border-[#E63946]/30' 
             : 'bg-[#FF6B6B]/10 border border-[#FF6B6B]/30'
         }`}>
           {result.success ? (
             <div>
-              <p className="font-bold text-[#00D4AA] mb-2">
+              <p className="font-bold text-[#E63946] mb-2">
                 ✅ 同步成功
               </p>
               {result.results && (

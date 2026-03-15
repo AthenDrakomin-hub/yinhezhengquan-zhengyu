@@ -27,7 +27,7 @@ import {
   
   // 验证工具
   validateRequired,
-} from '../_shared/mod.ts'
+} from './_shared/mod.ts'
 
 // 缓存键前缀
 const F10_CACHE_PREFIX = 'f10:'

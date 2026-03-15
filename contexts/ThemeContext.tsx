@@ -7,13 +7,13 @@ type ThemeMode = 'light' | 'dark';
 
 /**
  * 各区域的默认主题配置
- * 当前强制所有区域使用浅色主题，为深色主题预留切换能力
+ * 公共区域默认浅色，客户端支持用户自定义
  */
 const DEFAULT_THEME_BY_AREA: Record<string, ThemeMode> = {
   public: 'light',   // 公共页面 - 浅色
   auth: 'light',     // 认证页面 - 浅色
-  client: 'light',   // 客户端 - 浅色（用户可切换，但当前强制浅色）
-  admin: 'light',    // 管理端 - 浅色（原为深色，现统一为浅色基准）
+  client: 'light',   // 客户端 - 浅色默认（用户可切换）
+  admin: 'light',    // 管理端 - 浅色
 };
 
 /**
@@ -26,7 +26,7 @@ interface ThemeContextType {
   isDarkMode: boolean;
   /** 当前区域 */
   area: string;
-  /** 切换主题（保留功能，后续启用深色主题时使用） */
+  /** 切换主题 */
   toggleTheme: () => void;
   /** 设置主题 */
   setTheme: (theme: ThemeMode) => void;
@@ -51,11 +51,24 @@ interface ThemeProviderProps {
 
 /**
  * 主题提供者
- * 当前强制浅色主题，但保留切换逻辑以备后续启用深色主题
+ * 支持深色/浅色模式切换，通过 CSS 变量实现主题切换
  */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [area, setAreaState] = useState<string>('public');
-  const [theme, setThemeState] = useState<ThemeMode>('light');
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    // 初始化时从 localStorage 读取用户偏好
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        return savedTheme;
+      }
+      // 检查系统偏好
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    }
+    return 'light';
+  });
 
   /**
    * 应用主题到 DOM
@@ -71,48 +84,55 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   /**
    * 设置区域
-   * 根据区域自动应用对应的默认主题
+   * 根据区域应用对应的默认主题（公共区域强制浅色）
    */
   const setArea = useCallback((newArea: keyof typeof DEFAULT_THEME_BY_AREA) => {
     setAreaState(newArea);
-    // 当前强制使用浅色主题，忽略 localStorage 中保存的旧偏好
-    const defaultTheme = DEFAULT_THEME_BY_AREA[newArea];
-    setThemeState(defaultTheme);
-    applyTheme(defaultTheme);
+    
+    // 公共区域和认证页面强制使用浅色主题
+    if (newArea === 'public' || newArea === 'auth') {
+      setThemeState('light');
+      applyTheme('light');
+    } else if (newArea === 'client') {
+      // 客户端：读取用户保存的偏好，或使用默认浅色
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        setThemeState(savedTheme);
+        applyTheme(savedTheme);
+      } else {
+        setThemeState('light');
+        applyTheme('light');
+      }
+    } else {
+      // 其他区域使用默认主题
+      const defaultTheme = DEFAULT_THEME_BY_AREA[newArea];
+      setThemeState(defaultTheme);
+      applyTheme(defaultTheme);
+    }
   }, [applyTheme]);
 
   /**
-   * 设置主题（保留功能，后续启用深色主题时使用）
+   * 设置主题
    */
   const setTheme = useCallback((newTheme: ThemeMode) => {
     setThemeState(newTheme);
-    // 保存用户偏好到 localStorage（仅在客户端区域）
-    if (area === 'client') {
-      localStorage.setItem('theme', newTheme);
-    }
+    // 保存用户偏好到 localStorage
+    localStorage.setItem('theme', newTheme);
     applyTheme(newTheme);
-  }, [area, applyTheme]);
+  }, [applyTheme]);
 
   /**
-   * 切换主题（保留功能，后续启用深色主题时使用）
+   * 切换主题
    */
   const toggleTheme = useCallback(() => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   }, [theme, setTheme]);
 
   /**
-   * 初始化：清除旧的深色主题偏好
-   * 确保所有用户从浅色主题开始
+   * 初始化：应用保存的主题偏好
    */
   useEffect(() => {
-    // 清除可能存在的旧主题偏好
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      // 清除旧的深色偏好，强制浅色
-      localStorage.setItem('theme', 'light');
-    }
-    // 确保初始状态为浅色主题
-    document.body.classList.remove('dark-mode');
+    applyTheme(theme);
   }, []);
 
   const value: ThemeContextType = {

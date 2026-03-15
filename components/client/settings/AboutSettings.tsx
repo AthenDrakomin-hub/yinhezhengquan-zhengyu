@@ -152,8 +152,8 @@ const AboutSettings: React.FC = () => {
     <div className="animate-slide-up space-y-6">
       <div className="galaxy-card p-6 rounded-2xl">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-[#00D4AA]/10 flex items-center justify-center">
-            <ICONS.Headset size={28} className="text-[#00D4AA]" />
+          <div className="w-16 h-16 rounded-2xl bg-[#E63946]/10 flex items-center justify-center">
+            <ICONS.Headset size={28} className="text-[#E63946]" />
           </div>
           <div>
             <h3 className="text-lg font-black text-[var(--color-text-primary)]">关于与帮助</h3>
@@ -170,7 +170,7 @@ const AboutSettings: React.FC = () => {
           
           <button 
             onClick={handleContactSupport}
-            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#00D4AA]/30 transition-all"
+            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#E63946]/30 transition-all"
           >
             <div className="flex items-center gap-3">
               <ICONS.MessageCircle size={18} className="text-[var(--color-text-muted)]" />
@@ -184,7 +184,7 @@ const AboutSettings: React.FC = () => {
           
           <button 
             onClick={() => setShowTermsModal('terms')}
-            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#00D4AA]/30 transition-all"
+            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#E63946]/30 transition-all"
           >
             <div className="flex items-center gap-3">
               <ICONS.FileText size={18} className="text-[var(--color-text-muted)]" />
@@ -195,7 +195,7 @@ const AboutSettings: React.FC = () => {
           
           <button 
             onClick={() => setShowTermsModal('privacy')}
-            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#00D4AA]/30 transition-all"
+            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#E63946]/30 transition-all"
           >
             <div className="flex items-center gap-3">
               <ICONS.Shield size={18} className="text-[var(--color-text-muted)]" />
@@ -206,7 +206,7 @@ const AboutSettings: React.FC = () => {
           
           <button 
             onClick={() => setShowTermsModal('disclaimer')}
-            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#00D4AA]/30 transition-all"
+            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between hover:border-[#E63946]/30 transition-all"
           >
             <div className="flex items-center gap-3">
               <ICONS.AlertTriangle size={18} className="text-[var(--color-text-muted)]" />
@@ -217,11 +217,11 @@ const AboutSettings: React.FC = () => {
         </div>
         
         {/* 客服信息 */}
-        <div className="mt-6 p-4 bg-[#00D4AA]/5 rounded-xl border border-[#00D4AA]/20">
+        <div className="mt-6 p-4 bg-[#E63946]/5 rounded-xl border border-[#E63946]/20">
           <div className="flex items-start gap-3">
-            <ICONS.Phone size={16} className="text-[#00D4AA] mt-0.5" />
+            <ICONS.Phone size={16} className="text-[#E63946] mt-0.5" />
             <div>
-              <p className="text-xs font-bold text-[#00D4AA]">客服热线</p>
+              <p className="text-xs font-bold text-[#E63946]">客服热线</p>
               <p className="text-sm font-bold text-[var(--color-text-primary)] mt-1">95551</p>
               <p className="text-[10px] text-[var(--color-text-secondary)] mt-1">工作时间：工作日 9:00-21:00</p>
             </div>

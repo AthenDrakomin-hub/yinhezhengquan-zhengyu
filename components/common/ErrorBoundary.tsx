@@ -1,19 +1,21 @@
 "use strict";
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { ICONS } from '@/lib/constants';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
   resetOnNavigate?: boolean;
+  /** 错误类型，用于显示不同的错误界面 */
+  errorType?: 'page' | 'component' | 'network';
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  errorType: 'unknown' | 'network' | 'render' | 'script';
 }
 
 /**
@@ -29,49 +31,53 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       hasError: false,
       error: null,
       errorInfo: null,
+      errorType: 'unknown',
     };
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    // 更新 state 使下一次渲染能够显示降级 UI
+    // 根据错误类型判断
+    let errorType: 'unknown' | 'network' | 'render' | 'script' = 'unknown';
+    
+    if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Network')) {
+      errorType = 'network';
+    } else if (error.message.includes('render') || error.message.includes('React')) {
+      errorType = 'render';
+    } else if (error.message.includes('script') || error.message.includes('Script')) {
+      errorType = 'script';
+    }
+
     return {
       hasError: true,
       error,
+      errorType,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // 记录错误信息
     this.setState({
       errorInfo,
     });
 
-    // 调用自定义错误处理函数
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
-    // 也可以在这里将错误日志上报到服务器
     this.reportErrorToServer(error, errorInfo);
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {
-    // 如果 resetOnNavigate 为 true 且 children 发生变化（路由变化），重置错误状态
     if (this.props.resetOnNavigate && prevProps.children !== this.props.children) {
       this.resetErrorBoundary();
     }
   }
 
   private reportErrorToServer(error: Error, errorInfo: ErrorInfo): void {
-    // 这里可以集成 Sentry、LogRocket 等错误监控服务
-    // 目前先使用 console.error 记录，后续可以扩展
     console.error('ErrorBoundary 捕获到错误:', error);
     console.error('错误组件栈:', errorInfo.componentStack);
 
-    // 模拟发送错误到监控服务
     if (process.env.NODE_ENV === 'production') {
       // 生产环境可以发送到错误监控服务
-      // 例如：Sentry.captureException(error, { extra: errorInfo });
     }
   }
 
@@ -80,80 +86,192 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       hasError: false,
       error: null,
       errorInfo: null,
+      errorType: 'unknown',
     });
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // 如果有自定义的 fallback UI，使用自定义的
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      // 默认的降级 UI
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] p-4">
-          <div className="max-w-md w-full galaxy-card p-8 text-center space-y-6">
-            <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
-              <ICONS.AlertTriangle size={32} />
-            </div>
-            
-            <div className="space-y-2">
-              <h2 className="text-xl font-black text-[var(--color-text-primary)]">
-                页面加载失败
-              </h2>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                抱歉，页面加载时出现了问题。我们已经记录了这个错误，请稍后重试。
-              </p>
-            </div>
+      const isPage = this.props.errorType === 'page' || !this.props.errorType;
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="text-left p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)]">
-                <p className="text-xs font-bold text-red-500 mb-2">开发模式错误详情：</p>
-                <pre className="text-xs text-[var(--color-text-muted)] overflow-auto max-h-32">
-                  {this.state.error.toString()}
-                </pre>
-                {this.state.errorInfo && (
-                  <pre className="text-xs text-[var(--color-text-muted)] overflow-auto max-h-32 mt-2">
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                )}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={this.resetErrorBoundary}
-                className="w-full py-3 bg-[var(--color-text-primary)] text-[var(--color-bg)] font-bold text-sm rounded-xl hover:opacity-90 transition-opacity"
-              >
-                重试页面
-              </button>
-              
-              <button
-                onClick={() => window.location.href = '/'}
-                className="w-full py-3 border border-[var(--color-border)] text-[var(--color-text-primary)] font-bold text-sm rounded-xl hover:bg-[var(--color-surface)] transition-colors"
-              >
-                返回首页
-              </button>
-
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full py-3 border border-[var(--color-border)] text-[var(--color-text-primary)] font-bold text-sm rounded-xl hover:bg-[var(--color-surface)] transition-colors"
-              >
-                刷新页面
-              </button>
-            </div>
-
-            <p className="text-[10px] text-[var(--color-text-muted)] pt-4 border-t border-[var(--color-border)]">
-              如果问题持续存在，请联系客服或检查网络连接。
-            </p>
-          </div>
-        </div>
+      return isPage ? (
+        <PageErrorFallback
+          errorType={this.state.errorType}
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          onRetry={this.resetErrorBoundary}
+        />
+      ) : (
+        <ComponentErrorFallback
+          errorType={this.state.errorType}
+          onRetry={this.resetErrorBoundary}
+        />
       );
     }
 
     return this.props.children;
   }
 }
+
+/**
+ * 页面级错误回退界面
+ */
+interface ErrorFallbackProps {
+  errorType: string;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  onRetry: () => void;
+}
+
+const PageErrorFallback: React.FC<ErrorFallbackProps> = ({
+  errorType,
+  error,
+  errorInfo,
+  onRetry,
+}) => {
+  const getErrorContent = () => {
+    switch (errorType) {
+      case 'network':
+        return {
+          icon: (
+            <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+            </svg>
+          ),
+          title: '网络连接失败',
+          description: '请检查您的网络连接后重试',
+          color: 'text-orange-500',
+          bgColor: 'bg-orange-500/10',
+        };
+      case 'render':
+        return {
+          icon: (
+            <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          title: '页面渲染异常',
+          description: '页面加载时出现问题，请刷新重试',
+          color: 'text-red-500',
+          bgColor: 'bg-red-500/10',
+        };
+      default:
+        return {
+          icon: (
+            <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          ),
+          title: '页面加载失败',
+          description: '抱歉，页面加载时出现了问题',
+          color: 'text-red-500',
+          bgColor: 'bg-red-500/10',
+        };
+    }
+  };
+
+  const content = getErrorContent();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
+      <div className="max-w-md w-full">
+        {/* 错误卡片 */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-8 text-center">
+          {/* 图标 */}
+          <div className={`w-24 h-24 mx-auto rounded-2xl ${content.bgColor} flex items-center justify-center ${content.color} mb-6`}>
+            {content.icon}
+          </div>
+
+          {/* 标题 */}
+          <h2 className="text-2xl font-black text-slate-900 mb-2">
+            {content.title}
+          </h2>
+
+          {/* 描述 */}
+          <p className="text-slate-500 mb-8">
+            {content.description}
+          </p>
+
+          {/* 操作按钮 */}
+          <div className="space-y-3">
+            <button
+              onClick={onRetry}
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98]"
+            >
+              重新加载
+            </button>
+
+            <button
+              onClick={() => window.location.href = '/'}
+              className="w-full py-3.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+            >
+              返回首页
+            </button>
+          </div>
+
+          {/* 开发模式错误详情 */}
+          {process.env.NODE_ENV === 'development' && error && (
+            <div className="mt-6 text-left">
+              <details className="group">
+                <summary className="cursor-pointer text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                  开发者信息（点击展开）
+                </summary>
+                <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-100 overflow-auto max-h-48">
+                  <p className="text-xs font-mono text-red-500 mb-2">
+                    {error.toString()}
+                  </p>
+                  {errorInfo && (
+                    <pre className="text-xs text-slate-500 whitespace-pre-wrap">
+                      {errorInfo.componentStack}
+                    </pre>
+                  )}
+                </div>
+              </details>
+            </div>
+          )}
+        </div>
+
+        {/* 底部提示 */}
+        <p className="text-center text-xs text-slate-400 mt-6">
+          如果问题持续存在，请联系客服或稍后再试
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * 组件级错误回退界面
+ */
+interface ComponentFallbackProps {
+  errorType: string;
+  onRetry: () => void;
+}
+
+const ComponentErrorFallback: React.FC<ComponentFallbackProps> = ({
+  errorType,
+  onRetry,
+}) => {
+  return (
+    <div className="p-6 bg-slate-50 rounded-xl border border-slate-200 text-center">
+      <div className="w-12 h-12 mx-auto rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 mb-3">
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <p className="text-sm text-slate-600 mb-3">组件加载失败</p>
+      <button
+        onClick={onRetry}
+        className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+      >
+        重试
+      </button>
+    </div>
+  );
+};
 
 export default ErrorBoundary;

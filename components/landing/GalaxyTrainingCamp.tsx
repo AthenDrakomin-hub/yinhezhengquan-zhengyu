@@ -35,7 +35,7 @@ const GalaxyTrainingCamp: React.FC = () => {
     
     return () => {
       document.body.classList.remove('light-mode');
-      document.documentElement.style.backgroundColor = '#0A1628';
+      document.documentElement.style.backgroundColor = '#1E1E1E';
     };
   }, []);
 

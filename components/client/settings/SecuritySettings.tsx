@@ -152,7 +152,7 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ onClose }) => {
                     <p className="text-sm font-bold text-[var(--color-text-primary)]">
                       {device.name}
                       {device.current && (
-                        <span className="ml-2 text-[8px] px-2 py-0.5 bg-[#00D4AA]/10 text-[#00D4AA] rounded-full">当前</span>
+                        <span className="ml-2 text-[8px] px-2 py-0.5 bg-[#E63946]/10 text-[#E63946] rounded-full">当前</span>
                       )}
                     </p>
                     <p className="text-[10px] text-[var(--color-text-muted)]">{device.device} · {device.location}</p>
@@ -282,7 +282,7 @@ const TermsModal: React.FC<TermsModalProps> = ({ type, onClose }) => {
 
 // 成功提示
 const SuccessToast: React.FC<{ message: string }> = ({ message }) => (
-  <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-[#00D4AA] text-white px-4 py-2 rounded-lg text-sm animate-slide-up">
+  <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-[#E63946] text-white px-4 py-2 rounded-lg text-sm animate-slide-up">
     {message}
   </div>
 );
@@ -328,8 +328,8 @@ const SecuritySettings: React.FC = () => {
     <div className="animate-slide-up space-y-6">
       <div className="galaxy-card p-6 rounded-2xl">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-[#00D4AA]/10 flex items-center justify-center">
-            <ICONS.Shield size={28} className="text-[#00D4AA]" />
+          <div className="w-16 h-16 rounded-2xl bg-[#E63946]/10 flex items-center justify-center">
+            <ICONS.Shield size={28} className="text-[#E63946]" />
           </div>
           <div>
             <h3 className="text-lg font-black text-[var(--color-text-primary)]">账户安全</h3>
@@ -340,7 +340,7 @@ const SecuritySettings: React.FC = () => {
         <div className="space-y-4">
           {/* 密码设置 */}
           <div 
-            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#00D4AA]/30 transition-all"
+            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#E63946]/30 transition-all"
             onClick={() => setShowPasswordModal(true)}
           >
             <div>
@@ -361,7 +361,7 @@ const SecuritySettings: React.FC = () => {
             </div>
             <div 
               onClick={() => handleToggle2FA(!twoFactorEnabled)}
-              className={`w-12 h-6 rounded-full p-1 transition-colors cursor-pointer ${twoFactorEnabled ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
+              className={`w-12 h-6 rounded-full p-1 transition-colors cursor-pointer ${twoFactorEnabled ? 'bg-[#E63946]' : 'bg-[var(--color-text-muted)]/20'}`}
             >
               <div className={`w-4 h-4 bg-white rounded-full transition-transform ${twoFactorEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
             </div>
@@ -369,7 +369,7 @@ const SecuritySettings: React.FC = () => {
           
           {/* 登录设备 */}
           <div 
-            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#00D4AA]/30 transition-all"
+            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#E63946]/30 transition-all"
             onClick={() => setShowDeviceModal(true)}
           >
             <div>
@@ -377,14 +377,14 @@ const SecuritySettings: React.FC = () => {
               <p className="text-[10px] text-[var(--color-text-muted)]">查看和管理所有登录设备</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#00D4AA]">2 台设备</span>
+              <span className="text-xs text-[#E63946]">2 台设备</span>
               <ICONS.ArrowRight size={14} className="text-[var(--color-text-muted)]" />
             </div>
           </div>
           
           {/* 服务条款 */}
           <div 
-            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#00D4AA]/30 transition-all"
+            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#E63946]/30 transition-all"
             onClick={() => setShowTermsModal('terms')}
           >
             <div className="flex items-center gap-3">
@@ -396,7 +396,7 @@ const SecuritySettings: React.FC = () => {
           
           {/* 隐私政策 */}
           <div 
-            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#00D4AA]/30 transition-all"
+            className="p-4 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between cursor-pointer hover:border-[#E63946]/30 transition-all"
             onClick={() => setShowTermsModal('privacy')}
           >
             <div className="flex items-center gap-3">

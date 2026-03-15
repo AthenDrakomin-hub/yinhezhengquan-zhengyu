@@ -21,7 +21,7 @@ import {
   // 缓存
   clearStockCache,
   clearMarketCache,
-} from '../_shared/mod.ts'
+} from './_shared/mod.ts'
 
 // CORS 头
 const CORS_HEADERS = {
@@ -224,8 +224,8 @@ serve(async (req) => {
   console.log(`🚀 开始同步股票数据... (来源: ${source})`)
   
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    Deno.env.get('SUPABASE_URL') ?? Deno.env.get('VITE_SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('VITE_SUPABASE_SERVICE_KEY')!
   )
   
   try {

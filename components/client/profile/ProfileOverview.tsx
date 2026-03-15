@@ -145,11 +145,11 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
       );
     }
     return sortOrder === 'asc' ? (
-      <svg className="w-3 h-3 text-[#00D4AA]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className="w-3 h-3 text-[#E63946]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M17 15l-5-5-5 5"/>
       </svg>
     ) : (
-      <svg className="w-3 h-3 text-[#00D4AA]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className="w-3 h-3 text-[#E63946]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M7 9l5 5 5-5"/>
       </svg>
     );
@@ -193,7 +193,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
           {/* 可用资金 */}
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
             <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter mb-1">可用资金</p>
-            <p className="text-xl font-black font-mono text-[#00D4AA]" title={showAssets ? `¥${accountStats.availableCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}>
+            <p className="text-xl font-black font-mono text-[#E63946]" title={showAssets ? `¥${accountStats.availableCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}>
               {showAssets ? `¥${accountStats.availableCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '******'}
             </p>
           </div>
@@ -229,7 +229,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
           <div className="space-y-3">
             {/* 股票 */}
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-[#00D4AA]" />
+              <div className="w-3 h-3 rounded-full bg-[#E63946]" />
               <span className="text-xs font-bold text-[var(--color-text-secondary)] flex-1">股票</span>
               <span className="text-xs font-bold font-mono text-[var(--color-text-primary)]">
                 {showAssets ? `${accountStats.stockRatio.toFixed(1)}%` : '****'}
@@ -255,7 +255,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
           {/* 进度条 */}
           <div className="mt-4 h-2 rounded-full bg-white/10 overflow-hidden flex">
             <div 
-              className="h-full bg-[#00D4AA] transition-all duration-500" 
+              className="h-full bg-[#E63946] transition-all duration-500" 
               style={{ width: `${accountStats.stockRatio}%` }} 
             />
             <div 
@@ -286,7 +286,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
             <div className="flex-1 text-right">
               <button
                 onClick={onOpenAnalysis}
-                className="px-4 py-2 rounded-lg bg-[#00D4AA]/10 border border-[#00D4AA]/20 text-[10px] font-black text-[#00D4AA] hover:bg-[#00D4AA]/20 transition-all"
+                className="px-4 py-2 rounded-lg bg-[#E63946]/10 border border-[#E63946]/20 text-[10px] font-black text-[#E63946] hover:bg-[#E63946]/20 transition-all"
               >
                 详细分析 →
               </button>
@@ -310,13 +310,13 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
               <span className="text-[var(--color-text-muted)]">排序:</span>
               <button 
                 onClick={() => toggleSort('marketValue')}
-                className={`px-2 py-1 rounded ${sortField === 'marketValue' ? 'bg-[#00D4AA]/20 text-[#00D4AA]' : 'text-[var(--color-text-secondary)] hover:bg-white/5'}`}
+                className={`px-2 py-1 rounded ${sortField === 'marketValue' ? 'bg-[#E63946]/20 text-[#E63946]' : 'text-[var(--color-text-secondary)] hover:bg-white/5'}`}
               >
                 市值 <SortIcon field="marketValue" />
               </button>
               <button 
                 onClick={() => toggleSort('profitRate')}
-                className={`px-2 py-1 rounded ${sortField === 'profitRate' ? 'bg-[#00D4AA]/20 text-[#00D4AA]' : 'text-[var(--color-text-secondary)] hover:bg-white/5'}`}
+                className={`px-2 py-1 rounded ${sortField === 'profitRate' ? 'bg-[#E63946]/20 text-[#E63946]' : 'text-[var(--color-text-secondary)] hover:bg-white/5'}`}
               >
                 盈亏 <SortIcon field="profitRate" />
               </button>
@@ -350,7 +350,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
                     <StockIcon name={holding.name} logoUrl={holding.logoUrl} size="md" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-black text-sm text-[var(--color-text-primary)] group-hover:text-[#00D4AA] transition-colors">
+                        <h4 className="font-black text-sm text-[var(--color-text-primary)] group-hover:text-[#E63946] transition-colors">
                           {holding.name}
                         </h4>
                         {/* 风险等级标签 */}
@@ -417,10 +417,10 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
       <div className="grid grid-cols-3 gap-3">
         <button
           onClick={() => navigate('/client/trade')}
-          className="galaxy-card p-4 text-center hover:border-[#00D4AA]/40 transition-all group"
+          className="galaxy-card p-4 text-center hover:border-[#E63946]/40 transition-all group"
         >
-          <div className="w-10 h-10 rounded-xl bg-[#00D4AA]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[#00D4AA]/20 transition-colors">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" strokeWidth="2">
+          <div className="w-10 h-10 rounded-xl bg-[#E63946]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[#E63946]/20 transition-colors">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E63946" strokeWidth="2">
               <path d="M12 5v14M5 12h14"/>
             </svg>
           </div>
@@ -428,7 +428,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
         </button>
         <button
           onClick={onOpenConditional}
-          className="galaxy-card p-4 text-center hover:border-[#00D4AA]/40 transition-all group"
+          className="galaxy-card p-4 text-center hover:border-[#E63946]/40 transition-all group"
         >
           <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[#3B82F6]/20 transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2">
@@ -440,7 +440,7 @@ const ProfileOverview: React.FC<ProfileOverviewProps> = ({ account, onOpenAnalys
         </button>
         <button
           onClick={() => navigate('/client/ipo')}
-          className="galaxy-card p-4 text-center hover:border-[#00D4AA]/40 transition-all group"
+          className="galaxy-card p-4 text-center hover:border-[#E63946]/40 transition-all group"
         >
           <div className="w-10 h-10 rounded-xl bg-[#8B5CF6]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[#8B5CF6]/20 transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2">

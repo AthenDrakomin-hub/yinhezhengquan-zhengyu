@@ -48,7 +48,7 @@ import {
   
   // 缓存
   checkRateLimit,
-} from '../_shared/mod.ts'
+} from './_shared/mod.ts'
 
 // ==================== 主函数 ====================
 

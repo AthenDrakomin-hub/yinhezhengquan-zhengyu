@@ -132,7 +132,7 @@ const BlockTradeView: React.FC<BlockTradeViewProps> = ({ onBack }) => {
                   key={product.symbol}
                   onClick={() => setSelectedProduct(product)}
                   className={`px-6 py-3 rounded-xl font-black text-sm tracking-widest uppercase transition-all ${selectedProduct?.symbol === product.symbol
-                      ? 'bg-[#00D4AA] text-[#0A1628] shadow-lg'
+                      ? 'bg-[#E63946] text-[#1E1E1E] shadow-lg'
                       : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                     }`}
                 >
@@ -168,7 +168,7 @@ const BlockTradeView: React.FC<BlockTradeViewProps> = ({ onBack }) => {
                 </div>
                 <div className="bg-[var(--color-bg)] p-4 rounded-xl">
                   <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-widest mb-1">大宗折扣</p>
-                  <p className="text-2xl font-black font-mono text-[#00D4AA]">
+                  <p className="text-2xl font-black font-mono text-[#E63946]">
                     {((1 - selectedProduct.block_discount) * 100).toFixed(1)}%
                   </p>
                 </div>
@@ -246,7 +246,7 @@ const BlockTradeView: React.FC<BlockTradeViewProps> = ({ onBack }) => {
                   预估金额 (CNY)
                 </label>
                 <div className="bg-[var(--color-bg)] p-4 rounded-xl">
-                  <p className="text-2xl font-black font-mono text-[#00D4AA]">
+                  <p className="text-2xl font-black font-mono text-[#E63946]">
                     {selectedProduct && quantity
                       ? `¥${(selectedProduct.current_price * selectedProduct.block_discount * parseFloat(quantity) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                       : '¥0.00'
@@ -263,7 +263,7 @@ const BlockTradeView: React.FC<BlockTradeViewProps> = ({ onBack }) => {
               <button
                 onClick={handleTrade}
                 disabled={!selectedProduct || !quantity || executing || loading}
-                className="w-full py-4 bg-[#00D4AA] text-[#0A1628] font-black text-sm tracking-widest uppercase rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-[#E63946] text-[#1E1E1E] font-black text-sm tracking-widest uppercase rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {executing ? '执行中...' : '提交大宗交易'}
               </button>

@@ -19,7 +19,7 @@ const PublicRoutes: React.FC = () => {
     <Routes>
       {/* 首页 */}
       <Route index element={<LandingView onEnter={handleEnter} onQuickOpen={handleQuickOpen} />} />
-      {/* 服务中心 */}
+      {/* 下载中心 */}
       <Route path="service" element={
         <div className="min-h-screen bg-[var(--color-bg)]">
           <ServiceCenterView onBack={() => navigate('/')} />

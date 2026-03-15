@@ -103,8 +103,12 @@ export const userService = {
         .in('user_id', userIds);
       
       if (assetsError) {
-        console.error('获取资产数据失败:', assetsError);
-        // 即使资产获取失败，也继续返回用户数据
+        // 权限问题或表不存在时，静默处理，返回空资产数据
+        if (assetsError.code === '42501' || assetsError.code === 'PGRST205') {
+          // 权限不足或表不存在，这是预期情况
+        } else {
+          console.warn('获取资产数据:', assetsError.message || assetsError.code);
+        }
         assetsData = [];
       } else {
         assetsData = assetsResult || [];
@@ -297,7 +301,7 @@ export const userService = {
   /**
    * 更新用户状态
    */
-  async updateUserStatus(userId: string, status: 'ACTIVE' | 'BANNED') {
+  async updateUserStatus(userId: string, status: 'ACTIVE' | 'BANNED' | 'PENDING' | 'REJECTED') {
     const { data, error } = await supabase
       .from('profiles')
       .update({ status, updated_at: new Date().toISOString() })

@@ -21,7 +21,7 @@ interface UserNotification {
 
 // 通知类型配置
 const notificationTypeConfig = {
-  SYSTEM: { label: '系统通知', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: ICONS.Shield },
+  SYSTEM: { label: '系统通知', color: 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)] border-[var(--color-secondary)]/30', icon: ICONS.Shield },
   TRADE: { label: '交易通知', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: ICONS.Trade },
   FORCE_SELL: { label: '强制平仓', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: ICONS.AlertTriangle },
   APPROVAL: { label: '审批结果', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: ICONS.Shield },

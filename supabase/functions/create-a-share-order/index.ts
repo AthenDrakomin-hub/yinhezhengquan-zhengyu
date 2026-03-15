@@ -49,7 +49,7 @@ import {
   
   // 缓存
   checkRateLimit,
-} from '../_shared/mod.ts'
+} from './_shared/mod.ts'
 
 // ==================== 主函数 ====================
 
@@ -110,6 +110,27 @@ serve(async (req) => {
     // 7. 价格验证
     const priceValidation = validatePrice(price)
     if (!priceValidation.valid) return priceValidation.error!
+
+    // 7.5 价格偏离验证（防止异常价格交易）
+    const { data: priceDeviation, error: priceError } = await supabase.rpc('validate_price_deviation', {
+      p_stock_code: stock_code,
+      p_order_price: price,
+      p_max_deviation: 0.05  // 5% 阈值
+    })
+    
+    if (priceDeviation && !priceDeviation.valid) {
+      logTrade('价格偏离超限', { 
+        stock_code, 
+        order_price: price, 
+        current_price: priceDeviation.current_price,
+        deviation: priceDeviation.deviation 
+      })
+      return errorResponse(
+        `下单价格偏离当前价 ${priceDeviation.deviation}%，超过5%阈值。当前价：${priceDeviation.current_price}，请确认价格是否正确`,
+        ErrorCodes.INVALID_PRICE,
+        400
+      )
+    }
 
     // 8. 数量验证（A股最小单位100股）
     const unitRule = await getTradeRule(supabase, '最小交易单位')

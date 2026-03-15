@@ -1,96 +1,104 @@
 #!/usr/bin/env python3
 """
 检查管理端 RLS 策略
+使用数据库直连方式
 """
 
-import json
-import urllib.request
-import urllib.error
+import os
+import sys
 
-SUPABASE_URL = "https://rfnrosyfeivcbkimjlwo.supabase.co"
-SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmbnJvc3lmZWl2Y2JraW1qbHdvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzU1NDA2MywiZXhwIjoyMDgzMTMwMDYzfQ.QpI-mg-0yTClhaVkiXT2C5AdW9YOLnlmJPKeOmoIFjQ"
+try:
+    import psycopg2
+except ImportError:
+    print("Error: psycopg2 not installed. Run: pip install psycopg2-binary")
+    sys.exit(1)
 
-def exec_sql(sql: str) -> dict:
-    """执行 SQL 语句"""
-    url = f"{SUPABASE_URL}/rest/v1/rpc/exec_sql"
-    data = json.dumps({"sql": sql}).encode('utf-8')
-    
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "apikey": SERVICE_KEY,
-            "Authorization": f"Bearer {SERVICE_KEY}"
-        },
-        method='POST'
-    )
-    
-    try:
-        with urllib.request.urlopen(req) as response:
-            return json.loads(response.read().decode('utf-8'))
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode('utf-8')
-        return {"error": error_body, "status": e.code}
+# Supabase PostgreSQL 连接信息（Session Pooler）
+SUPABASE_DB_URL = os.environ.get(
+    "SUPABASE_DB_URL",
+    "postgres://postgres.kvlvbhzrrpspzaoiormt:HX0ydyF1nVKMDxMy@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require&channel_binding=disable"
+)
 
 def main():
     print("=" * 70)
     print("检查管理端 RLS 策略")
     print("=" * 70)
     
-    # 1. 检查新表的 RLS 策略
-    print("\n📋 检查新表的 RLS 策略:")
-    
-    tables = ['conditional_orders', 'user_notifications', 'notification_settings', 'asset_snapshots', 'education_progress']
-    
-    for table in tables:
-        result = exec_sql(f"""
-            SELECT policyname, permissive, roles, cmd, qual 
-            FROM pg_policies 
-            WHERE tablename = '{table}'
+    try:
+        # 连接数据库
+        print("\n[1/3] 连接远程 Supabase PostgreSQL...")
+        conn = psycopg2.connect(SUPABASE_DB_URL)
+        conn.autocommit = True
+        cursor = conn.cursor()
+        print("  ✓ 连接成功")
+        
+        # 1. 检查新表的 RLS 策略
+        print("\n[2/3] 检查新表的 RLS 策略:")
+        
+        tables = ['conditional_orders', 'user_notifications', 'notification_settings', 'asset_snapshots', 'education_progress']
+        
+        for table in tables:
+            cursor.execute(f"""
+                SELECT policyname, permissive, roles, cmd, qual 
+                FROM pg_policies 
+                WHERE tablename = '{table}'
+            """)
+            policies = cursor.fetchall()
+            print(f"\n  {table}:")
+            if policies:
+                for policy in policies:
+                    print(f"    - {policy[0]}: {policy[3]}")
+            else:
+                print(f"    ⚠️ 无策略或表不存在")
+        
+        # 2. 检查关键业务表的 RLS 策略
+        print("\n\n[3/3] 检查关键业务表的 RLS 策略:")
+        
+        core_tables = ['assets', 'positions', 'trades', 'profiles', 'trading_hours', 'approval_rules', 'fast_channel_rules']
+        
+        for table in core_tables:
+            cursor.execute(f"""
+                SELECT policyname, permissive, roles, cmd 
+                FROM pg_policies 
+                WHERE tablename = '{table}'
+            """)
+            policies = cursor.fetchall()
+            print(f"\n  {table}:")
+            if policies:
+                for policy in policies:
+                    print(f"    - {policy[0]}: {policy[3]}")
+            else:
+                print(f"    ⚠️ 无策略或表不存在")
+        
+        # 3. 检查管理员角色
+        print("\n\n👤 检查管理员账户:")
+        cursor.execute("""
+            SELECT id, email, role, admin_level 
+            FROM profiles 
+            WHERE role = 'admin' OR admin_level IN ('admin', 'super_admin')
+            LIMIT 5
         """)
-        print(f"\n  {table}:")
-        if "error" in result:
-            print(f"    ❌ 错误: {result['error'][:100]}")
-        elif result:
-            for policy in (result if isinstance(result, list) else []):
-                print(f"    - {policy.get('policyname', 'N/A')}: {policy.get('cmd', 'N/A')}")
+        admins = cursor.fetchall()
+        if admins:
+            for admin in admins:
+                print(f"  - ID: {admin[0]}, Email: {admin[1]}, Role: {admin[2]}, Level: {admin[3]}")
         else:
-            print(f"    ⚠️ 无策略")
+            print("  无管理员账户")
+        
+        cursor.close()
+        conn.close()
+        
+        print("\n" + "=" * 70)
+        print("✓ 检查完成！")
+        print("=" * 70)
+        
+    except Exception as e:
+        print(f"\n✗ 检查失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
     
-    # 2. 检查关键业务表的 RLS 策略
-    print("\n\n📋 检查关键业务表的 RLS 策略:")
-    
-    core_tables = ['assets', 'positions', 'trades', 'profiles', 'trading_hours', 'approval_rules', 'fast_channel_rules']
-    
-    for table in core_tables:
-        result = exec_sql(f"""
-            SELECT policyname, permissive, roles, cmd 
-            FROM pg_policies 
-            WHERE tablename = '{table}'
-        """)
-        print(f"\n  {table}:")
-        if "error" in result:
-            print(f"    ❌ 错误: {result['error'][:100]}")
-        elif result:
-            for policy in (result if isinstance(result, list) else []):
-                print(f"    - {policy.get('policyname', 'N/A')}: {policy.get('cmd', 'N/A')}")
-        else:
-            print(f"    ⚠️ 无策略或表不存在")
-    
-    # 3. 检查管理员角色
-    print("\n\n👤 检查管理员账户:")
-    result = exec_sql("""
-        SELECT id, email, role, admin_level 
-        FROM profiles 
-        WHERE role = 'admin' OR admin_level IN ('admin', 'super_admin')
-        LIMIT 5
-    """)
-    if "error" not in result and result:
-        for admin in (result if isinstance(result, list) else []):
-            print(f"  - {admin}")
-    else:
-        print(f"  查询结果: {result}")
+    return True
 
 if __name__ == "__main__":
     main()

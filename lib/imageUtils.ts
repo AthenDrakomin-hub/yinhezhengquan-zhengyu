@@ -9,7 +9,7 @@ import { imageConfig } from './imageConfig';
 const getStorageBaseUrl = (): string => {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (supabaseUrl) {
-    return `${supabaseUrl}/storage/v1/object/public/tupian`;
+    return `${supabaseUrl}/storage/v1/object/public/xitongtu`;
   }
   return '/images';
 };
@@ -23,7 +23,7 @@ const getStorageBaseUrl = (): string => {
  * @example
  * // 基础用法
  * getImageUrl('logo.png')
- * // => https://xxx.supabase.co/storage/v1/object/public/tupian/logo.png
+ * // => https://xxx.supabase.co/storage/v1/object/public/xitongtu/logo.png
  */
 export function getImageUrl(
   path: string,
@@ -55,7 +55,7 @@ export function getImageUrl(
     const format = options.format || 'webp';
     const resize = options.resize || 'cover';
     
-    return `${supabaseUrl}/storage/v1/render/image/public/tupian/${path}?width=${width}&height=${height}&quality=${quality}&format=${format}&resize=${resize}`;
+    return `${supabaseUrl}/storage/v1/render/image/public/xitongtu/${path}?width=${width}&height=${height}&quality=${quality}&format=${format}&resize=${resize}`;
   }
   
   return baseUrl;

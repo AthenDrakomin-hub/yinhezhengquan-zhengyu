@@ -21,7 +21,7 @@ import {
   
   // 缓存
   clearIPOCache,
-} from '../_shared/mod.ts'
+} from './_shared/mod.ts'
 
 // CORS 头配置
 const CORS_HEADERS = {
@@ -30,8 +30,8 @@ const CORS_HEADERS = {
 }
 
 // 环境变量
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? Deno.env.get('VITE_SUPABASE_URL')!
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('VITE_SUPABASE_SERVICE_KEY')!
 const SYNC_API_KEY = Deno.env.get('IPO_SYNC_API_KEY') || 'yinhe-ipo-sync-2024'
 
 // 初始化 Supabase 客户端

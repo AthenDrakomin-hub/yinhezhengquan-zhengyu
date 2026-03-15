@@ -83,7 +83,7 @@ const Pagination: React.FC<PaginationProps> = ({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="px-2 py-1 text-xs bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-[#00D4AA]"
+              className="px-2 py-1 text-xs bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-[#E63946]"
               disabled={loading}
             >
               {pageSizeOptions.map((size) => (
@@ -131,7 +131,7 @@ const Pagination: React.FC<PaginationProps> = ({
                     disabled={loading}
                     className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
                       currentPage === page
-                        ? 'bg-[#00D4AA] text-[#0A1628]'
+                        ? 'bg-[#E63946] text-[#1E1E1E]'
                         : 'hover:bg-[var(--color-surface)] text-[var(--color-text-secondary)]'
                     }`}
                   >

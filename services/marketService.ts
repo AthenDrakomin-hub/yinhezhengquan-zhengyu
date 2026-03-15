@@ -6,8 +6,8 @@ let newsCache: { data: any[]; timestamp: number } | null = null;
 const NEWS_CACHE_TTL = 5 * 60 * 1000; // 5分钟
 
 /**
- * 获取银河证券新闻 - 从数据库获取管理端发布的新闻
- * 使用 supabase.functions.invoke 自动传递用户 JWT token
+ * 获取银河证券新闻 - 直接从数据库获取热点资讯
+ * @deprecated 请使用 hotspotService 中的函数
  */
 export const getGalaxyNews = async () => {
   try {
@@ -16,18 +16,36 @@ export const getGalaxyNews = async () => {
       return newsCache.data;
     }
 
-    // 使用 supabase.functions.invoke 自动传递 JWT token
-    const { data, error } = await supabase.functions.invoke('fetch-galaxy-news');
+    // 直接从数据库获取热点资讯
+    const { data, error } = await supabase
+      .from('hot_news')
+      .select('*')
+      .order('crawl_time', { ascending: false })
+      .order('rank', { ascending: true })
+      .limit(50);
 
     if (error) {
-      // 如果失败，返回缓存数据或空数组
+      console.error('获取热点资讯失败:', error);
       return newsCache?.data || [];
     }
 
-    // 更新缓存
-    if (data && Array.isArray(data.news)) {
-      newsCache = { data: data.news, timestamp: Date.now() };
-      return data.news;
+    // 转换数据格式以兼容旧代码
+    if (data && Array.isArray(data)) {
+      const news = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        summary: item.title,
+        category: '热点资讯',
+        date: item.crawl_time?.split('T')[0] || '',
+        time: item.publish_time || '',
+        sentiment: 'neutral' as const,
+        views: parseInt(item.heat) || 0,
+        url: item.link,
+        source: item.source === 'ths' ? '同花顺' : '韭研公社',
+      }));
+      
+      newsCache = { data: news, timestamp: Date.now() };
+      return news;
     }
     
     return newsCache?.data || [];
@@ -219,6 +237,7 @@ export const getMarketOverview = async () => {
 
 // Default stock symbols for market list (扩展以支持分页)
 const DEFAULT_STOCK_SYMBOLS = {
+  // A股 - 京沪深主板
   CN: [
     // 第1页 - 热门蓝筹
     '600519', '000858', '601318', '000001', '300750',
@@ -239,29 +258,54 @@ const DEFAULT_STOCK_SYMBOLS = {
     '300760', '000538', '600196', '002007', '000568',
     '002304', '000895', '603369', '002032', '002371'
   ],
+  // 科创板 (688开头)
+  STAR: [
+    '688981', '688599', '688111', '688012', '688036',
+    '688169', '688187', '688223', '688256', '688369',
+    '688396', '688433', '688505', '688561', '688588',
+    '688008', '688009', '688015', '688019', '688029',
+    '688041', '688063', '688065', '688088', '688100',
+    '688122', '688126', '688138', '688156', '688168'
+  ],
+  // 北交所 (8开头)
+  BSE: [
+    '831305', '832566', '832475', '832743', '833266',
+    '833454', '833519', '833731', '833819', '833873',
+    '834765', '834958', '835305', '835640', '835985',
+    '836208', '836239', '836699', '836957', '837006',
+    '837174', '837242', '837592', '837748', '837821',
+    '838163', '838262', '838402', '838702', '839275'
+  ],
+  // 港股通
   HK: [
-    // 第1页
+    // 第1页 - 科技互联网
     '00700', '09988', '03690', '01810', '01024',
     '00941', '02318', '01299', '00883', '00388',
-    // 第2页
+    // 第2页 - 金融地产
     '01109', '02313', '00386', '00939', '00998',
     '02628', '01398', '03988', '01288', '00960',
-    // 第3页
+    // 第3页 - 消费医药
     '02269', '00669', '02015', '00285', '00358',
-    '02382', '00688', '01088', '01378', '00522'
+    '02382', '00688', '01088', '01378', '00522',
+    // 第4页 - 新能源汽车
+    '09868', '09866', '02333', '01798', '06618',
+    '02015', '03888', '00285', '00358', '02382'
   ]
 };
 
 // 分页配置
 const PAGE_SIZE = 10; // 每页显示股票数量
 
+// 市场类型映射
+export type MarketType = 'CN' | 'HK' | 'STAR' | 'BSE';
+
 /**
  * 获取市场股票列表
- * @param market 市场类型: 'CN' (A股) 或 'HK' (港股)
+ * @param market 市场类型: 'CN' (A股主板) | 'HK' (港股) | 'STAR' (科创板) | 'BSE' (北交所)
  * @param page 页码（从1开始）
  * @param pageSize 每页数量
  */
-export const getMarketList = async (market: 'CN' | 'HK' = 'CN', page: number = 1, pageSize: number = PAGE_SIZE) => {
+export const getMarketList = async (market: MarketType = 'CN', page: number = 1, pageSize: number = PAGE_SIZE) => {
   try {
     const allSymbols = DEFAULT_STOCK_SYMBOLS[market];
     
@@ -275,7 +319,9 @@ export const getMarketList = async (market: 'CN' | 'HK' = 'CN', page: number = 1
       return [];
     }
     
-    const stocks = await marketApi.getBatchStocks(symbols, market);
+    // 科创板和北交所也是A股市场，使用CN标识
+    const apiMarket = (market === 'STAR' || market === 'BSE') ? 'CN' : market;
+    const stocks = await marketApi.getBatchStocks(symbols, apiMarket as 'CN' | 'HK');
     
     // 返回分页信息
     return {

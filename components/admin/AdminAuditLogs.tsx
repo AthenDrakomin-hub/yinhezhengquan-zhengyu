@@ -68,7 +68,7 @@ const AdminAuditLogs: React.FC = () => {
         <button
           onClick={handleExport}
           disabled={!logs.length}
-          className="flex items-center gap-2 px-4 py-2 bg-[#00D4AA] text-[#0A1628] rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-[#E63946] text-[#1E1E1E] rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
         >
           <ICONS.Download size={16} />
           导出CSV

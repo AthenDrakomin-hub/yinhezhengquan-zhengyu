@@ -31,10 +31,8 @@ const SupportTicketPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const newTicketId = `T-${Date.now().toString().slice(-6)}`;
-      
-      const { error } = await supabase.from('support_tickets').insert({
-        id: newTicketId,
+      // id 由数据库自动生成 UUID
+      const { data, error } = await supabase.from('support_tickets').insert({
         title: formData.subject,
         description: formData.description,
         ticket_type: formData.type,
@@ -45,11 +43,11 @@ const SupportTicketPage: React.FC = () => {
         user_name: formData.name,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      }).select('id').single();
 
       if (error) throw error;
 
-      setTicketId(newTicketId);
+      setTicketId(data?.id || '');
       setSubmitted(true);
     } catch (err) {
       console.error('提交工单失败:', err);

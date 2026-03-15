@@ -95,7 +95,7 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
   // 加载中状态
   if (loading && ipoList.length === 0) {
     return React.createElement('div', { className: 'flex flex-col items-center justify-center h-full p-8' },
-      React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00D4AA]' }),
+      React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E63946]' }),
       React.createElement('p', { className: 'mt-4 text-[var(--color-text-muted)]' }, '正在加载IPO数据...')
     );
   }
@@ -107,7 +107,7 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
       React.createElement('p', { className: 'text-red-500 mb-4' }, error),
       React.createElement('button', {
         onClick: () => loadIPOData(),
-        className: 'px-6 py-3 bg-[#00D4AA] text-[#0A1628] font-black rounded-xl hover:opacity-90'
+        className: 'px-6 py-3 bg-[#E63946] text-[#1E1E1E] font-black rounded-xl hover:opacity-90'
       }, '重试')
     );
   }
@@ -147,7 +147,7 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
               onClick: () => setFilterStatus(status),
               className: `px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
                 filterStatus === status
-                  ? 'bg-[#00D4AA] text-[#0A1628]'
+                  ? 'bg-[#E63946] text-[#1E1E1E]'
                   : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
               }`
             }, status === 'ALL' ? '全部' : 
@@ -201,7 +201,7 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
                 // 证券代码
                 React.createElement('td', { className: 'py-4 px-3 text-left font-mono text-sm font-black whitespace-nowrap' }, ipo.symbol || '-'),
                 // 申购代码
-                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm font-black text-[#00D4AA] whitespace-nowrap' }, ipo.subscription_code || ipo.symbol || '-'),
+                React.createElement('td', { className: 'py-4 px-3 text-center font-mono text-sm font-black text-[#E63946] whitespace-nowrap' }, ipo.subscription_code || ipo.symbol || '-'),
                 // 证券简称
                 React.createElement('td', { className: 'py-4 px-3 text-left' },
                   React.createElement('div', { className: 'font-bold' }, ipo.name),
@@ -239,7 +239,7 @@ const IPOView: React.FC<IPOViewProps> = ({ onBack }) => {
                     React.createElement('button', {
                       onClick: () => handleApply(ipo),
                       disabled: ipo.status !== 'ONGOING' && ipo.status !== 'UPCOMING' || executing === ipo.symbol,
-                      className: 'w-full py-2.5 rounded-xl bg-[#00D4AA] text-[#0A1628] font-black text-xs uppercase hover:bg-[#00b88f] disabled:opacity-50'
+                      className: 'w-full py-2.5 rounded-xl bg-[#E63946] text-[#1E1E1E] font-black text-xs uppercase hover:bg-[#00b88f] disabled:opacity-50'
                     }, executing === ipo.symbol ? '申购中...' : '申购')
                   )
                 )

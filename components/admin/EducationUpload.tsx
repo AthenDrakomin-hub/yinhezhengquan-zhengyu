@@ -203,7 +203,7 @@ const EducationUpload: React.FC<EducationUploadProps> = ({
         <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4">
           {videoName ? (
             <div className="flex items-center gap-3">
-              <ICONS.Chart size={20} className="text-[#00D4AA]" />
+              <ICONS.Chart size={20} className="text-[#E63946]" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
                   {videoName}
@@ -229,7 +229,7 @@ const EducationUpload: React.FC<EducationUploadProps> = ({
           />
           <div className={`py-2.5 text-center text-xs font-bold rounded-lg transition-all ${
             uploading === 'video'
-              ? 'bg-[#00D4AA]/20 text-[#00D4AA]'
+              ? 'bg-[#E63946]/20 text-[#E63946]'
               : 'bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)]'
           }`}>
             {uploading === 'video' ? '上传中...' : '上传视频'}

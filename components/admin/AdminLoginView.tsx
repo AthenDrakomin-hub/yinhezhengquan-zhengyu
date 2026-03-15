@@ -101,7 +101,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
   // 使用统一主题管理 - 管理端使用浅色主题（当前强制浅色基准）
   useRouteTheme('admin');
   
-  const LOGO_URL = imageConfig.logo.fullUrl;
+  const LOGO_URL = imageConfig.logo.admin;
   
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -198,41 +198,38 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      // 获取用户资料
-      const profileResult = await supabase
+      // 从 profiles 表获取用户信息
+      const { data: profileData } = await supabase
         .from('profiles')
-        .select('admin_level, status, username, email')
+        .select('id, username, admin_level, status, is_admin')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
-      console.log('[Admin] profileResult:', profileResult);
-      console.log('[Admin] data.user.id:', data.user.id);
+      const profile = {
+        admin_level: profileData?.admin_level || 'user',
+        status: profileData?.status || 'active',
+        username: profileData?.username || formData.email.split('@')[0],
+        is_admin: profileData?.is_admin || false,
+      };
 
-      const profile = profileResult.data;
-      
-      if (profileResult.error) {
-        console.error('[Admin] profiles 查询错误:', profileResult.error);
-      }
-
-      if (!profile || profile.status?.toLowerCase() === 'banned') {
-        setError(profile?.status?.toLowerCase() === 'banned' ? '账户已被禁用' : '用户资料不存在');
+      if (profile.status?.toLowerCase() === 'banned') {
+        setError('账户已被禁用');
         await supabase.auth.signOut();
         setLoading(false);
         return;
       }
 
-      if (profile.admin_level !== 'admin' && profile.admin_level !== 'super_admin') {
+      if (!profile.is_admin) {
         setError('无管理员权限');
         await supabase.auth.signOut();
         setLoading(false);
         return;
       }
 
-      // 登录成功，直接完成
+      // 登录成功
       const userData = { ...data.user, ...profile };
       setCurrentUser(userData);
-      const now = new Date().toLocaleString('zh-CN');
-      localStorage.setItem('adminLastLogin', now);
+      localStorage.setItem('adminLastLogin', new Date().toLocaleString('zh-CN'));
       setLoading(false);
       onLoginSuccess(userData);
     } catch {

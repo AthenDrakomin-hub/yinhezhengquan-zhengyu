@@ -13,14 +13,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import {
   verifyAdminAccess,
   logAdminOperation,
-  AdminLevel
-} from "../_shared/admin.ts"
-import {
+  AdminLevel,
   jsonResponse,
   errorResponse,
   forbiddenResponse,
   CORS_HEADERS
-} from "../_shared/response.ts"
+} from './_shared/mod.ts'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -41,8 +39,8 @@ serve(async (req) => {
     
     // 2. 创建数据库客户端
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_URL') ?? Deno.env.get('VITE_SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('VITE_SUPABASE_SERVICE_KEY') ?? ''
     )
 
     // 3. 解析请求

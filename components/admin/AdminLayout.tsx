@@ -63,10 +63,18 @@ const AdminLayout: React.FC = () => {
     { id: 'users', label: '用户管理', icon: ICONS.User, path: '/admin/users', minLevel: 'admin' },
     { id: 'trades', label: '交易管理', icon: ICONS.Trade, path: '/admin/trades', minLevel: 'admin' },
     { id: 'conditional-orders', label: '条件单管理', icon: ICONS.Zap, path: '/admin/conditional-orders', minLevel: 'admin' },
+    { id: 'campaigns', label: '运营活动', icon: ICONS.Gift, path: '/admin/campaigns', minLevel: 'admin' },
+    { id: 'reports', label: '数据报表', icon: ICONS.BarChart, path: '/admin/reports', minLevel: 'admin' },
+    { id: 'risk-control', label: '风控管理', icon: ICONS.Shield, path: '/admin/risk-control', minLevel: 'admin' },
     { id: 'notifications', label: '通知管理', icon: ICONS.Bell, path: '/admin/notifications', minLevel: 'admin' },
     { id: 'match', label: '撮合干预', icon: ICONS.Zap, path: '/admin/match', minLevel: 'super_admin' },
     { id: 'rules', label: '规则管理', icon: ICONS.Shield, path: '/admin/rules', minLevel: 'super_admin' },
     { id: 'tickets', label: '工单管理', icon: ICONS.MessageCircle, path: '/admin/tickets', minLevel: 'admin' },
+    { id: 'system', label: '系统配置', icon: ICONS.Settings, path: '/admin/system', minLevel: 'super_admin' },
+    { id: 'search-config', label: '搜索配置', icon: '🔍', path: '/admin/search-config', minLevel: 'super_admin' },
+    { id: 'feature-config', label: '功能入口', icon: '📱', path: '/admin/feature-config', minLevel: 'super_admin' },
+    { id: 'market-config', label: '市场配置', icon: '📈', path: '/admin/market-config', minLevel: 'super_admin' },
+    { id: 'wealth-products', label: '理财产品', icon: '🏦', path: '/admin/wealth-products', minLevel: 'admin' },
     { id: 'content', label: '内容管理', icon: ICONS.Book, path: '/admin/content', minLevel: 'admin' },
     { id: 'audit-logs', label: '审计日志', icon: ICONS.FileText, path: '/admin/audit-logs', minLevel: 'super_admin' },
     { id: 'data-export', label: '数据导出', icon: ICONS.Download, path: '/admin/data-export', minLevel: 'super_admin' },
@@ -102,7 +110,7 @@ const AdminLayout: React.FC = () => {
                     : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]'
                   }`}
               >
-                <item.icon size={18} />
+                {typeof item.icon === 'function' ? <item.icon size={18} /> : <span className="text-lg">{item.icon}</span>}
                 {item.label}
               </button>
             );

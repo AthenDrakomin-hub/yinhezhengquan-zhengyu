@@ -1,8 +1,10 @@
 import React, { lazy, Suspense, createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, useRouteTheme } from '../contexts/ThemeContext';
 import { useUserSettings, triggerHaptic } from '../contexts/UserSettingsContext';
+import { PositionProvider } from '../contexts/PositionContext';
 import { supabase } from '../lib/supabase';
 import { soundLibrary } from '../lib/sound';
 import { marketApi } from '../services/marketApi';
@@ -41,6 +43,7 @@ const AboutSettings = lazy(() => import('../components/client/settings/AboutSett
 const EducationCenterView = lazy(() => import('../components/client/education/EducationCenterView'));
 const NewsDetailView = lazy(() => import('../components/client/news/NewsDetailView'));
 const StockDetailView = lazy(() => import('../components/client/market/StockDetailView'));
+const HotspotView = lazy(() => import('../components/client/hotspot/HotspotView'));
 
 // 诊断工具
 const ImageDiagnosticPage = lazy(() => import('../components/client/ImageDiagnosticPage'));
@@ -49,8 +52,50 @@ const ImageDiagnosticPage = lazy(() => import('../components/client/ImageDiagnos
 const BatchIPOPanel = lazy(() => import('../components/shared/WrappedBatchIPOPanel'));
 const ConditionalOrderPanel = lazy(() => import('../components/client/trading/ConditionalOrderPanel'));
 const ProfileDetailView = lazy(() => import('../components/client/profile/ProfileDetailView'));
+const WealthView = lazy(() => import('../components/views/WealthView'));
 
 const LimitUpView = lazy(() => import('../components/client/LimitUpView'));
+
+// 新增页面
+const VideoZoneView = lazy(() => import('../components/client/video/VideoZoneView'));
+const ETFZoneView = lazy(() => import('../components/client/etf/ETFZoneView'));
+const MarginTradingView = lazy(() => import('../components/client/margin/MarginTradingView'));
+const WealthFinanceView = lazy(() => import('../components/client/wealth/WealthFinanceView'));
+
+// 第二、三阶段新增页面
+const GeneralSettings = lazy(() => import('../components/client/settings/GeneralSettings'));
+const MarketSettings = lazy(() => import('../components/client/settings/MarketSettings'));
+const ConditionalSettings = lazy(() => import('../components/client/settings/ConditionalSettings'));
+const SectorsView = lazy(() => import('../components/client/market/SectorsView'));
+const SmartPickView = lazy(() => import('../components/client/market/SmartPickView'));
+const SectorDetailView = lazy(() => import('../components/client/market/SectorDetailView'));
+const WatchlistManager = lazy(() => import('../components/client/watchlist/WatchlistManager'));
+const TradeSiteSettings = lazy(() => import('../components/client/settings/TradeSiteSettings'));
+const MarketSiteSettings = lazy(() => import('../components/client/settings/MarketSiteSettings'));
+const PermissionSettings = lazy(() => import('../components/client/settings/PermissionSettings'));
+const FeedbackView = lazy(() => import('../components/client/settings/FeedbackView'));
+const DataCollectionSettings = lazy(() => import('../components/client/settings/DataCollectionSettings'));
+const ThirdPartySharingSettings = lazy(() => import('../components/client/settings/ThirdPartySharingSettings'));
+
+// 法律条款页面
+const UserAgreementView = lazy(() => import('../components/client/legal/UserAgreementView'));
+const PrivacyPolicyView = lazy(() => import('../components/client/legal/PrivacyPolicyView'));
+
+// 交易功能页面
+const HoldingsView = lazy(() => import('../components/client/trading/HoldingsView'));
+const CancelOrdersView = lazy(() => import('../components/client/trading/CancelOrdersView'));
+const OrderQueryView = lazy(() => import('../components/client/trading/OrderQueryView'));
+const BankTransferView = lazy(() => import('../components/client/trading/BankTransferView'));
+const FundPurchaseView = lazy(() => import('../components/client/trading/FundPurchaseView'));
+const FundRedeemView = lazy(() => import('../components/client/trading/FundRedeemView'));
+const WealthHoldingsView = lazy(() => import('../components/client/trading/WealthHoldingsView'));
+
+// 我的页面功能
+const MonthlyBillView = lazy(() => import('../components/client/bill/MonthlyBillView'));
+const VipBenefitsView = lazy(() => import('../components/client/vip/VipBenefitsView'));
+const WatchlistAlertsView = lazy(() => import('../components/client/alerts/WatchlistAlertsView'));
+const IPOReserveView = lazy(() => import('../components/client/ipo/IPOReserveView'));
+const ComprehensiveAccountView = lazy(() => import('../components/client/account/ComprehensiveAccountView'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -264,18 +309,19 @@ const ClientRoutes: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <UserAccountProvider>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <Layout
-                  activeTab="dashboard"
-                  setActiveTab={(tab) => navigate(`/client/${tab}`)}
-                  isDarkMode={isDarkMode}
-                  toggleTheme={toggleTheme}
-                  onOpenSettings={() => navigate('/client/settings')}
+      <PositionProvider>
+        <UserAccountProvider>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <Layout
+                    activeTab="dashboard"
+                    setActiveTab={(tab) => navigate(`/client/${tab}`)}
+                    isDarkMode={isDarkMode}
+                    toggleTheme={toggleTheme}
+                    onOpenSettings={() => navigate('/client/settings')}
                   account={null}
                   userRole="user"
                 />
@@ -286,17 +332,28 @@ const ClientRoutes: React.FC = () => {
               <Route path="market" element={<MarketView onSelectStock={(symbol) => navigate(`/client/stock/${symbol}`)} />} />
               <Route path="stock/:symbol" element={<StockDetailView />} />
               <Route path="trade" element={<TradePanelWrapper />} />
+              <Route path="wealth" element={<WealthViewWrapper />} />
               <Route path="profile" element={<ProfileViewWrapper />} />
               
               {/* 高级功能路由 */}
               <Route path="analysis" element={<AnalysisWrapper />} />
               <Route path="compliance" element={<ComplianceCenter onBack={() => navigate('/client/dashboard')} onOpenShield={() => navigate('/client/compliance/shield')} />} />
               <Route path="compliance/shield" element={<ComplianceShieldView onBack={() => navigate('/client/compliance')} />} />
-              <Route path="chat" element={<ChatView onBack={() => navigate('/client/support')} />} />
+              <Route path="chat" element={<ChatView onBack={() => navigate('/client/dashboard')} />} />
               <Route path="ipo" element={<IPOView />} />
               <Route path="batch-ipo" element={<BatchIPOPanel />} />
               <Route path="block-trade" element={<BlockTradeView />} />
               <Route path="conditional-orders" element={<ConditionalOrderWrapper />} />
+              
+              {/* 交易功能路由 */}
+              <Route path="holdings" element={<HoldingsView />} />
+              <Route path="cancel-orders" element={<CancelOrdersView />} />
+              <Route path="order-query" element={<OrderQueryView />} />
+              <Route path="bank-transfer" element={<BankTransferView />} />
+              <Route path="fund-purchase" element={<FundPurchaseView />} />
+              <Route path="fund-redeem" element={<FundRedeemView />} />
+              <Route path="wealth-holdings" element={<WealthHoldingsView />} />
+              
               <Route path="reports" element={<ResearchReportsView onBack={() => navigate('/client/dashboard')} />} />
               <Route path="calendar" element={<InvestmentCalendarView onBack={() => navigate('/client/dashboard')} />} />
               <Route path="limit-up" element={<Navigate to="/client/trade?mode=limitUp" replace />} />
@@ -319,14 +376,49 @@ const ClientRoutes: React.FC = () => {
                 <Route path="trading-preferences" element={<TradingPreferencesView />} />
                 <Route path="personalized" element={<PersonalizedSettingsView />} />
                 <Route path="about" element={<AboutSettings />} />
+                {/* 新增设置子页面 */}
+                <Route path="general" element={<GeneralSettings />} />
+                <Route path="market" element={<MarketSettings />} />
+                <Route path="conditional" element={<ConditionalSettings />} />
+                <Route path="trade-site" element={<TradeSiteSettings />} />
+                <Route path="market-site" element={<MarketSiteSettings />} />
+                <Route path="permission" element={<PermissionSettings />} />
+                <Route path="feedback" element={<FeedbackView />} />
+                <Route path="privacy/data" element={<DataCollectionSettings />} />
+                <Route path="privacy/sharing" element={<ThirdPartySharingSettings />} />
               </Route>
               <Route path="news/:newsId" element={<NewsDetailView />} />
+              <Route path="hotspot" element={<HotspotView />} />
+              
+              {/* 新增功能路由 */}
+              <Route path="video" element={<VideoZoneView onBack={() => navigate('/client/dashboard')} />} />
+              <Route path="etf" element={<ETFZoneView onBack={() => navigate('/client/dashboard')} />} />
+              <Route path="margin" element={<MarginTradingView onBack={() => navigate('/client/dashboard')} />} />
+              <Route path="wealth-finance" element={<WealthFinanceView onBack={() => navigate('/client/dashboard')} />} />
+              
+              {/* 我的页面功能路由 */}
+              <Route path="monthly-bill" element={<MonthlyBillView />} />
+              <Route path="vip-benefits" element={<VipBenefitsView />} />
+              <Route path="watchlist-alerts" element={<WatchlistAlertsView />} />
+              <Route path="ipo-reserve" element={<IPOReserveView />} />
+              <Route path="comprehensive-account" element={<ComprehensiveAccountView />} />
+              
+              {/* 法律条款路由 */}
+              <Route path="legal/user-agreement" element={<UserAgreementView />} />
+              <Route path="legal/privacy-policy" element={<PrivacyPolicyView />} />
+              
+              {/* 行情相关路由 */}
+              <Route path="market/sectors" element={<SectorsView onBack={() => navigate('/client/market')} />} />
+              <Route path="market/sector/:id" element={<SectorDetailView />} />
+              <Route path="market/smart-pick" element={<SmartPickView onBack={() => navigate('/client/market')} />} />
+              <Route path="watchlist" element={<WatchlistManager stocks={[]} onRemove={() => {}} onReorder={() => {}} onStockClick={(s) => navigate(`/client/stock/${s}`)} />} />
               
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Route>
           </Routes>
         </Suspense>
       </UserAccountProvider>
+      </PositionProvider>
     </ErrorBoundary>
   );
 };
@@ -356,12 +448,12 @@ const DashboardWrapper: React.FC = () => {
           onClick={() => setSelectedBanner(null)}
         >
           <div 
-            className="bg-[#1a1f2e] rounded-3xl max-w-lg w-full max-h-[80vh] overflow-hidden border border-[#00D4AA]/30 shadow-2xl flex flex-col"
+            className="bg-[#1a1f2e] rounded-3xl max-w-lg w-full max-h-[80vh] overflow-hidden border border-[#E63946]/30 shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 头部图片 */}
             {selectedBanner.img && (
-              <div className="h-48 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628] shrink-0">
+              <div className="h-48 bg-gradient-to-br from-[#E63946]/20 to-[#1E1E1E] shrink-0">
                 <img 
                   src={selectedBanner.img} 
                   alt={selectedBanner.title}
@@ -376,7 +468,7 @@ const DashboardWrapper: React.FC = () => {
             {/* 内容 */}
             <div className="p-6 flex-1 overflow-y-auto">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] font-black text-[#00D4AA] uppercase tracking-wider bg-[#00D4AA]/10 px-2 py-1 rounded">
+                <span className="text-[10px] font-black text-[#E63946] uppercase tracking-wider bg-[#E63946]/10 px-2 py-1 rounded">
                   {selectedBanner.category || '公告'}
                 </span>
                 {selectedBanner.date && (
@@ -402,7 +494,7 @@ const DashboardWrapper: React.FC = () => {
                       window.open(selectedBanner.linkUrl, '_blank');
                       setSelectedBanner(null);
                     }}
-                    className="flex-1 py-3 rounded-xl bg-[#00D4AA] text-[#0A1628] font-black hover:bg-[#00D4AA]/90 transition-colors"
+                    className="flex-1 py-3 rounded-xl bg-[#E63946] text-[#1E1E1E] font-black hover:bg-[#E63946]/90 transition-colors"
                   >
                     查看详情
                   </button>
@@ -578,6 +670,14 @@ const TradePanelWrapper: React.FC = () => {
   );
 };
 
+const WealthViewWrapper: React.FC = () => {
+  const { account } = useUserAccount();
+  
+  return (
+    <WealthView account={account} />
+  );
+};
+
 const ProfileViewWrapper: React.FC = () => {
   const { account } = useUserAccount();
   const navigate = useNavigate();
@@ -607,12 +707,166 @@ const AnalysisWrapper: React.FC = () => {
 
 const ConditionalOrderWrapper: React.FC = () => {
   const navigate = useNavigate();
-  
+  const [searchParams] = useSearchParams();
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [showStockSelector, setShowStockSelector] = useState(false);
+  const [searchCode, setSearchCode] = useState('');
+  const [searching, setSearching] = useState(false);
+
+  // 从 URL 参数获取股票代码
+  const symbolFromUrl = searchParams.get('symbol');
+
+  // 初始化：从 URL 参数或持仓中获取股票
+  useEffect(() => {
+    const initStock = async () => {
+      if (symbolFromUrl) {
+        // 从 URL 参数获取股票
+        try {
+          const { marketApi } = await import('@/services/marketApi');
+          const stock = await marketApi.getRealtimeStock(symbolFromUrl, 'CN');
+          if (stock) {
+            setSelectedStock({
+              symbol: stock.symbol,
+              name: stock.name,
+              price: stock.price,
+              change: stock.change,
+              changePercent: stock.changePercent,
+              market: stock.market,
+              sparkline: stock.sparkline || [],
+              logoUrl: ''
+            });
+          }
+        } catch (error) {
+          console.error('获取股票信息失败:', error);
+        }
+      } else {
+        // 尝试从持仓中获取第一只股票
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: positions } = await supabase
+              .from('positions')
+              .select('stock_code, stock_name')
+              .eq('user_id', user.id)
+              .gt('quantity', 0)
+              .limit(1);
+            
+            if (positions && positions.length > 0) {
+              const { marketApi } = await import('@/services/marketApi');
+              const stock = await marketApi.getRealtimeStock(positions[0].stock_code, 'CN');
+              if (stock) {
+                setSelectedStock({
+                  symbol: stock.symbol,
+                  name: stock.name,
+                  price: stock.price,
+                  change: stock.change,
+                  changePercent: stock.changePercent,
+                  market: stock.market,
+                  sparkline: stock.sparkline || [],
+                  logoUrl: ''
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('获取持仓股票失败:', error);
+        }
+      }
+    };
+    
+    initStock();
+  }, [symbolFromUrl]);
+
+  // 搜索股票
+  const handleSearchStock = async () => {
+    if (!searchCode.trim()) return;
+    
+    setSearching(true);
+    try {
+      const { marketApi } = await import('@/services/marketApi');
+      const code = searchCode.toUpperCase();
+      const market = code.length === 5 ? 'HK' : 'CN';
+      const stock = await marketApi.getRealtimeStock(code, market);
+      
+      if (stock) {
+        setSelectedStock({
+          symbol: stock.symbol,
+          name: stock.name,
+          price: stock.price,
+          change: stock.change,
+          changePercent: stock.changePercent,
+          market: stock.market,
+          sparkline: stock.sparkline || [],
+          logoUrl: ''
+        });
+        setShowStockSelector(false);
+      } else {
+        alert('未找到该股票，请检查股票代码');
+      }
+    } catch (error) {
+      console.error('搜索股票失败:', error);
+      alert('搜索股票失败，请稍后重试');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // 如果未选择股票，显示股票选择界面
+  if (!selectedStock || showStockSelector) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5]">
+        {/* 顶部导航 */}
+        <div className="bg-[#0066CC] px-4 py-3 flex items-center gap-4 sticky top-0 z-10">
+          <button onClick={() => showStockSelector ? setShowStockSelector(false) : navigate('/client/trade')} className="text-white">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="text-white text-lg font-semibold flex-1">选择股票</h1>
+        </div>
+
+        <div className="p-4">
+          {/* 搜索框 */}
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              value={searchCode}
+              onChange={(e) => setSearchCode(e.target.value.toUpperCase())}
+              placeholder="输入股票代码（如：600519）"
+              className="flex-1 px-4 py-3 bg-white border border-[#E5E5E5] rounded-xl text-sm focus:outline-none focus:border-[#0066CC]"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchStock()}
+            />
+            <button
+              onClick={handleSearchStock}
+              disabled={searching || !searchCode.trim()}
+              className="px-6 py-3 bg-[#0066CC] text-white rounded-xl font-medium disabled:opacity-50"
+            >
+              {searching ? '搜索中...' : '搜索'}
+            </button>
+          </div>
+
+          {/* 提示信息 */}
+          <div className="bg-white rounded-xl p-4 text-center">
+            <p className="text-sm text-[#666666]">
+              请输入股票代码搜索并选择要设置条件单的股票
+            </p>
+            <p className="text-xs text-[#999999] mt-2">
+              支持A股（6位代码）和港股（5位代码）
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ConditionalOrderPanel
       onBack={() => navigate('/client/trade')}
-      stock={defaultStock}
-      onAddOrder={() => {}}
+      stock={selectedStock}
+      onAddOrder={() => {
+        // 可以跳转到条件单列表或显示成功提示
+        navigate('/client/conditional-orders');
+      }}
     />
   );
 };

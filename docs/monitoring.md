@@ -69,7 +69,7 @@ const client = new Client({
 
 // 每5分钟检查一次
 await client.schedules.create({
-  destination: "https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/health-check",
+  destination: "https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/health-check",
   cron: "*/5 * * * *",
 });
 ```
@@ -89,7 +89,7 @@ SELECT cron.schedule(
   $$
   SELECT
     net.http_post(
-      url := 'https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/health-check',
+      url := 'https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/health-check',
       headers := '{"Content-Type": "application/json"}'::jsonb
     );
   $$

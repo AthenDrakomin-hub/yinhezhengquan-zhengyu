@@ -38,7 +38,7 @@ const TradeConfirmModal: React.FC<TradeConfirmModalProps> = ({
       case TradeType.IPO:
         return { label: '新股申购', color: 'text-purple-500', bg: 'bg-purple-500/10' };
       case TradeType.BLOCK:
-        return { label: '大宗交易', color: 'text-blue-500', bg: 'bg-blue-500/10' };
+        return { label: '大宗交易', color: 'text-[var(--color-secondary)]', bg: 'bg-[var(--color-secondary-light)]' };
       case TradeType.LIMIT_UP:
         return { label: '涨停打板', color: 'text-red-500', bg: 'bg-red-500/10' };
       default:
@@ -121,10 +121,10 @@ const TradeConfirmModal: React.FC<TradeConfirmModalProps> = ({
           </div>
 
           {/* 总金额 */}
-          <div className="p-4 bg-gradient-to-r from-[#00D4AA]/10 to-transparent rounded-xl border border-[#00D4AA]/20">
+          <div className="p-4 bg-gradient-to-r from-[#E63946]/10 to-transparent rounded-xl border border-[#E63946]/20">
             <div className="flex justify-between items-center">
               <p className="text-xs font-bold text-[var(--color-text-secondary)]">委托金额</p>
-              <p className="text-xl font-black font-mono text-[#00D4AA]">
+              <p className="text-xl font-black font-mono text-[#E63946]">
                 ¥{tradeInfo.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </p>
             </div>
@@ -146,7 +146,7 @@ const TradeConfirmModal: React.FC<TradeConfirmModalProps> = ({
         <label className="flex items-center gap-3 mb-6 cursor-pointer">
           <div 
             className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-              checked ? 'bg-[#00D4AA] border-[#00D4AA]' : 'border-[var(--color-border)]'
+              checked ? 'bg-[#E63946] border-[#E63946]' : 'border-[var(--color-border)]'
             }`}
             onClick={() => setChecked(!checked)}
           >
@@ -173,7 +173,7 @@ const TradeConfirmModal: React.FC<TradeConfirmModalProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!checked || loading}
-            className="flex-1 h-12 bg-[#00D4AA] rounded-xl text-sm font-bold text-[#0A1628] hover:bg-[#00D4AA]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 h-12 bg-[#E63946] rounded-xl text-sm font-bold text-[#1E1E1E] hover:bg-[#E63946]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '提交中...' : '确认提交'}
           </button>

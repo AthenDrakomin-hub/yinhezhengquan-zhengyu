@@ -34,7 +34,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ activeTab, onNavigate, userRole
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                  isActive ? 'text-[#00D4AA]' : 'text-slate-400'
+                  isActive ? 'text-[#E63946]' : 'text-slate-400'
                 }`}
               >
                 <Icon size={20} />
@@ -74,7 +74,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ activeTab, onNavigate, userRole
                     }}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
                       isActive
-                        ? 'bg-[#00D4AA]/20 text-[#00D4AA]'
+                        ? 'bg-[#E63946]/20 text-[#E63946]'
                         : 'text-slate-400 hover:bg-slate-800'
                     }`}
                   >

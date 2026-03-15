@@ -22,6 +22,16 @@ const AdminAuditLogs = lazy(() => import('../components/admin/AdminAuditLogs'));
 const AdminDataExport = lazy(() => import('../components/admin/AdminDataExport'));
 const AdminConditionalOrders = lazy(() => import('../components/admin/AdminConditionalOrders'));
 const AdminNotifications = lazy(() => import('../components/admin/AdminNotifications'));
+// 新增运营管理组件
+const AdminCampaignManagement = lazy(() => import('../components/admin/AdminCampaignManagement'));
+const AdminRiskControl = lazy(() => import('../components/admin/AdminRiskControl'));
+const AdminSystemConfig = lazy(() => import('../components/admin/AdminSystemConfig'));
+// 新增功能配置组件
+const AdminSearchConfig = lazy(() => import('../components/admin/AdminSearchConfig'));
+const AdminFeatureConfig = lazy(() => import('../components/admin/AdminFeatureConfig'));
+const AdminMarketConfig = lazy(() => import('../components/admin/AdminMarketConfig'));
+const AdminWealthProducts = lazy(() => import('../components/admin/AdminWealthProducts'));
+
 
 // 使用 CSS 变量的加载指示器
 const LoadingSpinner = () => (
@@ -52,13 +62,22 @@ const AdminRoutes: React.FC = () => {
             <Route path="content" element={<AdminContentManagement />} />
             {/* 内容管理子路由 */}
             <Route path="reports" element={<AdminReports />} />
+            <Route path="campaigns" element={<AdminCampaignManagement />} />
+            <Route path="risk-control" element={<AdminRiskControl />} />
             <Route path="education" element={<AdminEducation />} />
             <Route path="calendar" element={<AdminCalendar />} />
             <Route path="ipos" element={<AdminIPOs />} />
             <Route path="banners" element={<AdminBanners />} />
             {/* 其他管理功能 */}
+            <Route path="system" element={<AdminSystemConfig />} />
             <Route path="audit-logs" element={<AdminAuditLogs />} />
             <Route path="data-export" element={<AdminDataExport />} />
+            {/* 功能配置路由 */}
+            <Route path="search-config" element={<AdminSearchConfig />} />
+            <Route path="feature-config" element={<AdminFeatureConfig />} />
+            <Route path="market-config" element={<AdminMarketConfig />} />
+            <Route path="wealth-products" element={<AdminWealthProducts />} />
+
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Route>
         </Routes>

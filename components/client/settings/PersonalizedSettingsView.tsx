@@ -61,10 +61,10 @@ const PersonalizedSettingsView: React.FC = () => {
                 onClick={() => updateAndSaveSettings({ language: lang.id as any })}
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-[var(--color-surface-hover)] transition-all"
               >
-                <span className={`text-xs font-bold ${settings.language === lang.id ? 'text-[#00D4AA]' : 'text-[var(--color-text-primary)]'}`}>
+                <span className={`text-xs font-bold ${settings.language === lang.id ? 'text-[#E63946]' : 'text-[var(--color-text-primary)]'}`}>
                   {lang.label}
                 </span>
-                {settings.language === lang.id && <ICONS.Check size={14} className="text-[#00D4AA]" />}
+                {settings.language === lang.id && <ICONS.Check size={14} className="text-[#E63946]" />}
               </div>
             ))}
           </div>
@@ -76,13 +76,13 @@ const PersonalizedSettingsView: React.FC = () => {
           <div className="galaxy-card flex p-1 gap-1">
             <button 
               onClick={() => updateAndSaveSettings({ fontSize: 'standard' })}
-              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.fontSize === 'standard' ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)]'}`}
+              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.fontSize === 'standard' ? 'bg-[#E63946] text-[#1E1E1E]' : 'text-[var(--color-text-muted)]'}`}
             >
               标准视图
             </button>
             <button 
               onClick={() => updateAndSaveSettings({ fontSize: 'large' })}
-              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.fontSize === 'large' ? 'bg-[#00D4AA] text-[#0A1628]' : 'text-[var(--color-text-muted)]'}`}
+              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.fontSize === 'large' ? 'bg-[#E63946] text-[#1E1E1E]' : 'text-[var(--color-text-muted)]'}`}
             >
               大字增强
             </button>
@@ -101,7 +101,7 @@ const PersonalizedSettingsView: React.FC = () => {
               </div>
               <div 
                 onClick={() => updateAndSaveSettings({ hapticFeedback: !settings.hapticFeedback })}
-                className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.hapticFeedback ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
+                className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.hapticFeedback ? 'bg-[#E63946]' : 'bg-[var(--color-text-muted)]/20'}`}
               >
                 <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.hapticFeedback ? 'translate-x-5' : 'translate-x-0'}`} />
               </div>
@@ -113,7 +113,7 @@ const PersonalizedSettingsView: React.FC = () => {
               </div>
               <div 
                 onClick={() => updateAndSaveSettings({ soundEffects: !settings.soundEffects })}
-                className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.soundEffects ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
+                className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.soundEffects ? 'bg-[#E63946]' : 'bg-[var(--color-text-muted)]/20'}`}
               >
                 <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.soundEffects ? 'translate-x-5' : 'translate-x-0'}`} />
               </div>

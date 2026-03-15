@@ -138,8 +138,8 @@ const PhoneVerificationStep: React.FC<{
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FaMobileAlt className="text-blue-600 text-2xl" />
+        <div className="w-16 h-16 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center mx-auto mb-4">
+          <FaMobileAlt className="text-[var(--color-primary)] text-2xl" />
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">手机号验证</h3>
         <p className="text-sm text-gray-500">请输入姓名和手机号进行验证</p>
@@ -180,7 +180,7 @@ const PhoneVerificationStep: React.FC<{
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
+          className="w-full h-12 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] hover:opacity-90 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-[var(--color-primary)]/25 flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
@@ -227,8 +227,8 @@ const IdCardOcrStep: React.FC<{
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FaIdCard className="text-blue-600 text-2xl" />
+        <div className="w-16 h-16 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center mx-auto mb-4">
+          <FaIdCard className="text-[var(--color-primary)] text-2xl" />
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">身份信息</h3>
         <p className="text-sm text-gray-500">请上传身份证照片或手动填写信息</p>
@@ -239,18 +239,18 @@ const IdCardOcrStep: React.FC<{
         <button
           type="button"
           onClick={simulateOcr}
-          className="h-32 bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center hover:border-blue-400 hover:from-blue-50 hover:to-blue-100 transition-all group"
+          className="h-32 bg-gradient-to-br from-gray-50 to-[var(--color-primary-light)] border-2 border-dashed border-[var(--color-primary)]/30 rounded-xl flex flex-col items-center justify-center hover:border-[var(--color-primary)] hover:from-[var(--color-primary-light)] hover:to-[var(--color-primary)]/10 transition-all group"
         >
-          <FaCamera className="text-blue-400 group-hover:text-blue-600 text-2xl mb-2 transition-colors" />
+          <FaCamera className="text-[var(--color-primary)]/60 group-hover:text-[var(--color-primary)] text-2xl mb-2 transition-colors" />
           <span className="text-sm font-medium text-gray-700">上传身份证正面</span>
           <span className="text-xs text-gray-400 mt-1">自动识别</span>
         </button>
         
         <button
           type="button"
-          className="h-32 bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center justify-center hover:border-blue-400 hover:from-blue-50 hover:to-blue-100 transition-all group"
+          className="h-32 bg-gradient-to-br from-gray-50 to-[var(--color-primary-light)] border-2 border-dashed border-[var(--color-primary)]/30 rounded-xl flex flex-col items-center justify-center hover:border-[var(--color-primary)] hover:from-[var(--color-primary-light)] hover:to-[var(--color-primary)]/10 transition-all group"
         >
-          <FaCamera className="text-blue-400 group-hover:text-blue-600 text-2xl mb-2 transition-colors" />
+          <FaCamera className="text-[var(--color-primary)]/60 group-hover:text-[var(--color-primary)] text-2xl mb-2 transition-colors" />
           <span className="text-sm font-medium text-gray-700">上传身份证反面</span>
           <span className="text-xs text-gray-400 mt-1">验证有效期</span>
         </button>
@@ -270,7 +270,7 @@ const IdCardOcrStep: React.FC<{
           <div>
             <label className="text-sm font-semibold text-gray-900 block mb-2">性别</label>
             <select
-              className="w-full h-12 px-4 border-2 border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 bg-white"
+              className="w-full h-12 px-4 border-2 border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/20 bg-white"
               {...register('idCard.gender')}
             >
               <option value="">选择性别</option>
@@ -293,7 +293,7 @@ const IdCardOcrStep: React.FC<{
           <label className="text-sm font-semibold text-gray-900 block mb-2">出生日期</label>
           <input
             type="date"
-            className="w-full h-12 px-4 border-2 border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10"
+            className="w-full h-12 px-4 border-2 border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/20"
             {...register('idCard.birthday')}
           />
           {errors.idCard?.birthday && <p className="text-red-600 text-xs mt-1.5">{errors.idCard.birthday.message}</p>}
@@ -311,7 +311,7 @@ const IdCardOcrStep: React.FC<{
         type="button"
         onClick={onNext}
         disabled={!isComplete}
-        className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-blue-500/25"
+        className="w-full h-12 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] hover:opacity-90 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-[var(--color-primary)]/25"
       >
         确认并继续
       </button>
@@ -382,8 +382,8 @@ const FaceRecognitionStep: React.FC<{
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FaCamera className="text-blue-600 text-2xl" />
+        <div className="w-16 h-16 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center mx-auto mb-4">
+          <FaCamera className="text-[var(--color-primary)] text-2xl" />
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">人脸识别</h3>
         <p className="text-sm text-gray-500">请确保光线充足，正对摄像头</p>
@@ -411,22 +411,22 @@ const FaceRecognitionStep: React.FC<{
         
         {/* 扫描动画 */}
         {!verified && (
-          <div className="absolute inset-0 rounded-full border-2 border-blue-400/30 animate-ping" />
+          <div className="absolute inset-0 rounded-full border-2 border-[var(--color-primary)]/30 animate-ping" />
         )}
       </div>
 
       {/* 提示列表 */}
-      <div className="bg-blue-50 rounded-xl p-4 space-y-3">
+      <div className="bg-[var(--color-primary-light)] rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-blue-500 rounded-full" />
+          <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full" />
           <p className="text-sm text-gray-700">请保持面部在框内</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-blue-500 rounded-full" />
+          <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full" />
           <p className="text-sm text-gray-700">请勿佩戴帽子、眼镜等遮挡物</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-blue-500 rounded-full" />
+          <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full" />
           <p className="text-sm text-gray-700">请按照提示完成眨眼动作</p>
         </div>
       </div>
@@ -436,7 +436,7 @@ const FaceRecognitionStep: React.FC<{
           type="button"
           onClick={handleFaceVerify}
           disabled={loading}
-          className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-blue-500/25"
+          className="w-full h-12 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] hover:opacity-90 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-[var(--color-primary)]/25"
         >
           {loading ? '识别中...' : '开始人脸识别'}
         </button>
@@ -519,7 +519,7 @@ const RiskAssessmentStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
               {question.options.map((option) => (
                 <label 
                   key={option.value} 
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-[var(--color-primary-light)] transition-colors cursor-pointer border border-transparent hover:border-[var(--color-primary)]/30"
                 >
                   <input
                     type="radio"
@@ -678,7 +678,7 @@ const AgreementStep: React.FC<{
           type="button"
           onClick={handleSubmit(onSubmit)}
           disabled={loading}
-          className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-blue-500/25"
+          className="w-full h-12 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] hover:opacity-90 text-white rounded-xl font-semibold transition-all disabled:opacity-50 shadow-lg shadow-[var(--color-primary)]/25"
         >
           {loading ? '提交中...' : '提交开户申请'}
         </button>
@@ -803,14 +803,59 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
     
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('用户未登录');
+      let userId: string;
+      let isNewUser = false;
+
+      // 尝试获取当前登录用户
+      const { data: { user: existingUser } } = await supabase.auth.getUser();
+      
+      if (existingUser) {
+        // 用户已登录，直接使用现有账号
+        userId = existingUser.id;
+      } else {
+        // 用户未登录，创建新账号
+        isNewUser = true;
+        
+        // 使用手机号作为登录账号，创建一个默认邮箱
+        const email = `${formData.phone}@zhengyu.com`;
+        // 使用身份证后8位作为默认密码（系统要求密码至少8位）
+        // 如果身份证不足8位，则使用手机号后8位
+        const idLastDigits = formData.idCard.idNumber.slice(-8);
+        const password = idLastDigits.length >= 8 
+          ? idLastDigits 
+          : formData.phone.slice(-8).padEnd(8, '0');
+        
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              phone: formData.phone,
+              username: formData.idCard.name,
+            }
+          }
+        });
+
+        if (signUpError) {
+          // 如果邮箱已被注册，尝试用邮箱登录
+          if (signUpError.message.includes('already registered')) {
+            throw new Error('该手机号已注册，请直接登录后在个人中心完善开户信息');
+          }
+          throw signUpError;
+        }
+
+        if (!signUpData.user) {
+          throw new Error('账号创建失败，请重试');
+        }
+
+        userId = signUpData.user.id;
+      }
 
       // 1. 上传签名图片到存储桶
       let signatureUrl = null;
       if (agreementData.signature) {
         const signatureBlob = await fetch(agreementData.signature).then(r => r.blob());
-        const fileName = `signatures/${user.id}/${Date.now()}.png`;
+        const fileName = `signatures/${userId}/${Date.now()}.png`;
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('account-documents')
           .upload(fileName, signatureBlob, {
@@ -828,17 +873,24 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
         }
       }
 
-      // 2. 创建用户档案
+      // 2. 创建用户档案 - 新用户状态为 PENDING，需要管理员审核
+      const riskLevel = formData.riskAssessment.riskTolerance === 'conservative' ? '保守型' : 
+                        formData.riskAssessment.riskTolerance === 'moderate' ? '稳健型' : '积极型';
+      
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: user.id,
+          id: userId,
           email: formData.phone + '@zhengyu.com',
           username: formData.idCard.name,
-          risk_level: formData.riskAssessment.riskTolerance === 'conservative' ? 'C1-保守型' : 
-                     formData.riskAssessment.riskTolerance === 'moderate' ? 'C3-稳健型' : 'C5-进取型',
-          balance: 100000.00,
-          total_equity: 100000.00,
+          real_name: formData.idCard.name,
+          phone: formData.phone,
+          id_card: formData.idCard.idNumber,
+          risk_level: riskLevel,
+          role: 'USER',
+          status: isNewUser ? 'PENDING' : 'ACTIVE', // 新注册用户需要审核
+          balance: 0,
+          total_equity: 0,
         }, {
           onConflict: 'id'
         });
@@ -848,7 +900,7 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
       const { error: applicationError } = await supabase
         .from('account_applications')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           phone: formData.phone,
           id_card_info: formData.idCard,
           risk_assessment: formData.riskAssessment,
@@ -865,18 +917,25 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
 
       // 4. 发送管理端通知
       await sendAdminNotification({
-        userId: user.id,
+        userId: userId,
         userName: formData.idCard.name,
         phone: formData.phone,
         submittedAt: new Date().toISOString(),
+        isNewUser,
       });
 
       onComplete({
         phone: formData.phone,
         username: formData.idCard.name,
-        status: 'PENDING',
-        userId: user.id,
+        status: isNewUser ? 'PENDING' : 'ACTIVE',
+        userId: userId,
         submittedAt: new Date().toISOString(),
+        isNewUser,
+        defaultPassword: isNewUser 
+          ? (formData.idCard.idNumber.slice(-8).length >= 8 
+              ? formData.idCard.idNumber.slice(-8) 
+              : formData.phone.slice(-8).padEnd(8, '0'))
+          : undefined,
       });
     } catch (error) {
       console.error('提交开户申请失败:', error);
@@ -887,13 +946,15 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
   };
 
   // 发送管理端通知
-  const sendAdminNotification = async (data: { userId: string; userName: string; phone: string; submittedAt: string }) => {
+  const sendAdminNotification = async (data: { userId: string; userName: string; phone: string; submittedAt: string; isNewUser?: boolean }) => {
     try {
       // 创建系统通知 - 使用 user_notifications 表
       const { error: notifError } = await supabase.from('user_notifications').insert({
         notification_type: 'SYSTEM',
-        title: '新的开户申请',
-        content: `用户 ${data.userName} (${data.phone}) 提交了开户申请，请尽快审核`,
+        title: data.isNewUser ? '新用户注册待审核' : '新的开户申请',
+        content: data.isNewUser 
+          ? `新用户 ${data.userName} (${data.phone}) 已完成注册，请尽快审核激活账号`
+          : `用户 ${data.userName} (${data.phone}) 提交了开户申请，请尽快审核`,
         user_id: data.userId,
         is_read: false,
         priority: 'HIGH',
@@ -970,14 +1031,14 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
         <div className="bg-white border-b border-gray-100">
           <div className="max-w-lg mx-auto px-4 py-4">
             {/* 进度 */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between">
               {steps.map((s, idx) => (
                 <React.Fragment key={s.number}>
                   <div className="flex flex-col items-center">
                     <div className={`
                       w-10 h-10 rounded-full flex items-center justify-center transition-all
                       ${step > s.number ? 'bg-green-500 text-white' :
-                        step === s.number ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' :
+                        step === s.number ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' :
                         'bg-gray-100 text-gray-400'}
                     `}>
                       {step > s.number ? <FaCheck size={16} /> : <s.icon size={16} />}
@@ -991,33 +1052,11 @@ const QuickOpenView: React.FC<QuickOpenViewProps> = ({ onBack, onComplete }) => 
                 </React.Fragment>
               ))}
             </div>
-            {/* 步骤标签 */}
-            <div className="flex justify-between">
-              {steps.map((s) => (
-                <span 
-                  key={s.number}
-                  className={`text-xs font-medium ${
-                    step >= s.number ? 'text-blue-600' : 'text-gray-400'
-                  }`}
-                >
-                  {s.label}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
 
         {/* 主内容 */}
         <main className="max-w-lg mx-auto px-4 py-6">
-          {/* Logo和标题 */}
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-4 p-3">
-              <img src={LOGO_URL} alt="中国银河证券" className="w-full h-full object-contain" />
-            </div>
-            <h2 className="text-lg font-bold text-gray-900">{steps[step - 1]?.label}</h2>
-            <p className="text-sm text-gray-500 mt-1"> step {step} of 6</p>
-          </div>
-
           {/* 步骤内容 */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             {renderStep()}

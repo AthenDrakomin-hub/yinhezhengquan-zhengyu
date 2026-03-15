@@ -20,7 +20,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate(); // 添加导航钩子
 
-  const LOGO_URL = imageConfig.logo.fullUrl;
+  const LOGO_URL = imageConfig.logo.publicHome;
   const CAROUSEL_IMAGE = imageConfig.carousel[0]?.img || '/images/carousel-1.jpg';
   const BACKGROUND_IMAGES = imageConfig.backgrounds;
   const SERVICE_ICONS = imageConfig.serviceIcons;
@@ -76,10 +76,10 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
             <img src={LOGO_URL} alt="中国银河证券 日斗投资单元" className="h-10 md:h-12 object-contain" />
           </div>
           <div className="flex items-center gap-8">
-            {['首页', '服务中心', '开户申请', '进入平台'].map(item => (
+            {['首页', '下载中心', '开户申请', '进入平台'].map(item => (
               <span 
                 key={item} 
-                onClick={item === '开户申请' ? onQuickOpen : item === '进入平台' ? onEnter : item === '服务中心' ? () => navigate('/service') : undefined}
+                onClick={item === '开户申请' ? onQuickOpen : item === '进入平台' ? onEnter : item === '下载中心' ? () => navigate('/service') : undefined}
                 className={`text-[13px] font-bold ${item === '首页' ? 'text-[#E30613]' : 'text-slate-700'} hover:text-[#E30613] cursor-pointer transition-colors whitespace-nowrap`}
               >
                 {item}
@@ -118,39 +118,6 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
           ))}
         </div>
       </section>
-
-      {/* 2.5 指数行情条 (Market Bar) */}
-      <div className="bg-slate-900 text-white py-3 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 md:px-12 flex items-center gap-12 animate-marquee whitespace-nowrap">
-          {[
-            { name: '上证指数', value: '3,245.12', change: '+1.24%', color: 'text-red-500' },
-            { name: '深证成指', value: '10,456.78', change: '+0.85%', color: 'text-red-500' },
-            { name: '创业板指', value: '2,123.45', change: '-0.12%', color: 'text-emerald-500' },
-            { name: '恒生指数', value: '19,876.54', change: '+1.56%', color: 'text-red-500' },
-            { name: '中国银河', value: '12.45', change: '+2.31%', color: 'text-red-500' }
-          ].map((idx, i) => (
-            <div key={i} className="flex items-center gap-3 text-xs font-bold">
-              <span className="text-slate-400">{idx.name}</span>
-              <span>{idx.value}</span>
-              <span className={idx.color}>{idx.change}</span>
-            </div>
-          ))}
-          {/* Duplicate for seamless loop */}
-          {[
-            { name: '上证指数', value: '3,245.12', change: '+1.24%', color: 'text-red-500' },
-            { name: '深证成指', value: '10,456.78', change: '+0.85%', color: 'text-red-500' },
-            { name: '创业板指', value: '2,123.45', change: '-0.12%', color: 'text-emerald-500' },
-            { name: '恒生指数', value: '19,876.54', change: '+1.56%', color: 'text-red-500' },
-            { name: '中国银河', value: '12.45', change: '+2.31%', color: 'text-red-500' }
-          ].map((idx, i) => (
-            <div key={i+'_dup'} className="flex items-center gap-3 text-xs font-bold">
-              <span className="text-slate-400">{idx.name}</span>
-              <span>{idx.value}</span>
-              <span className={idx.color}>{idx.change}</span>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* 5.5 中国银河介绍板块 (Refined to match image) */}
       <section className="py-16 md:py-24 bg-white">
@@ -406,7 +373,7 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
         {/* 底图 */}
         <div className="absolute inset-0">
           <img 
-            src={BACKGROUND_IMAGES.bg1}
+            src="https://kvlvbhzrrpspzaoiormt.supabase.co/storage/v1/object/public/xitongtu/screenshot-20260315-050724.png"
             alt="背景"
             className="w-full h-full object-cover"
           />

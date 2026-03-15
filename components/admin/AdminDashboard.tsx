@@ -21,6 +21,7 @@ interface StatsData {
   pendingTickets: number;
   todayTrades: number;
   totalPositions: number;
+  pendingUsers: number;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -31,6 +32,7 @@ const AdminDashboard: React.FC = () => {
     pendingTickets: 0,
     todayTrades: 0,
     totalPositions: 0,
+    pendingUsers: 0,
   });
   const [chartData, setChartData] = useState<any[]>([]);
   const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
@@ -70,6 +72,12 @@ const AdminDashboard: React.FC = () => {
           .select('*', { count: 'exact', head: true })
           .in('status', ['OPEN', 'IN_PROGRESS']);
 
+        // 获取待审核用户数
+        const { count: pendingUserCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'PENDING');
+
         // 获取近7日数据
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -108,6 +116,7 @@ const AdminDashboard: React.FC = () => {
           pendingTickets: ticketCount || 0,
           todayTrades: todayTradesCount,
           totalPositions: positionCount || 0,
+          pendingUsers: pendingUserCount || 0,
         });
 
         // 获取最新交易
@@ -167,8 +176,32 @@ const AdminDashboard: React.FC = () => {
     { label: '待处理工单', value: stats.pendingTickets.toLocaleString(), icon: '🎫', color: 'text-red-600', desc: '需要处理的工单' },
   ];
 
+  // 待审核用户提示
+  const pendingUsersAlert = stats.pendingUsers > 0 ? (
+    <div className="galaxy-card p-4 bg-amber-50 border-amber-200">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">⏳</span>
+          <div>
+            <p className="text-sm font-bold text-amber-800">有 {stats.pendingUsers} 个用户待审核</p>
+            <p className="text-xs text-amber-600">新注册用户需要审核激活后才能登录使用</p>
+          </div>
+        </div>
+        <a 
+          href="/admin/users"
+          className="px-4 py-2 bg-amber-500 text-white text-sm font-bold rounded-lg hover:bg-amber-600 transition-colors"
+        >
+          立即处理
+        </a>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="flex flex-col gap-6">
+      {/* 待审核用户提示 */}
+      {pendingUsersAlert}
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statItems.map((stat, i) => (

@@ -145,7 +145,7 @@ const StockIdentity: React.FC<StockIdentityProps> = ({
           
           {/* 港股标签 */}
           {market === 'HK' && (
-            <span className="px-1.5 py-0.5 bg-blue-500 text-white text-[8px] rounded font-bold">
+            <span className="px-1.5 py-0.5 bg-[var(--color-secondary)] text-white text-[8px] rounded font-bold">
               港股
             </span>
           )}

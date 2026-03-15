@@ -172,7 +172,7 @@ const SmartAssistant: React.FC<SmartAssistantProps> = ({ onClose, onSwitchToHuma
         <div className="flex items-center gap-2">
           <button
             onClick={onSwitchToHuman}
-            className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary-light)] hover:bg-blue-100 rounded-lg text-[var(--color-primary)] text-sm font-medium transition"
+            className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary-light)] hover:bg-[var(--color-primary)] hover:text-white rounded-lg text-[var(--color-primary)] text-sm font-medium transition"
           >
             <FaHeadset size={14} />
             <span className="hidden sm:inline">转人工</span>

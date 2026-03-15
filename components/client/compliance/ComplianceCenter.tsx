@@ -87,7 +87,7 @@ const ComplianceCenter: React.FC<ComplianceCenterProps> = ({ onBack, onOpenShiel
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#00D4AA]/10 flex items-center justify-center text-[#00D4AA]">
+            <div className="w-12 h-12 rounded-xl bg-[#E63946]/10 flex items-center justify-center text-[#E63946]">
               <ICONS.Shield size={24} />
             </div>
             <div>
@@ -103,21 +103,21 @@ const ComplianceCenter: React.FC<ComplianceCenterProps> = ({ onBack, onOpenShiel
       <div className="galaxy-card p-4 border-[var(--color-border)] shadow-sm space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">投资者身份信息</h3>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isVerified ? 'text-[#00D4AA] bg-[#00D4AA]/10' : 'text-[var(--color-warning)] bg-[var(--color-warning)]/10'}`}>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isVerified ? 'text-[#E63946] bg-[#E63946]/10' : 'text-[var(--color-warning)] bg-[var(--color-warning)]/10'}`}>
             {isVerified ? '已实名认证' : '未认证'}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] space-y-1">
             <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-tighter">风险承受能力</p>
-            <p className="text-xs font-black text-[#00D4AA]">{getRiskLevelText(riskLevel)}</p>
+            <p className="text-xs font-black text-[#E63946]">{getRiskLevelText(riskLevel)}</p>
           </div>
           <div className="p-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] space-y-1">
             <p className="text-[9px] text-[var(--color-text-muted)] font-black uppercase tracking-tighter">评测有效期</p>
             <p className="text-xs font-black text-[var(--color-text-primary)]">长期有效</p>
           </div>
         </div>
-        <button className="w-full py-2.5 rounded-xl border border-[#00D4AA]/30 text-[#00D4AA] text-[10px] font-black uppercase tracking-widest hover:bg-[#00D4AA]/10 transition-all">
+        <button className="w-full py-2.5 rounded-xl border border-[#E63946]/30 text-[#E63946] text-[10px] font-black uppercase tracking-widest hover:bg-[#E63946]/10 transition-all">
           重新进行风险测评
         </button>
       </div>
@@ -132,13 +132,13 @@ const ComplianceCenter: React.FC<ComplianceCenterProps> = ({ onBack, onOpenShiel
         ) : (
           <div className="space-y-3">
             {tickets.map(ticket => (
-              <div key={ticket.id} className="p-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex justify-between items-center group cursor-pointer hover:border-[#00D4AA]/30 transition-all">
+              <div key={ticket.id} className="p-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] flex justify-between items-center group cursor-pointer hover:border-[#E63946]/30 transition-all">
                 <div className="space-y-1">
                   <p className="text-xs font-bold text-[var(--color-text-primary)]">{ticket.subject}</p>
                   <p className="text-[9px] text-[var(--color-text-muted)] font-mono">编号：{ticket.id.substring(0, 8)} | 更新：{ticket.updatedAt ? formatDate(ticket.updatedAt) : ticket.createdAt ? formatDate(ticket.createdAt) : ticket.lastUpdate || '-'}</p>
                 </div>
                 <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${
-                  ticket.status === 'CLOSED' ? 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)]' : 'bg-[#00D4AA]/10 text-[#00D4AA] border-[#00D4AA]/20'
+                  ticket.status === 'CLOSED' ? 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)]' : 'bg-[#E63946]/10 text-[#E63946] border-[#E63946]/20'
                 }`}>
                   {getStatusLabel(ticket.status)}
                 </span>

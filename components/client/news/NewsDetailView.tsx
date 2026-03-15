@@ -92,7 +92,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
 
   const getSentimentColor = (sentiment?: string) => {
     switch (sentiment) {
-      case 'positive': return 'bg-[#00D4AA]/20 text-[#00D4AA] border-[#00D4AA]/30';
+      case 'positive': return 'bg-[#E63946]/20 text-[#E63946] border-[#E63946]/30';
       case 'negative': return 'bg-[#FF6B6B]/20 text-[#FF6B6B] border-[#FF6B6B]/30';
       default: return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
     }
@@ -108,7 +108,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
 
   const getCategoryColor = (category?: string) => {
     const colors: Record<string, string> = {
-      '市场': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      '市场': 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)] border-[var(--color-secondary)]/30',
       '策略': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
       '科技': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
       '公告': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
@@ -143,7 +143,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
           <h1 className="text-sm font-black uppercase tracking-[0.2em]">新闻详情</h1>
         </header>
         <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00D4AA]"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E63946]"></div>
         </div>
       </div>
     );
@@ -163,7 +163,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
           <p className="text-[var(--color-text-muted)] font-bold">{error || '新闻未找到'}</p>
           <button 
             onClick={loadNewsDetail}
-            className="mt-4 px-6 py-2 rounded-xl bg-[#00D4AA] text-[#0A1628] font-black text-xs uppercase"
+            className="mt-4 px-6 py-2 rounded-xl bg-[#E63946] text-[#1E1E1E] font-black text-xs uppercase"
           >
             重试
           </button>
@@ -187,7 +187,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
             href={news.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[#00D4AA] transition-all"
+            className="p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[#E63946] transition-all"
             title="查看原文"
           >
             <ICONS.Globe size={18} />
@@ -208,10 +208,10 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg)] via-transparent to-transparent" />
           </div>
         ) : (
-          <div className="relative w-full h-32 bg-gradient-to-br from-[#00D4AA]/20 to-[#0A1628] flex items-center justify-center">
+          <div className="relative w-full h-32 bg-gradient-to-br from-[#E63946]/20 to-[#1E1E1E] flex items-center justify-center">
             <div className="text-center">
-              <ICONS.Book size={40} className="text-[#00D4AA]/50 mx-auto mb-2" />
-              <span className="text-[10px] font-black text-[#00D4AA]/50 uppercase tracking-widest">Galaxy News</span>
+              <ICONS.Book size={40} className="text-[#E63946]/50 mx-auto mb-2" />
+              <span className="text-[10px] font-black text-[#E63946]/50 uppercase tracking-widest">Galaxy News</span>
             </div>
           </div>
         )}
@@ -281,7 +281,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
           <div className="flex gap-3 pt-4">
             <button 
               onClick={() => navigator.share?.({ title: news.title, text: news.summary, url: window.location.href }).catch(() => {})}
-              className="flex-1 py-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest hover:border-[#00D4AA]/30 transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest hover:border-[#E63946]/30 transition-all flex items-center justify-center gap-2"
             >
               <ICONS.Share size={14} />
               分享资讯
@@ -291,7 +291,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
                 if (news.url) window.open(news.url, '_blank');
               }}
               disabled={!news.url}
-              className="flex-1 py-3 rounded-xl bg-[#00D4AA]/10 border border-[#00D4AA]/20 text-[10px] font-black uppercase tracking-widest text-[#00D4AA] hover:bg-[#00D4AA]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl bg-[#E63946]/10 border border-[#E63946]/20 text-[10px] font-black uppercase tracking-widest text-[#E63946] hover:bg-[#E63946]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <ICONS.ExternalLink size={14} />
               查看原文
@@ -307,7 +307,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
                   <button
                     key={item.id}
                     onClick={() => navigate(`/client/news/${item.id}`)}
-                    className="w-full text-left p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[#00D4AA]/30 transition-all group"
+                    className="w-full text-left p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[#E63946]/30 transition-all group"
                   >
                     <div className="flex items-start gap-3">
                       {item.imageUrl ? (
@@ -323,7 +323,7 @@ const NewsDetailView: React.FC<NewsDetailViewProps> = ({ newsId: propNewsId, onB
                         <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${getCategoryColor(item.category)}`}>
                           {item.category || '资讯'}
                         </span>
-                        <h4 className="text-sm font-bold text-[var(--color-text-primary)] mt-1 group-hover:text-[#00D4AA] transition-colors line-clamp-2">
+                        <h4 className="text-sm font-bold text-[var(--color-text-primary)] mt-1 group-hover:text-[#E63946] transition-colors line-clamp-2">
                           {item.title}
                         </h4>
                         <p className="text-[10px] text-[var(--color-text-muted)] mt-1">{formatDate(item.date)}</p>

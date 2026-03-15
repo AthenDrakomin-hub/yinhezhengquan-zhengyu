@@ -8,8 +8,19 @@ export type MarketType = 'A股' | '港股' | '美股'
 // 交易类型
 export type TradeType = 'BUY' | 'SELL' | 'IPO' | 'BLOCK_TRADE' | 'LIMIT_UP'
 
-// 订单状态
-export type OrderStatus = 'PENDING' | 'MATCHING' | 'FILLED' | 'CANCELLED' | 'REJECTED'
+// 订单状态（统一状态值）
+// PENDING: 待审核（需要审批的订单初始状态）
+// SUBMITTED: 已提交（新股申购等）
+// MATCHING: 撮合中（正常订单已入撮合池）
+// PARTIAL: 部分成交
+// SUCCESS: 全部成交
+// CANCELLED: 已撤销
+// FAILED: 失败
+// REJECTED: 已拒绝
+export type OrderStatus = 'PENDING' | 'SUBMITTED' | 'MATCHING' | 'PARTIAL' | 'SUCCESS' | 'CANCELLED' | 'FAILED' | 'REJECTED'
+
+// 可撤销的订单状态
+export const CANCELABLE_STATUSES: OrderStatus[] = ['PENDING', 'SUBMITTED', 'MATCHING', 'PARTIAL']
 
 // 审核状态
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED'

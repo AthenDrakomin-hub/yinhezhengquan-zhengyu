@@ -1,5 +1,11 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * 客户端主布局
+ * 按银河证券官方App风格还原
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ICONS } from '../../lib/constants';
 import { imageConfig } from '../../lib/imageConfig';
 import { UserAccount } from '../../lib/types';
@@ -27,23 +33,40 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
   const [loadingChatCount, setLoadingChatCount] = useState(false);
   const [showSmartAssistant, setShowSmartAssistant] = useState(false);
   const [showSmartPicker, setShowSmartPicker] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    // 从本地存储读取折叠状态，默认展开
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved ? saved === 'true' : false;
   });
 
-  const LOGO_URL = imageConfig.logo.fullUrl;
+  const LOGO_URL = imageConfig.logo.clientHeader;
   const notificationUnreadCount = account?.notifications?.filter(n => !n.isRead).length || 0;
 
+  // 判断是否在首页
+  const isDashboard = location.pathname === '/client/dashboard' || location.pathname === '/client';
+
+  // 银河证券官方底部导航：首页、行情、交易、财富、我的
   const tabs = React.useMemo(() => [
-    { id: 'dashboard', label: '首页总览', icon: ICONS.Home, path: '/client/dashboard' },
-    { id: 'market', label: '实时行情', icon: ICONS.Market, path: '/client/market' },
-    { id: 'trade', label: '极速交易', icon: ICONS.Trade, path: '/client/trade' },
-    { id: 'profile', label: '资产中心', icon: ICONS.User, path: '/client/profile' },
+    { id: 'dashboard', label: '首页', icon: ICONS.Home, path: '/client/dashboard', tourId: 'overview-tab' },
+    { id: 'market', label: '行情', icon: ICONS.Market, path: '/client/market', tourId: 'quotes-tab' },
+    { id: 'trade', label: '交易', icon: ICONS.Trade, path: '/client/trade', tourId: 'trade-tab' },
+    { id: 'wealth', label: '财富', icon: ICONS.Wallet, path: '/client/wealth', tourId: 'wealth-tab' },
+    { id: 'profile', label: '我的', icon: ICONS.User, path: '/client/profile', tourId: 'profile-tab' },
   ], []);
 
   const isTabActive = React.useCallback((path: string) => location.pathname === path || location.pathname.startsWith(path + '/'), [location.pathname]);
+
+  // 当前页面标题
+  const currentPageTitle = React.useMemo(() => {
+    return tabs.find(t => isTabActive(t.path))?.label || '控制面板';
+  }, [tabs, isTabActive]);
+
+  // 处理搜索
+  const handleSearch = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchText.trim()) {
+      navigate(`/client/stock/${searchText.trim()}`);
+    }
+  }, [navigate, searchText]);
 
   // 加载未读消息计数
   useEffect(() => {
@@ -88,7 +111,7 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
     navigate('/client/chat');
   }, [navigate]);
 
-  // 切换侧边栏折叠状态并保存到本地存储
+  // 切换侧边栏折叠状态
   const toggleSidebar = React.useCallback(() => {
     setSidebarCollapsed(prev => {
       const newState = !prev;
@@ -98,20 +121,15 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)]">
+    <div className="flex min-h-screen bg-[#F5F5F5] text-[#333333]">
       
       {/* --- PC 端侧边导航栏 - 可折叠 --- */}
-      <aside className={`hidden md:flex flex-col ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-[var(--color-surface)] border-r border-[var(--color-border)] sticky top-0 h-screen z-40 transition-all duration-300`}>
-        {/* Logo 区域 */}
-        <div className={`p-4 border-b border-[var(--color-border)] flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-          {!sidebarCollapsed && (
-            <>
-              <img src={LOGO_URL} alt="日斗投资单元" className="h-10 object-contain" />
-            </>
-          )}
+      <aside className={`hidden md:flex flex-col ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-[#E5E5E5] sticky top-0 h-screen z-40 transition-all duration-300`}>
+        {/* Logo 区域 - 已移除logo */}
+        <div className={`p-4 border-b border-[#E5E5E5] flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <button 
             onClick={toggleSidebar}
-            className={`p-2 rounded-lg hover:bg-[var(--color-bg)] transition-all ${sidebarCollapsed ? 'mx-auto' : ''}`}
+            className={`p-2 rounded-lg hover:bg-[#F5F5F5] transition-all text-[#666666] ${sidebarCollapsed ? 'mx-auto' : ''}`}
             title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`}>
@@ -119,13 +137,6 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
             </svg>
           </button>
         </div>
-
-        {!sidebarCollapsed && (
-          <div className="px-4 pb-2 pt-2">
-            <p className="text-xs font-semibold text-[var(--color-primary)]">日斗投资单元</p>
-            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">专业数字化交易平台</p>
-          </div>
-        )}
 
         {/* 导航菜单 */}
         <nav className="flex-1 p-2 space-y-1">
@@ -135,12 +146,13 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
             return (
               <button
                 key={tab.id}
+                data-tour={tab.tourId}
                 onClick={() => navigate(tab.path)}
                 title={sidebarCollapsed ? tab.label : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                   isActive 
-                    ? 'bg-[#2563EB] text-white shadow-sm' 
-                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text-primary)]'
+                    ? 'bg-gradient-to-r from-[#E63946] to-[#C62836] text-white shadow-sm' 
+                    : 'text-[#666666] hover:bg-[#FFF5F5] hover:text-[#E63946]'
                 } ${sidebarCollapsed ? 'justify-center' : ''}`}
               >
                 <Icon size={18} className={`shrink-0 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
@@ -154,13 +166,13 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
 
         {/* 底部状态区 */}
         {!sidebarCollapsed && (
-          <div className="p-4 border-t border-[var(--color-border)]">
-            <div className="bg-[var(--color-bg)] rounded-lg p-3">
+          <div className="p-4 border-t border-[#E5E5E5]">
+            <div className="bg-[#F5F5F5] rounded-xl p-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--color-text-muted)]">连接状态</span>
+                <span className="text-xs text-[#999999]">连接状态</span>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 bg-green-500 rounded-full" />
-                  <span className="text-xs text-green-600 font-medium">在线</span>
+                  <div className="w-2 h-2 bg-[#22C55E] rounded-full" />
+                  <span className="text-xs text-[#22C55E] font-medium">在线</span>
                 </div>
               </div>
             </div>
@@ -173,7 +185,7 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
         
         {/* 待激活状态横幅 */}
         {account?.status === 'PENDING' && (
-          <div className="bg-orange-500 py-2 px-6 flex items-center justify-between z-[60]">
+          <div className="bg-[#F97316] py-2 px-6 flex items-center justify-between z-[60]">
             <div className="flex items-center gap-3">
               <ICONS.Shield size={14} className="text-white" />
               <span className="text-xs font-medium text-white">账户合规审核中：部分交易指令受限</span>
@@ -181,24 +193,48 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
           </div>
         )}
 
-        {/* 顶部标题栏 */}
-        <header className="sticky top-0 z-30 bg-[var(--color-surface)] border-b border-[var(--color-border)] px-4 md:px-6 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            {/* 移动端 Logo */}
-            <div className="md:hidden flex items-center gap-2" onClick={() => navigate('/client/dashboard')}>
-              <img src={LOGO_URL} alt="Logo" className="h-8 object-contain" />
-            </div>
-            {/* PC端标题 */}
-            <h2 className="hidden md:block text-base font-semibold text-[var(--color-text-primary)]">
-              {tabs.find(t => isTabActive(t.path))?.label || '控制面板'}
-            </h2>
-          </div>
-          
-          <div className="flex items-center gap-2">
+        {/* 顶部标题栏 - 首页显示搜索框，其他页面显示标题 */}
+        <header className="sticky top-0 z-30 bg-white border-b border-[#E5E5E5] px-4 md:px-6 py-2.5">
+          <div className="flex items-center gap-3">
+            {/* 移动端 Logo 已移除 */}
+            
+            {/* 首页显示搜索框，其他页面显示标题 */}
+            {isDashboard ? (
+              <div className="flex-1 flex items-center gap-2 bg-[#F5F5F5] rounded-full px-3 py-2">
+                <svg className="w-4 h-4 text-[#999999] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  onKeyDown={handleSearch}
+                  placeholder="大家都在搜索：中国电建"
+                  className="flex-1 text-sm text-[#333333] placeholder:text-[#999999] bg-transparent outline-none min-w-0"
+                />
+                {searchText && (
+                  <button 
+                    onClick={() => setSearchText('')}
+                    className="text-[#999999] hover:text-[#666666] shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <h2 className="text-base font-semibold text-[#333333] hidden md:block">
+                {currentPageTitle}
+              </h2>
+            )}
+            
+            {/* 右侧按钮组 */}
+            <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
             {/* 智能选股按钮 */}
             <button 
               onClick={() => setShowSmartPicker(true)}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-lg text-sm font-medium hover:bg-blue-100 transition-all"
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-[#FFEBEE] text-[#E63946] rounded-xl text-sm font-medium hover:bg-[#E63946] hover:text-white transition-all"
             >
               <ICONS.Brain size={16} />
               智能选股
@@ -208,7 +244,7 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
             {userRole === 'admin' && (
               <Link 
                 to="/admin/dashboard"
-                className="w-9 h-9 rounded-lg bg-[var(--color-bg)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-all"
+                className="w-9 h-9 rounded-xl bg-[#F5F5F5] flex items-center justify-center text-[#666666] hover:text-[#E63946] hover:bg-[#FFEBEE] transition-all"
                 title="管理后台"
               >
                 <ICONS.Shield size={18} />
@@ -218,16 +254,16 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
             {/* 客服按钮 */}
             <button 
               onClick={handleChatClick}
-              className="w-9 h-9 rounded-lg bg-[var(--color-bg)] flex items-center justify-center relative text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-all"
+              className="w-9 h-9 rounded-xl bg-[#F5F5F5] flex items-center justify-center relative text-[#666666] hover:text-[#E63946] hover:bg-[#FFEBEE] transition-all"
               disabled={loadingChatCount}
             >
               {loadingChatCount ? (
-                <div className="w-4 h-4 border-2 border-[var(--color-text-muted)] border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-[#999999] border-t-transparent rounded-full animate-spin" />
               ) : (
                 <ICONS.Headset size={18} />
               )}
               {unreadChatCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-accent)] text-white rounded-full text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#E63946] text-white rounded-full text-[10px] font-bold flex items-center justify-center">
                   {unreadChatCount > 9 ? '9+' : unreadChatCount}
                 </span>
               )}
@@ -235,18 +271,30 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
             
             {/* 设置按钮 */}
             <button 
+              data-tour="settings-tab"
               onClick={onOpenSettings}
-              className="w-9 h-9 rounded-lg bg-[var(--color-bg)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-all"
+              className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-[#F5F5F5] flex items-center justify-center text-[#666666] hover:text-[#E63946] hover:bg-[#FFEBEE] transition-all"
             >
               <ICONS.Settings size={18} />
             </button>
+            </div>
           </div>
         </header>
 
         {/* 主内容区 */}
         <main className="flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-8 w-full">
           <div className="max-w-md mx-auto md:max-w-7xl md:px-6">
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
 
@@ -264,22 +312,23 @@ const Layout: React.FC<LayoutProps> = React.memo(({ activeTab, setActiveTab, isD
           onClose={() => setShowSmartPicker(false)}
         />
 
-        {/* --- 移动端底部导航 --- */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex justify-around items-center z-40 py-2 safe-area-inset-bottom">
+        {/* --- 移动端底部导航 - 深色背景 --- */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1a1a2e] flex justify-around items-center z-40 py-2 safe-area-inset-bottom">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = isTabActive(tab.path);
             return (
               <button
                 key={tab.id}
+                data-tour={tab.tourId}
                 onClick={() => navigate(tab.path)}
-                className={`flex flex-col items-center py-2 px-4 transition-all ${
-                  isActive ? 'text-[#2563EB]' : 'text-[#9CA3AF]'
+                className={`flex flex-col items-center py-2 px-3 transition-all ${
+                  isActive ? 'text-[#4DA6FF]' : 'text-white/70'
                 }`}
               >
                 <Icon size={22} className={isActive ? 'stroke-[2.5px]' : 'stroke-2'} />
-                <span className={`text-[10px] mt-1 font-medium ${isActive ? 'text-[#2563EB]' : 'text-[#9CA3AF]'}`}>
-                  {tab.label.substring(0, 2)}
+                <span className={`text-[11px] mt-1 font-medium ${isActive ? 'text-[#4DA6FF]' : 'text-white/70'}`}>
+                  {tab.label}
                 </span>
               </button>
             );

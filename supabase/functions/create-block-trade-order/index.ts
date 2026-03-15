@@ -44,7 +44,7 @@ import {
   
   // 缓存
   checkRateLimit,
-} from '../_shared/mod.ts'
+} from './_shared/mod.ts'
 
 // 大宗交易最低金额（万元）
 const MIN_BLOCK_AMOUNT = 50

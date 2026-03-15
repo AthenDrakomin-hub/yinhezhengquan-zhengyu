@@ -114,7 +114,7 @@ export const getCurrentProfile = async (): Promise<Profile | null> => {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileResponse.error) {
       if (import.meta.env.DEV) {

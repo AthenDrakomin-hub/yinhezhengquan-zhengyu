@@ -28,7 +28,7 @@ const UnauthorizedView: React.FC = () => {
         <div className="space-y-3">
           <button
             onClick={() => navigate('/client/dashboard')}
-            className="w-full h-12 rounded-xl font-bold bg-[#00D4AA] text-white hover:bg-[#00B894] transition-all flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-xl font-bold bg-[#E63946] text-white hover:bg-[#C62836] transition-all flex items-center justify-center gap-2"
           >
             <ICONS.Home size={16} /> 返回客户端首页
           </button>

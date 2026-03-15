@@ -330,7 +330,14 @@ export const tradeService = {
 
     const { data, error, count } = await query.range(offset, offset + limit - 1);
 
-    if (error) throw error;
+    if (error) {
+      // RLS 权限问题或列不存在时返回空数据
+      if (error.code === '42501' || error.code === '42703' || error.code === 'PGRST205') {
+        console.warn('获取交易记录:', error.message || error.code);
+        return { data: [], total: 0 };
+      }
+      throw error;
+    }
     
     // 计算交易金额（如果数据库中没有amount字段）
     return {
@@ -343,15 +350,11 @@ export const tradeService = {
   },
 
   /**
-   * 获取行情数据（通过 proxy-market）
+   * 获取行情数据（前端直连东方财富 API）
    */
   async getMarketData(marketType: string, stockCodes: string[]) {
-    const { data, error } = await supabase.functions.invoke('proxy-market', {
-      body: { action: 'batch', symbols: stockCodes, market: marketType === 'HK' ? 'HK' : 'CN' }
-    });
-
-    if (error) throw error;
-    return data?.data || [];
+    const { marketApi } = await import('./marketApi');
+    return await marketApi.getBatchStocks(stockCodes, marketType === 'HK' ? 'HK' : 'CN');
   },
 
   /**
@@ -418,6 +421,11 @@ export const tradeService = {
       .order('created_at', { ascending: false });
 
     if (error) {
+      // RLS 权限问题或列不存在时返回空数组
+      if (error.code === '42501' || error.code === '42703' || error.code === 'PGRST205') {
+        console.warn('获取待审批订单:', error.message || error.code);
+        return [];
+      }
       logger.error('获取待审批订单失败:', error);
       throw error;
     }
@@ -442,6 +450,11 @@ export const tradeService = {
       .limit(limit);
 
     if (error) {
+      // RLS 权限问题或列不存在时返回空数组
+      if (error.code === '42501' || error.code === '42703' || error.code === 'PGRST205') {
+        console.warn('获取审批历史:', error.message || error.code);
+        return [];
+      }
       logger.error('获取审批历史失败:', error);
       throw error;
     }

@@ -6,13 +6,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import {
   verifyIPWhitelist,
-  getClientIP
-} from "../_shared/admin.ts"
-import {
+  getClientIP,
   jsonResponse,
   errorResponse,
   CORS_HEADERS
-} from "../_shared/response.ts"
+} from './_shared/mod.ts'
 
 // 速率限制配置
 const RATE_LIMIT_WINDOW = 60

@@ -78,7 +78,7 @@ async function checkEdgeFunction(): Promise<{ status: boolean; latency?: number;
   const start = Date.now()
   try {
     // 调用 proxy-market 进行自检
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL')
     const response = await fetch(`${supabaseUrl}/functions/v1/proxy-market?action=realtime&market=CN&symbols=600519`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }

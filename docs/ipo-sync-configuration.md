@@ -23,7 +23,7 @@
 - `sync-stock-data`
 - `fetch-galaxy-news`
 - `fetch-stock-f10`
-- `get-limit-up`
+- `proxy-market`
 - `get-market-data`
 - `phone-location`
 - `db-migrate`
@@ -72,7 +72,7 @@ supabase functions deploy sync-ipo
    - **Command**: 
    ```sql
    SELECT net.http_post(
-       url := 'https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo',
+       url := 'https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo',
        headers := '{"Content-Type": "application/json", "x-api-key": "yinhe-ipo-sync-2024", "x-trigger-source": "scheduled"}'::jsonb,
        body := '{}'::jsonb
    );
@@ -90,7 +90,7 @@ SELECT cron.schedule(
     '0 0 * * *',
     $$
     SELECT net.http_post(
-        url := 'https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo',
+        url := 'https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo',
         headers := '{"Content-Type": "application/json", "x-api-key": "yinhe-ipo-sync-2024"}'::jsonb,
         body := '{}'::jsonb
     );
@@ -116,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const response = await fetch(
-      'https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo',
+      'https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo',
       {
         method: 'POST',
         headers: {
@@ -153,7 +153,7 @@ jobs:
           curl -X POST \
             -H "Content-Type: application/json" \
             -H "x-api-key: yinhe-ipo-sync-2024" \
-            "https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo"
+            "https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo"
 ```
 
 ## 数据库对象状态
@@ -189,13 +189,13 @@ SELECT * FROM cron.job WHERE jobname = 'ipo-daily-sync';
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: yinhe-ipo-sync-2024" \
-  "https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo"
+  "https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo"
 
 # 使用 JWT 调用（需要用户登录）
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  "https://rfnrosyfeivcbkimjlwo.supabase.co/functions/v1/sync-ipo"
+  "https://kvlvbhzrrpspzaoiormt.supabase.co/functions/v1/sync-ipo"
 ```
 
 ## 下一步操作

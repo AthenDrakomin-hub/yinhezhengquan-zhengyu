@@ -1,53 +1,49 @@
 /**
  * 图片资源配置文件
- * 集中管理所有图片 URL，避免使用环境变量
+ * 集中管理所有图片 URL
  * 
- * 图片来源：Supabase Storage (tupian 存储桶)
- * 基础 URL 从环境变量获取，或使用默认值
+ * 图片来源：Supabase Storage (xitongtu 存储桶)
  */
 
-// 从 Supabase URL 构建存储 URL，避免硬编码
-const getStorageBaseUrl = (): string => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (supabaseUrl) {
-    return `${supabaseUrl}/storage/v1/object/public/tupian`;
-  }
-  // 开发环境回退
-  return '/images';
-};
-
-const STORAGE_BASE_URL = getStorageBaseUrl();
+// Supabase Storage 基础 URL
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kvlvbhzrrpspzaoiormt.supabase.co';
+const STORAGE_BASE_URL = `${SUPABASE_URL}/storage/v1/object/public/xitongtu`;
 
 export const imageConfig = {
   // ==================== Logo ====================
   logo: {
-    main: '/logo.png',
-    admin: '/logo.png',
-    training: '/logo.png',
-    // 完整 URL 版本（用于某些需要完整 URL 的场景）
-    fullUrl: `${STORAGE_BASE_URL}/logo.png`,
+    main: `${STORAGE_BASE_URL}/256.webp`,
+    // 客户端登录页 & 开户页 (256.webp)
+    fullUrl: `${STORAGE_BASE_URL}/256.webp`,
+    // 管理端登录页 (logo.png)
+    admin: `${STORAGE_BASE_URL}/logo.png`,
+    // 客户端首页顶部 & 公共页面首页 (logo.png)
+    clientHeader: `${STORAGE_BASE_URL}/logo.png`,
+    // 公共页面首页 (logo.png)
+    publicHome: `${STORAGE_BASE_URL}/logo.png`,
+    training: `${STORAGE_BASE_URL}/256.webp`,
   },
 
   // ==================== 公章 ====================
   seal: `${STORAGE_BASE_URL}/gongzhang.jpg`,
   
   // ==================== 客服头像 ====================
-  agentAvatar: `${STORAGE_BASE_URL}/yinxiaohe.png`,
+  agentAvatar: '/logo.png',
   
   // ==================== 其他图片 ====================
-  jigou: `${STORAGE_BASE_URL}/jigou.png`,
+  jigou: 'https://kvlvbhzrrpspzaoiormt.supabase.co/storage/v1/object/public/xitongtu/1773005421322-019ccf5b-20b3-780f-afc1-02a862307568.png',
 
   // ==================== 首页 Banner ====================
   banners: [
     {
       id: 1,
-      img: `${STORAGE_BASE_URL}/yinheguandian-1.png`,
+      img: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
       category: '银河观点',
       title: '年度策略',
     },
     {
       id: 2,
-      img: `${STORAGE_BASE_URL}/121.png`,
+      img: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
       category: '系统公告',
       title: '系统升级',
     },
@@ -77,35 +73,37 @@ export const imageConfig = {
 
   // ==================== 首页服务图标 ====================
   serviceIcons: {
-    icon1: `${STORAGE_BASE_URL}/img_home_wealth_management@2x.96211330.png`,
-    icon2: `${STORAGE_BASE_URL}/img_home_investment_financing@2x.541f016f.png`,
-    icon3: `${STORAGE_BASE_URL}/img_home_CGS_research_3@2x.6b975cfd.png`,
-    icon4: `${STORAGE_BASE_URL}/img_home_international_business@2x.d9987cf6.png`,
+    icon1: '/images/service-icon-1.png',
+    icon2: '/images/service-icon-2.png',
+    icon3: '/images/service-icon-3.png',
+    icon4: '/images/service-icon-4.png',
   },
 
   // ==================== 头像 ====================
   avatars: {
-    agent: `${STORAGE_BASE_URL}/yinxiaohe.png`, // 客服/智能助理头像
+    agent: '/logo.png',
     default: '/logo.png',
   },
 
   // ==================== 公章和协议 ====================
   documents: {
-    seal: `${STORAGE_BASE_URL}/gongzhang.jpg`, // 电子公章
+    seal: `${STORAGE_BASE_URL}/gongzhang.jpg`,
   },
 
   // ==================== 培训营背景 ====================
   training: {
-    bg1: `${STORAGE_BASE_URL}/yinheguandian-1.png`,
-    bg2: `${STORAGE_BASE_URL}/121.png`,
-    joinUs: `${STORAGE_BASE_URL}/jiaruwomen-1.png`,
+    bg1: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
+    bg2: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
+    joinUs: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
   },
 
   // ==================== 背景图 ====================
   backgrounds: {
-    bg1: `${STORAGE_BASE_URL}/yinheguandian-1.png`,
-    bg2: `${STORAGE_BASE_URL}/121.png`,
-    research: `${STORAGE_BASE_URL}/img_home_CGS_research_5@2x.dc6d9350.png`,
+    bg1: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
+    bg2: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
+    research: '/images/service-icon-3.png',
+    // 银河观点板块背景图
+    galaxyViewpoint: `${STORAGE_BASE_URL}/screenshot-20260315-050724.png`,
   },
 };
 

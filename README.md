@@ -1,4 +1,4 @@
-# 银河证券正裕交易系统
+# 银河证券·日斗投资单元
 
 > 工业级虚拟证券交易平台 | 基于 Supabase + Vercel + React + TypeScript
 
@@ -8,62 +8,37 @@
 
 ## 📋 项目概述
 
-正裕交易系统是一个完整的虚拟证券交易平台，支持行情同步、交易下单、撮合成交、清算对账等全流程功能。
+日斗投资单元是一个完整的虚拟证券交易平台，支持行情同步、交易下单、撮合成交、清算对账等全流程功能。
 
-### 核心功能
+### 核心功能模块
 
-- 🔐 用户认证（登录/注册/权限管理）
-- 📊 实时行情数据（东方财富、腾讯财经公开 API）
-- 💰 交易下单（股票、大宗商品、IPO 申购）
-- 🎯 涨停板监控（QVeris API 实时数据）
-- 📈 市场分析（K线图、技术指标）
-- 📋 IPO 管理（新股申购、中签查询）
-- 🛡️ 风控合规（交易规则、限制管理）
-- 👨‍💼 管理后台（用户管理、数据统计）
-- 💬 智能客服（知识库问答）
-- 🔔 消息通知（实时推送）
-- 📚 投教中心（投资教育内容）
+#### 🎯 第一阶段：核心交易系统
+- 用户认证（登录/注册/权限管理）
+- 实时行情数据（东方财富、腾讯财经公开 API）
+- 交易下单（股票、大宗商品、IPO 申购）
+- 涨停板监控（东方财富 API + Redis 缓存）
+- 市场分析（K线图、技术指标）
 
-## 📦 共享模块 (_shared)
+#### 💰 第二阶段：基金理财产品
+- 基金产品管理（公募基金、净值型）
+- 基金申购/赎回（T+1 确认结算）
+- 理财产品管理（定期理财、收益型）
+- 理财购买/赎回（收益计算、提前赎回处理）
 
-Edge Functions 使用统一的共享模块，位于 `supabase/functions/_shared/`：
+#### 👑 第三阶段：用户体系与运营
+- VIP 会员体系（等级配置、权益管理、升级进度）
+- 积分签到系统（签到奖励、连续签到加成、积分兑换）
+- 运营活动管理（活动创建、参与管理、奖励发放）
 
-```
-supabase/functions/_shared/
-├── mod.ts           # 统一入口
-├── types.ts         # 类型定义
-├── response.ts      # 响应工具（jsonResponse, errorResponse等）
-├── auth.ts          # 认证模块
-├── admin.ts         # 管理员验证
-├── validation.ts    # 验证工具
-├── cache.ts         # Redis 缓存（含清除函数）
-├── database.ts      # 数据库操作
-└── trading.ts       # 交易核心逻辑
-```
+#### 🛡️ 第四阶段：风控与报表
+- 风控规则配置（交易限额、价格偏离、持仓集中度）
+- 风险事件监控（事件记录、处理流程、统计分析）
+- 数据报表系统（用户统计、交易统计、资产统计）
 
-### 共享模块使用情况
-
-| 函数 | 使用共享模块 | 说明 |
-|------|-------------|------|
-| `sync-ipo` | ✅ | jsonResponse, optionsResponse, clearIPOCache |
-| `sync-stock-data` | ✅ | jsonResponse, optionsResponse, clearStockCache, clearMarketCache |
-| `fetch-galaxy-news` | ✅ | jsonResponse, optionsResponse, getCache, setCache, clearNewsCache |
-| `stock-search` | ✅ | jsonResponse, getCache, setCache, CacheTTL |
-| `proxy-market` | ✅ | jsonResponse, optionsResponse, CORS_HEADERS |
-| `fetch-stock-f10` | ✅ | jsonResponse, optionsResponse, getCache, setCache, CacheTTL |
-| `admin-verify` | ✅ | 完整使用共享模块 |
-| `admin-operations` | ✅ | 完整使用共享模块 |
-| 其他交易函数 | ✅ | 完整使用共享模块 |
-
-### 缓存清除函数
-
-共享模块提供以下缓存清除函数，在数据同步后自动调用：
-
-- `clearIPOCache()` - 清除 IPO 相关缓存
-- `clearStockCache(symbol?)` - 清除股票基础信息缓存
-- `clearMarketCache(market?, symbol?)` - 清除行情缓存
-- `clearNewsCache()` - 清除新闻缓存
-- `clearAllCache()` - 清除所有缓存（谨慎使用）
+#### ⚙️ 第五阶段：系统完善
+- 系统配置管理（参数配置、功能开关）
+- 公告管理（公告发布、类型分类、有效期管理）
+- 维护模式（维护公告、系统状态监控）
 
 ---
 
@@ -140,6 +115,14 @@ npm run preview
 .
 ├── components/          # React 组件
 │   ├── admin/          # 管理后台组件
+│   │   ├── AdminLayout.tsx           # 管理后台布局
+│   │   ├── AdminDashboard.tsx        # 总览面板
+│   │   ├── AdminUserManagement.tsx   # 用户管理
+│   │   ├── AdminTradeManagement.tsx  # 交易管理
+│   │   ├── AdminCampaignManagement.tsx # 运营活动管理
+│   │   ├── AdminRiskControl.tsx      # 风控管理
+│   │   ├── AdminReports.tsx          # 数据报表
+│   │   └── AdminSystemConfig.tsx     # 系统配置
 │   ├── client/         # 客户端功能组件
 │   ├── auth/           # 认证组件
 │   ├── landing/        # 首页组件
@@ -149,11 +132,45 @@ npm run preview
 │   ├── imageConfig.ts  # 图片资源配置
 │   └── constants.tsx   # 常量定义
 ├── routes/             # 路由配置
+│   ├── PublicRoutes.tsx    # 公共路由
+│   ├── AuthRoutes.tsx      # 认证路由
+│   ├── ClientRoutes.tsx    # 客户端路由
+│   └── AdminRoutes.tsx     # 管理端路由
 ├── contexts/           # React Context
+│   ├── AuthContext.tsx     # 认证上下文
+│   ├── AdminContext.tsx    # 管理员上下文
+│   ├── ThemeContext.tsx    # 主题上下文
+│   └── UserSettingsContext.tsx # 用户设置上下文
 ├── services/           # 业务服务层
+│   ├── authService.ts      # 认证服务
+│   ├── tradeService.ts     # 交易服务
+│   ├── fundService.ts      # 基金服务
+│   ├── wealthService.ts    # 理财服务
+│   ├── vipService.ts       # VIP服务
+│   ├── checkinService.ts   # 签到服务
+│   ├── campaignService.ts  # 活动服务
+│   ├── riskControlService.ts # 风控服务
+│   └── reportService.ts    # 报表服务
 ├── supabase/           # Supabase 配置
 │   ├── functions/      # Edge Functions
+│   │   ├── _shared/    # 共享模块
+│   │   ├── admin-operations/   # 管理操作
+│   │   ├── campaign/           # 运营活动
+│   │   ├── data-reports/       # 数据报表
+│   │   ├── fund-purchase/      # 基金申购
+│   │   ├── fund-redeem/        # 基金赎回
+│   │   ├── risk-control/       # 风控管理
+│   │   ├── system-config/      # 系统配置
+│   │   ├── user-checkin/       # 用户签到
+│   │   ├── user-vip/           # VIP管理
+│   │   └── ...                 # 更多函数
 │   └── migrations/     # 数据库迁移
+│       ├── 20250327000000_init.sql
+│       ├── 20250615000000_phase1_core_trading.sql
+│       ├── 20250620000000_phase2_fund_wealth.sql
+│       └── 20250625000000_phase3_vip_points_campaign.sql
+├── scripts/            # 脚本
+│   └── deployment-check.sh  # 部署检查脚本
 └── index.tsx           # 应用入口
 ```
 
@@ -193,18 +210,18 @@ supabase functions deploy
 |--------|------|
 | `SUPABASE_URL` | Supabase 项目 URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服务角色密钥 |
-| `QVERIS_API_KEY` | QVeris 行情 API 密钥（涨停数据） |
+| `UPSTASH_REDIS_REST_URL` | Redis 缓存 URL |
+| `UPSTASH_REDIS_REST_TOKEN` | Redis 缓存 Token |
 
 ## 📊 Edge Functions 列表
 
 | 函数名 | 功能 |
 |--------|------|
-| `proxy-market` | 行情数据统一代理（含成交明细，已合并 fetch-trade-ticks） |
+| `proxy-market` | 行情数据统一代理（含成交明细、涨停股等，已合并 fetch-trade-ticks） |
 | `health-check` | 服务健康检查与告警 |
 | `clear-cache` | 管理端缓存清除 |
 | `sync-ipo` | 同步新股发行数据（定时任务） |
 | `sync-stock-data` | 同步股票基础数据 |
-| `get-limit-up` | 获取涨停股票数据（QVeris API） |
 | `fetch-galaxy-news` | 获取银河证券新闻 |
 | `fetch-stock-f10` | 获取股票基本面数据 |
 | `stock-search` | 股票搜索 |
@@ -526,11 +543,11 @@ SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;
     ↓
 limitUpService.getLimitUpList()
     ↓
-Supabase Edge Function: get-limit-up
+Supabase Edge Function: proxy-market?action=limitup
     ↓
-QVeris API (实时行情)
+东方财富 API (实时行情)
     ↓
-涨停判定 → 返回数据
+Redis 缓存 → 涨停判定 → 返回数据
 ```
 
 ### 涨停判定规则
@@ -542,7 +559,7 @@ QVeris API (实时行情)
 | ST股票 | 名称含ST | ≥5% |
 
 ### 配置要求
-- 需要在 Supabase Edge Function 环境中配置 `QVERIS_API_KEY`
+- 需要在 Supabase Edge Function 环境中配置 Redis 缓存（UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN）
 
 ## 👥 管理员用户设置
 
@@ -651,7 +668,6 @@ background: slate-800;
 - [ ] `UPSTASH_REDIS_REST_TOKEN` - Redis 访问令牌
 - [ ] `SUPABASE_URL` - Supabase 项目 URL
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` - 服务角色密钥
-- [ ] `QVERIS_API_KEY` - 涨停数据 API 密钥
 - [ ] `ALERT_WEBHOOK_URL` - 告警通知 Webhook（可选）
 
 #### 数据库与认证

@@ -100,7 +100,7 @@ const ComplianceShieldView: React.FC<ComplianceShieldViewProps> = ({ onBack }) =
           </button>
           <h1 className="text-sm font-black uppercase tracking-[0.2em]">日斗合规盾牌</h1>
         </div>
-        <div className="w-8 h-8 rounded-lg bg-[#00D4AA]/10 flex items-center justify-center text-[#00D4AA]">
+        <div className="w-8 h-8 rounded-lg bg-[#E63946]/10 flex items-center justify-center text-[#E63946]">
           <ICONS.Shield size={18} />
         </div>
       </header>

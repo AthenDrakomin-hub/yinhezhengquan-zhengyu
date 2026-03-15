@@ -209,7 +209,7 @@ const AssetAnalysisView: React.FC<AssetAnalysisViewProps> = ({ account, onBack }
                  </div>
                  <span className="text-xs font-black font-mono text-[#059669]">-¥1,245.50</span>
               </div>
-              <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+              <div className="p-4 bg-[var(--color-secondary-light)] rounded-2xl border border-[var(--color-secondary)]/20">
                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                    银河 Nexus 智能建议

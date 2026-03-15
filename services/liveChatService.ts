@@ -39,9 +39,6 @@ export const createTicketAndQueue = async (
   guestPhone: string
 ): Promise<{ ticketId: string; queuePosition: number }> => {
   try {
-    // 生成工单ID
-    const ticketId = `T-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-    
     // 获取当前排队人数
     const { count } = await supabase
       .from('support_tickets')
@@ -50,11 +47,10 @@ export const createTicketAndQueue = async (
     
     const queuePosition = (count || 0) + 1;
 
-    // 创建工单
-    const { error } = await supabase
+    // 创建工单（id 由数据库自动生成 UUID）
+    const { data, error } = await supabase
       .from('support_tickets')
       .insert({
-        id: ticketId,
         subject: `在线咨询 - ${guestName}`,
         description: `访客: ${guestName}, 电话: ${guestPhone}`,
         status: 'OPEN',
@@ -65,10 +61,13 @@ export const createTicketAndQueue = async (
         queue_status: 'WAITING',
         last_message_at: new Date().toISOString(),
         unread_count_admin: 1,
-      });
+      })
+      .select('id')
+      .single();
 
     if (error) throw error;
 
+    const ticketId = data.id;
     return { ticketId, queuePosition };
   } catch (error) {
     console.error('创建工单失败:', error);

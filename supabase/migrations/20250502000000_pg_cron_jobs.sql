@@ -72,15 +72,17 @@ SELECT cron.schedule(
   $$
 );
 
--- 任务3：刷新新闻缓存（每30分钟）
--- 说明：新闻数据更新频率适中，30分钟刷新一次
+-- 任务3：爬取热点数据（每30分钟）
+-- 说明：爬取热点资讯、今日热点、财经日历、公社热帖
+-- 特性：✅ 有去重机制 ✅ 7天自动清理
+-- 存储量：约150KB，占免费额度0.03%
 SELECT cron.schedule(
-  'fetch-galaxy-news-every-30min',
+  'crawler-hotspot-every-30min',
   '*/30 * * * *', -- 每30分钟执行
   $$
   SELECT
     net.http_post(
-      url := 'https://YOUR_PROJECT_ID.supabase.co/functions/v1/fetch-galaxy-news',
+      url := 'https://YOUR_PROJECT_ID.supabase.co/functions/v1/crawler',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
         'Authorization', 'Bearer YOUR_SERVICE_ROLE_KEY',
@@ -137,7 +139,7 @@ SELECT cron.schedule(
 -- |------|---------|------|
 -- | sync-stock-data | 每5分钟 | 股票信息需要保持较新 |
 -- | sync-ipo | 每天1次 | 新股数据更新频率低 |
--- | fetch-galaxy-news | 每30分钟 | 新闻更新频率适中 |
+-- | crawler-hotspot | 每30分钟 | 热点数据更新适中，有去重和自动清理 |
 --
 -- 注意：
 -- 1. 频率越高，Edge Function 调用配额消耗越大

@@ -269,7 +269,7 @@ const AdminEducation: React.FC = () => {
           value={formData.title}
           onChange={e => setFormData({ ...formData, title: e.target.value })}
           placeholder="请输入文章标题"
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#00D4AA] transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#E63946] transition"
         />
       </div>
 
@@ -280,7 +280,7 @@ const AdminEducation: React.FC = () => {
           <select
             value={formData.category}
             onChange={e => setFormData({ ...formData, category: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#00D4AA] transition"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#E63946] transition"
           >
             {EDUCATION_CATEGORIES.map(cat => (
               <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>
@@ -292,7 +292,7 @@ const AdminEducation: React.FC = () => {
           <select
             value={formData.difficulty}
             onChange={e => setFormData({ ...formData, difficulty: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#00D4AA] transition"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#E63946] transition"
           >
             {DIFFICULTY_LEVELS.map(diff => (
               <option key={diff.value} value={diff.value}>{diff.label}</option>
@@ -310,7 +310,7 @@ const AdminEducation: React.FC = () => {
             value={formData.author}
             onChange={e => setFormData({ ...formData, author: e.target.value })}
             placeholder="银河证券"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#00D4AA] transition"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#E63946] transition"
           />
         </div>
         <div>
@@ -320,7 +320,7 @@ const AdminEducation: React.FC = () => {
             value={formData.duration}
             onChange={e => setFormData({ ...formData, duration: e.target.value })}
             placeholder="如：5分钟"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#00D4AA] transition"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#E63946] transition"
           />
         </div>
       </div>
@@ -333,7 +333,7 @@ const AdminEducation: React.FC = () => {
           value={formData.image}
           onChange={e => setFormData({ ...formData, image: e.target.value })}
           placeholder="https://example.com/image.jpg"
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#00D4AA] transition"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#E63946] transition"
         />
       </div>
 
@@ -348,7 +348,7 @@ const AdminEducation: React.FC = () => {
           onChange={e => setFormData({ ...formData, content: e.target.value })}
           placeholder="请输入文章内容，支持换行..."
           rows={10}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#00D4AA] transition resize-none"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#E63946] transition resize-none"
         />
       </div>
 
@@ -358,7 +358,7 @@ const AdminEducation: React.FC = () => {
           type="button"
           onClick={() => setFormData({ ...formData, is_published: !formData.is_published })}
           className={`w-12 h-6 rounded-full transition ${
-            formData.is_published ? 'bg-[#00D4AA]' : 'bg-gray-300'
+            formData.is_published ? 'bg-[#E63946]' : 'bg-gray-300'
           }`}
         >
           <div className={`w-5 h-5 rounded-full bg-white shadow transform transition ${
@@ -385,7 +385,7 @@ const AdminEducation: React.FC = () => {
         <button
           type="submit"
           disabled={submitting}
-          className="flex-1 px-6 py-3 rounded-xl bg-[#00D4AA] text-[var(--color-text-primary)] text-sm font-bold hover:bg-[#00B894] transition disabled:opacity-50"
+          className="flex-1 px-6 py-3 rounded-xl bg-[#E63946] text-[var(--color-text-primary)] text-sm font-bold hover:bg-[#C62836] transition disabled:opacity-50"
         >
           {submitting ? '保存中...' : (isEdit ? '保存修改' : '创建文章')}
         </button>
@@ -413,7 +413,7 @@ const AdminEducation: React.FC = () => {
               resetForm();
               setIsCreateModalOpen(true);
             }}
-            className="px-4 py-2 rounded-xl bg-[#00D4AA] text-[var(--color-text-primary)] text-sm font-bold hover:bg-[#00B894] transition flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-[#E63946] text-[var(--color-text-primary)] text-sm font-bold hover:bg-[#C62836] transition flex items-center gap-2"
           >
             <ICONS.Plus size={16} /> 新建文章
           </button>
@@ -427,7 +427,7 @@ const AdminEducation: React.FC = () => {
           <div className="text-xs text-gray-500 mt-1">总文章数</div>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-gray-100">
-          <div className="text-2xl font-black text-[#00D4AA]">{stats.published}</div>
+          <div className="text-2xl font-black text-[#E63946]">{stats.published}</div>
           <div className="text-xs text-gray-500 mt-1">已发布</div>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-gray-100">
@@ -452,7 +452,7 @@ const AdminEducation: React.FC = () => {
             onClick={() => setFilterStatus(filter.value as typeof filterStatus)}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
               filterStatus === filter.value
-                ? 'bg-[#00D4AA] text-[var(--color-text-primary)]'
+                ? 'bg-[#E63946] text-[var(--color-text-primary)]'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -480,7 +480,7 @@ const AdminEducation: React.FC = () => {
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-[#00D4AA]" />
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-[#E63946]" />
                     </div>
                   </td>
                 </tr>
@@ -529,7 +529,7 @@ const AdminEducation: React.FC = () => {
                         onClick={() => handleTogglePublish(topic)}
                         className={`text-[9px] font-black px-3 py-1 rounded-full transition ${
                           topic.is_published
-                            ? 'bg-[#00D4AA]/10 text-[#00D4AA] hover:bg-[#00D4AA]/20'
+                            ? 'bg-[#E63946]/10 text-[#E63946] hover:bg-[#E63946]/20'
                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
                       >
@@ -661,7 +661,7 @@ const AdminEducation: React.FC = () => {
               onClick={e => e.stopPropagation()}
             >
               {/* 头部 */}
-              <div className="relative h-40 bg-gradient-to-br from-[#00D4AA] to-[#0A1628]">
+              <div className="relative h-40 bg-gradient-to-br from-[#E63946] to-[#1E1E1E]">
                 {selectedTopic.image ? (
                   <img src={selectedTopic.image} alt={selectedTopic.title} className="w-full h-full object-cover opacity-50" />
                 ) : (

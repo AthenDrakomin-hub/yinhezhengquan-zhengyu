@@ -62,7 +62,7 @@ const LimitUpPanel: React.FC = () => {
       return <span className="text-[10px] px-1 py-0.5 bg-red-100 text-red-600 rounded">ST</span>;
     }
     if (stock.stockType === 'GEM') {
-      return <span className="text-[10px] px-1 py-0.5 bg-blue-100 text-blue-600 rounded">创业板</span>;
+      return <span className="text-[10px] px-1 py-0.5 bg-[var(--color-secondary-light)] text-[var(--color-secondary)] rounded">创业板</span>;
     }
     if (stock.stockType === 'STAR') {
       return <span className="text-[10px] px-1 py-0.5 bg-purple-100 text-purple-600 rounded">科创板</span>;

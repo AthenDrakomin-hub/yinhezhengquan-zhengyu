@@ -189,7 +189,7 @@ const LimitUpView: React.FC = () => {
           </div>
           <div className="text-sm text-gray-600 space-y-2">
             <p>• <strong>涨停判断</strong>：根据股票类型自动判断（主板10%、ST 5%、创业板20%、科创板20%）</p>
-            <p>• <strong>实时更新</strong>：通过 QVeris API 获取实时行情数据</p>
+            <p>• <strong>实时更新</strong>：通过东方财富 API 获取实时行情数据</p>
             <p>• <strong>龙头标识</strong>：排名第一的涨停股票标注为"龙头"</p>
             <p>• <strong>数据来源</strong>：同花顺 iFinD 实时行情</p>
           </div>

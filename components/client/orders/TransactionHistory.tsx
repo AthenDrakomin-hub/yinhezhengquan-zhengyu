@@ -104,7 +104,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   const getTradeTypeClass = (type: TradeType) => {
     switch (type) {
       case TradeType.IPO: return 'bg-purple-500/20 text-purple-500';
-      case TradeType.BLOCK: return 'bg-blue-500/20 text-blue-500';
+      case TradeType.BLOCK: return 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)]';
       case TradeType.LIMIT_UP: return 'bg-red-500/20 text-red-500';
       case TradeType.BUY: return 'bg-green-500/20 text-green-500';
       case TradeType.SELL: return 'bg-orange-500/20 text-orange-500';
@@ -118,7 +118,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
       case 'SUCCESS': return 'bg-green-500/20 text-green-500';
       case 'PENDING': return 'bg-yellow-500/20 text-yellow-500';
       case 'FAILED': return 'bg-red-500/20 text-red-500';
-      case 'MATCHING': return 'bg-blue-500/20 text-blue-500';
+      case 'MATCHING': return 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)]';
       case 'PARTIAL': return 'bg-orange-500/20 text-orange-500';
       case 'CANCELLED': return 'bg-gray-500/20 text-gray-500';
       default: return 'bg-gray-500/20 text-gray-500';
@@ -223,7 +223,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   if (loading && transactions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00D4AA]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E63946]"></div>
         <p className="mt-4 text-[var(--color-text-muted)]">正在加载交易记录...</p>
       </div>
     );
@@ -236,7 +236,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         <p className="text-red-500 mb-4">{error}</p>
         <button
           onClick={loadTransactions}
-          className="px-6 py-3 bg-[#00D4AA] text-[#0A1628] font-black rounded-xl hover:opacity-90 transition-opacity"
+          className="px-6 py-3 bg-[#E63946] text-[#1E1E1E] font-black rounded-xl hover:opacity-90 transition-opacity"
         >
           重试
         </button>

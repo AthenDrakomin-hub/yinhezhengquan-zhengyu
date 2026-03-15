@@ -1,36 +1,70 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * Dashboard 首页
+ * 按银河证券官方App首页截图还原
+ */
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ICONS } from '../../lib/constants';
+import { imageConfig } from '../../lib/imageConfig';
 import { getBanners } from '../../services/contentService';
 import { Transaction, Banner } from '../../lib/types';
-import { HotStocksPanel } from '../client/market/HotStocksPanel';
-import LimitUpPanel from '../client/market/LimitUpPanel';
 import { usePerformanceMonitor } from '../../utils/performanceMonitor';
-import { LazyImage } from '../shared/LazyImage';
 import { supabase } from '../../lib/supabase';
+import { 
+  WelcomeModal, 
+  OnboardingTour, 
+  useOnboarding,
+  defaultTourSteps 
+} from '../shared/OnboardingTour';
+import { 
+  getHomeNewsData,
+  getHotNews,
+  getFinancialCalendar,
+  HotNewsItem,
+  FinancialCalendarItem,
+} from '../../services/hotspotService';
+import HomeCarousel from '../client/home/HomeCarousel';
 
-// Banner 组件
-const BannerImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
-  const [error, setError] = useState(false);
+// 功能入口配置 - 移除极速开户（已登录用户不需要）
+const featureGrid = [
+  { id: 'ai-stock', label: 'AI选股', icon: '🤖', bgColor: 'bg-[#6366F1]', badge: 'AI', path: '/client/conditional-orders' },
+  { id: 'video', label: '视频专区', icon: '📹', bgColor: 'bg-[#F97316]', path: '/client/video' },
+  { id: 'etf', label: 'ETF专区', icon: '📊', bgColor: 'bg-[#EAB308]', badge: 'HOT', path: '/client/etf' },
+  { id: 'ipo', label: '新股申购', icon: '🎯', bgColor: 'bg-[#E63946]', badge: 'NEW', path: '/client/ipo' },
+  { id: 'margin', label: '融资融券', icon: '💰', bgColor: 'bg-[#F97316]', path: '/client/margin' },
+  { id: 'calendar', label: '财富日历', icon: '📅', bgColor: 'bg-[#EAB308]', badge: '10', path: '/client/calendar' },
+  { id: 'market', label: '沪深市场', icon: '📈', bgColor: 'bg-[#E63946]', path: '/client/market' },
+  { id: 'wealth', label: '稳健理财', icon: '🏦', bgColor: 'bg-[#3B82F6]', path: '/client/wealth-finance' },
+  { id: 'all', label: '全部', icon: '⊞', bgColor: 'bg-[#6B7280]', path: 'all' },
+];
 
-  if (!src || error) {
-    return (
-      <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-brand-800)] flex items-center justify-center">
-        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center font-bold text-[var(--color-primary)]">日斗</div>
-      </div>
-    );
-  }
+// 生成相对时间
+const getRelativeTimeStr = (minutesAgo: number) => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - minutesAgo);
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+};
 
-  return (
-    <div className="relative w-full h-full">
-      <LazyImage
-        src={src}
-        alt={alt}
-        className="absolute inset-0 w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
-        onError={() => setError(true)}
-        loading="eager"
-      />
-    </div>
-  );
+// 默认快讯数据（作为fallback）
+const defaultNewsData = [
+  { id: '1', time: '09:15', content: '正在加载最新资讯...' },
+];
+
+// 默认看点数据（作为fallback）
+const defaultViewpointData = [
+  { id: '1', title: '正在加载银河看点...', summary: '', date: '' },
+];
+
+// Tab 类型
+type NewsTabType = 'viewpoint' | 'news' | 'hot_news' | 'financial_calendar';
+
+// 默认Banner数据
+const defaultBanner = {
+  tag: '贵金属',
+  title: '黄金上涨大周期还有多长？',
+  expert: '许之彦',
+  avatar: '👨‍💼',
 };
 
 interface DashboardProps {
@@ -43,155 +77,6 @@ interface DashboardProps {
   onOpenNews?: (newsId: string) => void;
 }
 
-// 默认热门股票数据
-const defaultHotStocksData = [
-  { id: 'hs-1', symbol: '600519', name: '贵州茅台', price: 1688.00, change: 2.35, volume: '56.8万手' },
-  { id: 'hs-2', symbol: '000858', name: '五粮液', price: 156.80, change: 1.28, volume: '42.3万手' },
-  { id: 'hs-3', symbol: '601318', name: '中国平安', price: 45.60, change: -0.85, volume: '38.1万手' },
-  { id: 'hs-4', symbol: '000333', name: '美的集团', price: 62.30, change: 0.92, volume: '32.5万手' },
-  { id: 'hs-5', symbol: '002415', name: '海康威视', price: 32.50, change: -1.15, volume: '28.7万手' },
-];
-
-// 默认市场新闻数据
-// 获取当前时间的格式化字符串 (HH:MM)
-const getCurrentTimeStr = () => {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-};
-
-// 生成相对时间（当前时间减去N分钟）
-const getRelativeTimeStr = (minutesAgo: number) => {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - minutesAgo);
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-};
-
-const defaultNewsData = [
-  {
-    id: 'news-1',
-    title: '央行：稳健货币政策将更加灵活适度',
-    content: '中国人民银行表示将继续实施稳健的货币政策，保持流动性合理充裕，加大对实体经济的支持力度。',
-    time: getRelativeTimeStr(5),
-    source: '财经头条',
-    category: '宏观政策',
-    sentiment: 'neutral'
-  },
-  {
-    id: 'news-2',
-    title: '北向资金今日净流入超50亿元',
-    content: '数据显示，北向资金今日全天净流入超过50亿元，其中沪股通净流入30亿元，深股通净流入20亿元。',
-    time: getRelativeTimeStr(15),
-    source: '财经快讯',
-    category: '资金动向',
-    sentiment: 'positive'
-  },
-  {
-    id: 'news-3',
-    title: '科技板块持续活跃 半导体领涨',
-    content: '今日科技板块表现强劲，半导体、芯片概念股集体走强，多只个股涨停。',
-    time: getRelativeTimeStr(25),
-    source: '证券时报',
-    category: '板块异动',
-    sentiment: 'positive'
-  },
-  {
-    id: 'news-4',
-    title: '新能源汽车销量创新高',
-    content: '据中汽协数据，新能源汽车月度销量再次刷新历史记录，同比增长超过80%。',
-    time: getRelativeTimeStr(35),
-    source: '汽车之家',
-    category: '行业动态',
-    sentiment: 'positive'
-  },
-  {
-    id: 'news-5',
-    title: 'A股三大指数集体收涨',
-    content: 'A股三大指数今日集体收涨，沪指涨0.8%，深成指涨1.2%，创业板指涨1.5%。',
-    time: getRelativeTimeStr(45),
-    source: '新浪财经',
-    category: '市场收评',
-    sentiment: 'positive'
-  },
-];
-
-const defaultBanners: Array<{
-  id: string;
-  title: string;
-  category: string;
-  desc: string;
-  content?: string;
-  img?: string;
-}> = [
-  {
-    id: 'default-1',
-    title: '银河日斗 · 智能交易单元',
-    category: '平台公告',
-    desc: '银河证券日斗投资单元全面上线，提供实时行情、智能交易、合规监控等功能',
-    content: `尊敬的投资者：
-
-银河证券"日斗"智能交易单元正式上线！
-
-【核心功能】
-• 实时行情：覆盖A股、港股市场，支持分时图、K线图、五档行情
-• 智能交易：支持普通买卖、新股申购、大宗交易、涨停打板等多种交易模式
-• 合规盾牌：实时监测交易行为，确保每一笔交易符合监管要求
-• 投教中心：提供专业的投资知识和风险教育内容
-
-【风险提示】
-股市有风险，投资需谨慎。请根据自身风险承受能力合理配置资产。
-
-银河证券客户服务热线：95551`,
-    img: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&h=400&fit=crop&q=80',
-  },
-  {
-    id: 'default-2',
-    title: '风控合规 · 实时监测',
-    category: '合规公告',
-    desc: '合规盾牌实时监测交易行为，确保每一笔交易符合监管要求',
-    content: `尊敬的投资者：
-
-银河证券"合规盾牌"系统运行公告
-
-【监测功能】
-• 异常报单拦截：自动识别并拦截异常价格、异常数量的委托
-• 价格偏离度监控：实时监测委托价格与市场价格的偏离程度
-• 持仓集中度审查：定期审查客户持仓集中度，提示风险
-• 反洗钱(AML)筛查：对所有交易进行反洗钱合规筛查
-
-【合规提示】
-请确保您的交易行为符合《证券法》及相关监管规定，避免违规操作。
-
-银河证券合规部`,
-    img: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop&q=80',
-  },
-  {
-    id: 'default-3',
-    title: '投教中心 · 理财知识',
-    category: '投教活动',
-    desc: '银河证券投资者教育基地，提供专业的投资知识和风险教育',
-    content: `尊敬的投资者：
-
-银河证券投资者教育基地欢迎您！
-
-【课程内容】
-• 股票入门基础知识
-• 技术分析入门：K线图解读
-• 价值投资理念与实践
-• 风险管理与仓位控制
-• 新股申购全攻略
-• 基金定投策略指南
-
-【学习建议】
-建议您从基础课程开始学习，逐步提升投资能力。每个课程配有练习题和模拟交易环节。
-
-【风险教育】
-投资有风险，入市需谨慎。请根据自身风险承受能力（C1-C5）选择适合的投资产品。
-
-银河证券投教团队`,
-    img: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop&q=80',
-  },
-];
-
 const Dashboard: React.FC<DashboardProps> = React.memo(({ 
   transactions = [], 
   onOpenCalendar, 
@@ -201,267 +86,488 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({
   onOpenBanner,
   onOpenNews
 }) => {
-  const [banners, setBanners] = useState<typeof defaultBanners>(defaultBanners);
-  const [realtimeNews, setRealtimeNews] = useState<any[]>([]);
-  const [loadingNews, setLoadingNews] = useState(true);
-  const [expandedNews, setExpandedNews] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+  const [viewpointData, setViewpointData] = useState<any[]>(defaultViewpointData);
+  const [realtimeNews, setRealtimeNews] = useState<any[]>(defaultNewsData);
+  const [hotNews, setHotNews] = useState<HotNewsItem[]>([]);
+  const [financialCalendar, setFinancialCalendar] = useState<FinancialCalendarItem[]>([]);
+  const [loadingNews, setLoadingNews] = useState(false);
+  const [activeTab, setActiveTab] = useState<NewsTabType>('viewpoint');
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
+  
+  // 新用户引导
+  const {
+    showWelcome,
+    showTour,
+    handleStartTour,
+    handleSkipTour,
+    handleCompleteTour,
+    handleCloseTour
+  } = useOnboarding('client-onboarding-completed');
   
   usePerformanceMonitor('Dashboard');
 
-  const fetchRealtimeNews = useCallback(async () => {
-    try {
-      // 使用代理函数获取财经快讯
-      const { data, error } = await supabase.functions.invoke('proxy-market', {
-        body: { action: 'news', pageSize: 20 }
-      });
-      
-      if (error) throw error;
-      
-      if (data?.success && data.data?.length > 0) {
-        setRealtimeNews(data.data);
-      } else {
-        // 如果没有数据，使用默认数据
-        setRealtimeNews(defaultNewsData);
-      }
-    } catch (err) {
-      console.warn('获取实时快讯失败:', err);
-      // 使用默认数据作为后备
-      setRealtimeNews(defaultNewsData);
-    } finally {
-      setLoadingNews(false);
-    }
-  }, []);
-
+  // 加载新闻数据
   useEffect(() => {
-    const fetchBanners = async () => {
+    const loadNewsData = async () => {
+      setLoadingNews(true);
       try {
-        const bannerData = await getBanners();
-        if (bannerData && bannerData.length > 0) {
-          setBanners(bannerData.map(b => ({
-            id: b.id,
-            title: b.title,
-            category: b.category || '平台公告',
-            desc: b.subtitle || '',
-            content: b.content || b.subtitle || '',
-            img: b.imageUrl,
-          })));
+        // 并行加载所有数据
+        const [homeNews, hotNewsData, calendarData] = await Promise.all([
+          getHomeNewsData(),
+          getHotNews(20),
+          getFinancialCalendar(20),
+        ]);
+        
+        if (homeNews.galaxyNews && homeNews.galaxyNews.length > 0) {
+          setViewpointData(homeNews.galaxyNews);
         }
-      } catch (err) {
-        console.error('获取横幅失败:', err);
+        if (homeNews.flashNews && homeNews.flashNews.length > 0) {
+          setRealtimeNews(homeNews.flashNews);
+        }
+        if (hotNewsData && hotNewsData.length > 0) {
+          setHotNews(hotNewsData);
+        }
+        if (calendarData && calendarData.length > 0) {
+          setFinancialCalendar(calendarData);
+        }
+      } catch (error) {
+        console.error('加载新闻数据失败:', error);
+      } finally {
+        setLoadingNews(false);
       }
     };
-    fetchBanners();
+
+    loadNewsData();
     
-    fetchRealtimeNews();
-    const interval = setInterval(fetchRealtimeNews, 60000);
+    // 每5分钟刷新一次
+    const interval = setInterval(loadNewsData, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchRealtimeNews]);
+  }, []);
+
+  // 获取市场状态
+  const getMarketStatus = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const day = now.getDay();
+    
+    // 周末
+    if (day === 0 || day === 6) {
+      return { status: '休市', color: 'text-[#999999]' };
+    }
+    
+    // 交易时间 9:30-11:30, 13:00-15:00
+    if ((hour === 9 && minute >= 30) || (hour === 10) || (hour === 11 && minute < 30)) {
+      return { status: '交易中', color: 'text-[#E63946]' };
+    }
+    if (hour >= 13 && hour < 15) {
+      return { status: '交易中', color: 'text-[#E63946]' };
+    }
+    if (hour < 9 || (hour === 9 && minute < 30)) {
+      return { status: '盘前', color: 'text-[#F97316]' };
+    }
+    
+    return { status: '休市', color: 'text-[#999999]' };
+  };
+
+  const marketStatus = getMarketStatus();
+
+  // 处理功能入口点击
+  const handleFeatureClick = (featureId: string, path?: string) => {
+    // 找到对应的功能配置
+    const feature = featureGrid.find(f => f.id === featureId);
+    
+    if (featureId === 'all') {
+      setShowAllFeatures(true);
+      return;
+    }
+    
+    if (feature?.path && feature.path !== 'all') {
+      navigate(feature.path);
+      return;
+    }
+    
+    // 兼容旧的回调方式
+    switch (featureId) {
+      case 'calendar':
+        onOpenCalendar?.();
+        break;
+      default:
+        console.log('Feature clicked:', featureId);
+    }
+  };
 
   return (
-    <div className="space-y-5 p-4 md:p-6">
-      {/* 风险提示栏 */}
-      <div className="bg-orange-50 border border-orange-200 rounded-lg py-2.5 px-4 flex items-center gap-3 overflow-hidden">
-        <div className="bg-orange-500 text-white px-2 py-0.5 rounded text-xs font-semibold shrink-0 z-10">风险提示</div>
-        <div className="flex-1 overflow-hidden relative">
-          <div className="animate-marquee whitespace-nowrap text-sm text-orange-700 inline-block">
-            市场有风险，投资需谨慎。日斗投资单元实时合规提示：请严格执行止盈止损策略，防范流动性风险。
+    <div className="bg-[#F5F5F5] min-h-screen pb-20">
+      {/* 首页轮播图 */}
+      <section className="mx-4 mt-2">
+        <HomeCarousel 
+          onSlideClick={(slide) => {
+            if (slide.link) {
+              navigate(slide.link);
+            }
+          }}
+        />
+      </section>
+      
+      {/* 功能入口网格 - 2行5列（9个入口+全部） */}
+      <section className="bg-white mx-4 rounded-xl shadow-sm p-4 mt-2">
+        <div className="grid grid-cols-5 gap-y-4 gap-x-2">
+          {featureGrid.map((feature) => (
+            <button
+              key={feature.id}
+              onClick={() => handleFeatureClick(feature.id)}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <div className={`relative w-11 h-11 rounded-xl ${feature.bgColor} flex items-center justify-center text-white text-lg shadow-sm`}>
+                {feature.icon}
+                {feature.badge && (
+                  <span className="absolute -top-1 -right-1 bg-[#E63946] text-white text-[8px] px-1 rounded font-bold">
+                    {feature.badge}
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] text-[#333333] font-medium">{feature.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Banner卡片 */}
+      <section className="mx-4 mt-3">
+        <div className="bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-xl p-4 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <span className="inline-block bg-[#E63946] text-white text-[10px] px-1.5 py-0.5 rounded font-medium mb-2">
+                {defaultBanner.tag}
+              </span>
+              <h3 className="text-white text-base font-semibold leading-tight">
+                {defaultBanner.title}
+              </h3>
+              <p className="text-white/60 text-xs mt-2">
+                投资有风险，入市需谨慎
+              </p>
+            </div>
+            <div className="flex flex-col items-center ml-3">
+              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-2xl">
+                {defaultBanner.avatar}
+              </div>
+              <span className="text-white/80 text-xs mt-1 writing-vertical">{defaultBanner.expert}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 轮播Banner */}
-      <section>
-        <div className="flex overflow-x-auto gap-4 no-scrollbar snap-x pb-1">
-          {banners.map((banner) => (
-            <div 
-              key={banner.id} 
-              onClick={() => onOpenBanner?.({ 
-                id: banner.id, 
-                title: banner.title, 
-                subtitle: banner.desc,
-                desc: banner.desc,
-                content: banner.content,
-                category: banner.category,
-                img: banner.img
-              })}
-              className="min-w-[85%] md:min-w-[45%] lg:min-w-[32%] snap-center relative h-48 rounded-xl overflow-hidden group shadow-sm border border-[var(--color-border)] cursor-pointer hover:shadow-md transition-all"
-            >
-              <BannerImage src={banner.img} alt={banner.title} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-5 flex flex-col justify-end">
-                <span className="text-xs font-medium text-blue-300 mb-1">{banner.category}</span>
-                <h4 className="text-white font-semibold text-lg leading-tight">{banner.title}</h4>
-                <p className="text-white/70 text-sm mt-1 line-clamp-2">{banner.desc}</p>
-              </div>
+      {/* 行情状态卡片 */}
+      <section className="mx-4 mt-3">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-[#F0F0F0]">
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-medium ${marketStatus.color}`}>{marketStatus.status}</span>
+              <span className="text-sm font-semibold text-[#333333]">反转又反转</span>
             </div>
-          ))}
+            <div className="flex items-center gap-2 text-[#666666]">
+              <span className="text-xs">融资余额</span>
+              <span className="text-xs text-[#999999]">03-12</span>
+              <svg className="w-4 h-4 text-[#999999]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* 功能入口 */}
-      <section className="py-2">
-        <div className="grid grid-cols-4 gap-4 md:gap-6">
-          {[
-            { id: 'calendar', label: '投资日历', icon: ICONS.Calendar, color: 'bg-blue-50 text-[var(--color-primary)]', action: onOpenCalendar },
-            { id: 'reports', label: '日斗研报', icon: ICONS.Book, color: 'bg-purple-50 text-purple-600', action: onOpenReports },
-            { id: 'edu', label: '投教中心', icon: ICONS.User, color: 'bg-green-50 text-green-600', action: onOpenEducation },
-            { id: 'compliance', label: '合规盾牌', icon: ICONS.Shield, color: 'bg-red-50 text-red-500', action: onOpenCompliance },
-          ].map((feat) => (
-            <div 
-              key={feat.id} 
-              onClick={() => feat.action?.()}
-              className="flex flex-col items-center gap-2.5 cursor-pointer group"
+      {/* 资讯区 */}
+      <section className="mx-4 mt-3">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          {/* Tab切换 - 4个Tab */}
+          <div className="flex items-center border-b border-[#F0F0F0] overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('viewpoint')}
+              className={`flex-shrink-0 px-4 py-3 text-sm font-semibold relative ${
+                activeTab === 'viewpoint' ? 'text-[#333333]' : 'text-[#999999]'
+              }`}
             >
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${feat.color} group-hover:scale-105 transition-transform`}>
-                <feat.icon size={24} />
-              </div>
-              <span className="text-xs font-medium text-[var(--color-text-secondary)]">{feat.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 热门股票和涨停个股 */}
-      <section>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <HotStocksPanel />
-          <LimitUpPanel />
-        </div>
-      </section>
-
-      {/* 实时市场动态 */}
-      <section>
-        <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-[var(--color-border)] flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">实时市场动态</h3>
-            </div>
-            <button 
-              className="text-xs text-[var(--color-primary)] font-medium px-3 py-1 bg-blue-50 rounded-md hover:bg-blue-100 transition-all" 
-              onClick={fetchRealtimeNews}
+              银河看点
+              {activeTab === 'viewpoint' && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-[#E63946] rounded-full" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('news')}
+              className={`flex-shrink-0 px-4 py-3 text-sm font-semibold relative ${
+                activeTab === 'news' ? 'text-[#333333]' : 'text-[#999999]'
+              }`}
             >
-              刷新
+              7x24快讯
+              {activeTab === 'news' && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-[#E63946] rounded-full" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('hot_news')}
+              className={`flex-shrink-0 px-4 py-3 text-sm font-semibold relative ${
+                activeTab === 'hot_news' ? 'text-[#333333]' : 'text-[#999999]'
+              }`}
+            >
+              热点资讯
+              {activeTab === 'hot_news' && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-[#E63946] rounded-full" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('financial_calendar')}
+              className={`flex-shrink-0 px-4 py-3 text-sm font-semibold relative ${
+                activeTab === 'financial_calendar' ? 'text-[#333333]' : 'text-[#999999]'
+              }`}
+            >
+              财经日历
+              {activeTab === 'financial_calendar' && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-[#E63946] rounded-full" />
+              )}
             </button>
           </div>
-          <div className="max-h-[360px] overflow-y-auto">
+
+          {/* 内容列表 */}
+          <div className="divide-y divide-[#F0F0F0] max-h-[400px] overflow-y-auto">
             {loadingNews ? (
-              <div className="p-6 text-center text-[var(--color-text-muted)] text-sm">加载中...</div>
-            ) : realtimeNews.length === 0 ? (
-              <div className="p-6 text-center text-[var(--color-text-muted)] text-sm">暂无实时动态</div>
-            ) : (
-              realtimeNews.map((item) => {
-                const isExpanded = expandedNews.has(item.id);
-                const content = item.content || '';
-                const needsCollapse = content.length > 80;
-                const displayContent = isExpanded || !needsCollapse ? content : content.slice(0, 80) + '...';
+              <div className="px-4 py-8 text-center text-sm text-[#999999]">
+                加载中...
+              </div>
+            ) : activeTab === 'viewpoint' ? (
+              // 银河看点列表
+              viewpointData.map((item) => (
+                <div 
+                  key={item.id} 
+                  className="px-4 py-3 cursor-pointer hover:bg-[#FAFAFA]"
+                  onClick={() => onOpenNews?.(item.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm text-[#333333] font-medium leading-relaxed line-clamp-2">
+                        {item.title}
+                      </p>
+                      {item.summary && (
+                        <p className="text-xs text-[#999999] mt-1 line-clamp-1">{item.summary}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-[#E63946] bg-[#E63946]/10 px-1.5 py-0.5 rounded">
+                          {item.source || '银河证券'}
+                        </span>
+                        <span className="text-[10px] text-[#999999]">{item.date}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : activeTab === 'news' ? (
+              // 7x24快讯列表（使用 today_hotspot 表数据）
+              realtimeNews.map((item: any) => {
+                // 获取快讯前缀标签
+                const getPrefixTag = () => {
+                  // 优先使用 category，其次使用 sentiment
+                  const category = item.category || item.type || '';
+                  const sentiment = item.sentiment || '';
+                  
+                  // 根据分类或情感返回标签样式
+                  if (category.includes('公告') || category.includes('公司')) {
+                    return { text: '公告', color: 'bg-[#3B82F6] text-white' };
+                  }
+                  if (category.includes('利好') || sentiment === 'positive') {
+                    return { text: '利好', color: 'bg-[#22C55E] text-white' };
+                  }
+                  if (category.includes('利空') || sentiment === 'negative') {
+                    return { text: '利空', color: 'bg-[#E63946] text-white' };
+                  }
+                  if (category.includes('数据') || category.includes('统计')) {
+                    return { text: '数据', color: 'bg-[#8B5CF6] text-white' };
+                  }
+                  if (category.includes('政策') || category.includes('央行')) {
+                    return { text: '政策', color: 'bg-[#F97316] text-white' };
+                  }
+                  if (category.includes('国际') || category.includes('外盘')) {
+                    return { text: '国际', color: 'bg-[#06B6D4] text-white' };
+                  }
+                  if (category.includes('新股') || category.includes('IPO')) {
+                    return { text: '新股', color: 'bg-[#EC4899] text-white' };
+                  }
+                  // 默认快讯标签
+                  return { text: '快讯', color: 'bg-[#E63946] text-white' };
+                };
+                
+                const tag = getPrefixTag();
                 
                 return (
-                  <div key={item.id} className="px-4 py-3 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-surface-hover)] transition-colors">
+                  <div 
+                    key={item.id} 
+                    className="px-4 py-3 cursor-pointer hover:bg-[#FAFAFA]"
+                  >
                     <div className="flex gap-3">
-                      <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0 w-14 pt-0.5">
-                        {item.time || '--:--'}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-2 mb-1">
-                          <p className="text-sm font-medium text-[var(--color-text-primary)] leading-relaxed">
-                            {item.title}
-                          </p>
-                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2 ${
-                            item.sentiment === 'positive' ? 'bg-red-500' :
-                            item.sentiment === 'negative' ? 'bg-green-500' :
-                            'bg-[var(--color-text-muted)]'
-                          }`} />
-                        </div>
-                        {displayContent && (
-                          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mb-1">
-                            {displayContent}
-                          </p>
-                        )}
-                        {needsCollapse && (
-                          <button
-                            onClick={() => {
-                              const newSet = new Set(expandedNews);
-                              if (isExpanded) {
-                                newSet.delete(item.id);
-                              } else {
-                                newSet.add(item.id);
-                              }
-                              setExpandedNews(newSet);
-                            }}
-                            className="text-xs text-[var(--color-primary)] font-medium hover:underline"
-                          >
-                            {isExpanded ? '收起' : '展开全文'}
-                          </button>
-                        )}
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[10px] text-[var(--color-text-muted)] bg-[var(--color-bg)] px-1.5 py-0.5 rounded">
-                            {item.category || '快讯'}
+                      <span className="text-xs text-[#999999] shrink-0 w-12">{item.time || item.date || ''}</span>
+                      <div className="flex-1">
+                        <div className="flex items-start gap-2">
+                          <span className={`flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded ${tag.color}`}>
+                            {tag.text}
                           </span>
-                          <span className="text-[10px] text-[var(--color-text-muted)]">{item.source}</span>
+                          <p className="text-sm text-[#333333] leading-relaxed flex-1">
+                            {item.title || item.content}
+                          </p>
                         </div>
+                        {item.keywords && (
+                          <p className="text-xs text-[#999999] mt-1 ml-10">{item.keywords}</p>
+                        )}
+                        {item.heat && (
+                          <span className="text-[10px] text-[#F97316] mt-1 ml-10 inline-block">🔥 {item.heat}</span>
+                        )}
                       </div>
                     </div>
                   </div>
                 );
               })
-            )}
-          </div>
-          {realtimeNews.length > 0 && (
-            <div className="px-4 py-2 text-center bg-[var(--color-surface)] border-t border-[var(--color-border)]">
-              <span className="text-xs text-[var(--color-text-muted)]">数据每60秒自动刷新</span>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 最近交易 */}
-      <section>
-        <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] overflow-hidden shadow-sm">
-          <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center gap-2">
-            <ICONS.Trade size={16} className="text-[var(--color-primary)]" />
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">最近交易指令</h3>
-          </div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {transactions.length === 0 ? (
-              <div className="p-8 text-center text-[var(--color-text-muted)] text-sm">暂无交易记录</div>
-            ) : (
-              transactions.slice(0, 5).map((trade) => (
+            ) : activeTab === 'hot_news' ? (
+              // 热点资讯列表
+              hotNews.map((item) => (
                 <div 
-                  key={trade.id} 
-                  className="px-4 py-3 flex justify-between items-center hover:bg-[var(--color-surface-hover)] transition-colors"
+                  key={item.id} 
+                  className="px-4 py-3 cursor-pointer hover:bg-[#FAFAFA]"
+                  onClick={() => {
+                    if (item.link) {
+                      window.open(item.link, '_blank');
+                    }
+                  }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-semibold text-sm ${
-                      trade.type === 'BUY' ? 'bg-red-50 text-red-500' : 
-                      trade.type === 'SELL' ? 'bg-green-50 text-green-600' : 
-                      'bg-blue-50 text-blue-500'
-                    }`}>
-                      {trade.type === 'BUY' ? '买' : trade.type === 'SELL' ? '卖' : '申'}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--color-text-primary)]">{trade.name}</h4>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        {trade.symbol} · {new Date(trade.timestamp).toLocaleTimeString()}
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                      style={{
+                        backgroundColor: item.rank <= 3 ? '#E63946' : item.rank <= 10 ? '#F97316' : '#999',
+                      }}
+                    >
+                      {item.rank}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#333333] font-medium leading-relaxed line-clamp-2">
+                        {item.title}
                       </p>
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#999999]">
+                        <span>{item.publish_time}</span>
+                        {item.heat && (
+                          <span className="text-[#F97316]">🔥 {item.heat}</span>
+                        )}
+                        <span className="px-1 py-0.5 bg-[#F5F5F5] rounded">
+                          {item.source === 'ths' ? '同花顺' : '韭研公社'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">¥{trade.price.toFixed(2)}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      trade.status === 'FILLED' || trade.status === 'SUCCESS' ? 'bg-green-50 text-green-600' : 
-                      trade.status === 'PENDING' || trade.status === 'MATCHING' ? 'bg-blue-50 text-blue-500' :
-                      'bg-orange-50 text-orange-500'
-                    }`}>
-                      {trade.status === 'FILLED' || trade.status === 'SUCCESS' ? '成功' : 
-                       trade.status === 'PENDING' || trade.status === 'MATCHING' ? '撮合中' : '处理中'}
-                    </span>
+                </div>
+              ))
+            ) : (
+              // 财经日历列表
+              financialCalendar.map((item, index) => (
+                <div 
+                  key={item.id || index} 
+                  className="px-4 py-3 hover:bg-[#FAFAFA]"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 text-center">
+                      <div className="text-base font-bold text-[#3B82F6]">
+                        {item.date?.split('-')[2] || '--'}
+                      </div>
+                      <div className="text-[10px] text-[#999999]">
+                        {item.date?.split('-').slice(0, 2).join('-') || ''}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-[#333333] leading-relaxed">
+                        {item.event}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))
             )}
           </div>
+
+          {/* 查看更多 - 点击跳转到热点汇总页 */}
+          <button 
+            onClick={() => navigate('/client/hotspot')}
+            className="w-full py-3 text-center text-xs text-[#0066CC] border-t border-[#F0F0F0]"
+          >
+            查看更多热点
+          </button>
         </div>
       </section>
+      
+      {/* 全部功能弹窗 */}
+      {showAllFeatures && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center"
+          onClick={() => setShowAllFeatures(false)}
+        >
+          <div 
+            className="bg-white w-full max-w-lg rounded-t-2xl p-4 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[#333333]">全部功能</h3>
+              <button 
+                onClick={() => setShowAllFeatures(false)}
+                className="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center"
+              >
+                <svg className="w-5 h-5 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { id: 'ai-stock', label: 'AI选股', icon: '🤖', bgColor: 'bg-[#6366F1]', path: '/client/conditional-orders' },
+                { id: 'video', label: '视频专区', icon: '📹', bgColor: 'bg-[#F97316]', path: '/client/video' },
+                { id: 'etf', label: 'ETF专区', icon: '📊', bgColor: 'bg-[#EAB308]', path: '/client/etf' },
+                { id: 'ipo', label: '新股申购', icon: '🎯', bgColor: 'bg-[#E63946]', path: '/client/ipo' },
+                { id: 'margin', label: '融资融券', icon: '💰', bgColor: 'bg-[#F97316]', path: '/client/margin' },
+                { id: 'calendar', label: '财富日历', icon: '📅', bgColor: 'bg-[#EAB308]', path: '/client/calendar' },
+                { id: 'market', label: '沪深市场', icon: '📈', bgColor: 'bg-[#E63946]', path: '/client/market' },
+                { id: 'wealth', label: '稳健理财', icon: '🏦', bgColor: 'bg-[#3B82F6]', path: '/client/wealth-finance' },
+                { id: 'trade', label: '股票交易', icon: '💹', bgColor: 'bg-[#10B981]', path: '/client/trade' },
+                { id: 'block', label: '大宗交易', icon: '🏢', bgColor: 'bg-[#8B5CF6]', path: '/client/block-trade' },
+                { id: 'reports', label: '研报中心', icon: '📑', bgColor: 'bg-[#EC4899]', path: '/client/reports' },
+                { id: 'education', label: '投教中心', icon: '📚', bgColor: 'bg-[#14B8A6]', path: '/client/education' },
+              ].map((feature) => (
+                <button
+                  key={feature.id}
+                  onClick={() => {
+                    navigate(feature.path);
+                    setShowAllFeatures(false);
+                  }}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className={`w-12 h-12 rounded-xl ${feature.bgColor} flex items-center justify-center text-white text-xl shadow-sm`}>
+                    {feature.icon}
+                  </div>
+                  <span className="text-xs text-[#333333]">{feature.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 新用户引导 */}
+      <WelcomeModal
+        isOpen={showWelcome}
+        onStartTour={handleStartTour}
+        onSkip={handleSkipTour}
+      />
+      <OnboardingTour
+        steps={defaultTourSteps}
+        isOpen={showTour}
+        onClose={handleCloseTour}
+        onComplete={handleCompleteTour}
+      />
     </div>
   );
 });

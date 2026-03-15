@@ -91,7 +91,7 @@ export const LoadingState: React.FC<{ message?: string }> = ({
   message = '加载中...' 
 }) => (
   <div className="flex flex-col items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00D4AA] mb-4"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E63946] mb-4"></div>
     <p className="text-slate-400">{message}</p>
   </div>
 );
@@ -112,7 +112,7 @@ export const EmptyState: React.FC<{
     {action && (
       <button
         onClick={action.onClick}
-        className="px-6 py-3 bg-[#00D4AA] text-[#0A1628] rounded-xl font-bold hover:opacity-90"
+        className="px-6 py-3 bg-[#E63946] text-[#1E1E1E] rounded-xl font-bold hover:opacity-90"
       >
         {action.label}
       </button>

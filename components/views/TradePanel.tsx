@@ -1,94 +1,22 @@
+/**
+ * 交易页面
+ * 按银河证券官方App交易页面截图还原
+ * 深色模式
+ */
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { TradeType, UserAccount, Stock } from '../../lib/types';
-import { IPOData } from '../../services/adapters/sinaIPOAdapter';
-import { marketApi } from '../../services/marketApi';
-
-// ===================== 【必看】组件导入容错 =====================
-// 如果ICONS/StockIcon报错，直接注释掉对应行，代码会自动降级显示
 import { ICONS } from '../../lib/constants';
-import StockIcon from '../shared/StockIcon';
-// 降级兜底：如果导入失败，使用默认占位
-const SafeIcon = ICONS || {
-  ArrowRight: () => <span>→</span>,
-  Calendar: () => <span>📅</span>,
-  TrendingUp: () => <span>📈</span>,
-  Plus: () => <span>+</span>,
-};
-const SafeStockIcon = StockIcon || (({ name }: { name: string }) => (
-  <div className="w-10 h-10 rounded-full bg-[#00D4AA]/10 flex items-center justify-center text-[#00D4AA] font-black">
-    {name.slice(0, 2)}
-  </div>
-));
+import { useAuth } from '../../contexts/AuthContext';
+import { usePosition } from '../../contexts/PositionContext';
+import { marketApi } from '../../services/marketApi';
+import { tradeService } from '../../services/tradeService';
+import TradeResultModal from '../shared/TradeResultModal';
 
-// ===================== 新股申购数据适配器 =====================
-// TradePanel 期望的中文字段接口
-interface TradeIPOData {
-  证券代码: string;
-  申购代码: string;
-  证券简称: string;
-  发行价格: number;
-  市盈率?: number;
-  个人申购上限: number;
-  市场: string; // SH: 上海, SZ: 深圳
-  状态: 'ONGOING' | 'UPCOMING' | 'LISTED' | 'CANCELLED'; // 申购状态
-  申购日期?: string; // 申购日期
-  上市日期?: string; // 上市日期
-}
-
-/**
- * 根据股票代码判断申购单位
- * - 沪市主板（60开头）：1000股
- * - 深市主板（00开头）：500股
- * - 创业板（30开头）：500股
- * - 科创板（688开头）：500股
- */
-function getIPOUnit(symbol: string): number {
-  if (symbol.startsWith('688')) return 500; // 科创板
-  if (symbol.startsWith('60')) return 1000; // 沪市主板
-  if (symbol.startsWith('00') || symbol.startsWith('30')) return 500; // 深市主板、创业板
-  return 500; // 默认
-}
-
-/**
- * 判断新股是否可申购
- * - ONGOING: 申购中，可申购
- * - UPCOMING: 待申购，不可申购
- * - LISTED: 已上市，不可申购
- * - CANCELLED: 已取消，不可申购
- */
-function canSubscribe(status: string): boolean {
-  return status === 'ONGOING';
-}
-
-// 适配器函数：将数据库返回的数据转换为 TradePanel 期望的格式
-function convertIpoData(ipoList: any[]): TradeIPOData[] {
-  return ipoList.map(ipo => ({
-    证券代码: ipo.symbol,
-    申购代码: ipo.subscription_code || ipo.symbol,
-    证券简称: ipo.name,
-    发行价格: ipo.ipo_price || 0,
-    市盈率: ipo.pe_ratio || undefined,
-    个人申购上限: Math.floor(1000000 / (ipo.ipo_price || 1)), // 临时计算
-    市场: ipo.market || 'SZ',
-    状态: ipo.status || 'UPCOMING',
-    申购日期: ipo.issue_date,
-    上市日期: ipo.listing_date,
-  }));
-}
-
-// ===================== 常量配置 =====================
-const TRADE_MODES = [
-  { key: 'A股', label: 'A股', market: 'CN', type: 'normal' },
-  { key: '港股', label: '港股', market: 'HK', type: 'normal' },
-  { key: '新股申购', label: '新股申购', type: 'ipo' },
-  { key: '大宗交易', label: '大宗交易', type: 'block' },
-  { key: '涨停打板', label: '涨停打板', type: 'limitUp' },
-] as const;
-
-type TradeModeKey = typeof TRADE_MODES[number]['key'];
-
-
+// TradeType 是枚举，定义快捷引用
+const BUY = TradeType.BUY;
+const SELL = TradeType.SELL;
 
 // ===================== 组件Props =====================
 interface TradePanelProps {
@@ -98,1156 +26,608 @@ interface TradePanelProps {
 }
 
 // ===================== 主组件 =====================
-const TradePanel: React.FC<TradePanelProps> = React.memo(({ account, onExecute, initialStock }) => {
-  // ===================== URL参数处理 =====================
+const TradePanel: React.FC<TradePanelProps> = ({ account, onExecute, initialStock }) => {
+  const navigate = useNavigate();
+  const { session, user } = useAuth();
+  const { refreshPositions } = usePosition();
   const [searchParams] = useSearchParams();
-  const modeFromUrl = searchParams.get('mode');
-  const symbolFromUrl = searchParams.get('symbol');
-  const priceFromUrl = searchParams.get('price');
-  const sideFromUrl = searchParams.get('side');
   
-  // ===================== 核心状态 =====================
-  const [currentMode, setCurrentMode] = useState<TradeModeKey>(() => {
-    // 如果 URL 中有 mode 参数，尝试匹配
-    if (modeFromUrl === 'limitUp') return '涨停打板';
-    return 'A股';
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // --- 普通交易（A股/港股）状态 ---
-  const [selectedStock, setSelectedStock] = useState<Stock>(() => 
-    initialStock || {
-      symbol: '600519',
-      name: '贵州茅台',
-      price: 1750.00,
-      change: 15.00,
-      changePercent: 0.87,
-      market: 'CN',
-      sparkline: []
-    }
-  );
+  // 交易模式
+  const [tradeMode, setTradeMode] = useState<'normal' | 'margin' | 'option'>('normal');
   
-  // --- 五档盘口状态（真实数据）---
-  const [orderBookData, setOrderBookData] = useState<{ asks: { price: number; volume: number }[]; bids: { price: number; volume: number }[] } | null>(null);
+  // 股票搜索
+  const [stockCode, setStockCode] = useState('');
+  const [stockName, setStockName] = useState('');
+  const [stockPrice, setStockPrice] = useState(0);
+  const [stockInfo, setStockInfo] = useState<Stock | null>(null);
+  const [searching, setSearching] = useState(false);
   
-  const [tradeSide, setTradeSide] = useState<'BUY' | 'SELL'>(() => {
-    if (sideFromUrl === 'SELL') return 'SELL';
-    return 'BUY';
-  });
-  const [price, setPrice] = useState(() => {
-    if (priceFromUrl) return priceFromUrl;
-    return '1750.00'; // 默认价格，会在股票加载后更新
-  });
+  // 买卖切换
+  const [tradeType, setTradeType] = useState<TradeType>(BUY);
+  
+  // 价格类型
+  const [priceType, setPriceType] = useState<'limit' | 'market'>('limit');
+  const [price, setPrice] = useState('');
+  
+  // 数量
   const [quantity, setQuantity] = useState('');
-  const [stockList, setStockList] = useState<Stock[]>([]);
-  const [showStockSelector, setShowStockSelector] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  
+  // 提交状态
+  const [submitting, setSubmitting] = useState(false);
+  
+  // 弹窗
+  const [showTip, setShowTip] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
+  
+  // 交易结果
+  const [tradeResult, setTradeResult] = useState<{
+    visible: boolean;
+    status: 'success' | 'failed' | 'pending';
+    errorMessage?: string;
+    orderNo?: string;
+  }>({ visible: false, status: 'pending' });
 
-  // --- 新股申购状态 ---
-  const [ipoList, setIpoList] = useState<TradeIPOData[]>([]);
-  const [ipoLoading, setIpoLoading] = useState(false);
-  const [selectedIpo, setSelectedIpo] = useState<TradeIPOData | null>(null);
+  // 可用资金
+  const availableFunds = account?.balance || 0;
+  
+  // 是否已登录
+  const isLoggedIn = !!session && !!user;
 
-  // --- 大宗交易状态 ---
-  const [blockDiscount, setBlockDiscount] = useState(0.9);
-  const [blockQuantity, setBlockQuantity] = useState('');
+  // 核心交易功能矩阵
+  const tradeFunctions = [
+    { id: 'buy', label: '买入', icon: '买', color: 'text-[#E63946]', bg: 'bg-[#FFE5E5]' },
+    { id: 'sell', label: '卖出', icon: '卖', color: 'text-[#3B82F6]', bg: 'bg-[#E5EDFF]' },
+    { id: 'cancel', label: '撤单', icon: '撤', color: 'text-[#F97316]', bg: 'bg-[#FFF3E5]' },
+    { id: 'position', label: '持仓', icon: '持', color: 'text-[#22C55E]', bg: 'bg-[#E5F9EF]' },
+  ];
 
-  // --- 涨停打板状态 ---
-  const [limitUpList, setLimitUpList] = useState<Stock[]>([]);
-  const [limitUpLoading, setLimitUpLoading] = useState(false);
+  const moreFunctions = [
+    { id: 'condition', label: '条件单', icon: '📋' },
+    { id: 'order', label: '委托查询', icon: '📝' },
+    { id: 'deal', label: '成交查询', icon: '✅' },
+    { id: 'ipo', label: '新股申购', icon: '🎯' },
+    { id: 'transfer', label: '银证转账', icon: '💳' },
+    { id: 'fund-buy', label: '基金购买', icon: '📊' },
+    { id: 'fund-sell', label: '基金赎回', icon: '💰' },
+    { id: 'wealth', label: '理财持仓', icon: '🏦' },
+  ];
 
-  // ===================== 【关键】防无限循环控制 =====================
-  const initRef = useRef({
-    normalLoaded: false,
-    ipoLoaded: false,
-    limitUpLoaded: false,
-    urlSymbolLoaded: false, // 追踪URL股票是否已加载
-  });
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  // 特色服务
+  const specialServices = [
+    { id: 'condition', title: '条件单', desc: '随时随地 为您盯盘下单', icon: '⏰', color: 'from-[#E63946] to-[#C62836]' },
+    { id: 'wealth-star', title: '财富星', desc: '银河财富星 专业好投顾', icon: '⭐', color: 'from-[#F97316] to-[#EA580C]' },
+    { id: 'etf', title: 'ETF专区', desc: '一站式ETF 投资服务平台', icon: '📈', color: 'from-[#3B82F6] to-[#2563EB]' },
+  ];
 
-  // ===================== 账户为空时的默认值 =====================
-  const safeAccount = account || {
-    balance: 0,
-    holdings: [],
-    transactions: [],
-    conditionalOrders: [],
+  // 处理功能点击
+  const handleFunctionClick = (id: string) => {
+    switch (id) {
+      case 'buy':
+        setTradeType(BUY);
+        break;
+      case 'sell':
+        setTradeType(SELL);
+        break;
+      case 'cancel':
+        navigate('/client/cancel-orders');
+        break;
+      case 'position':
+        navigate('/client/holdings');
+        break;
+      case 'ipo':
+        navigate('/client/ipo');
+        break;
+      case 'condition':
+        navigate('/client/conditional-orders');
+        break;
+      case 'order':
+        navigate('/client/order-query');
+        break;
+      case 'deal':
+        navigate('/client/transaction-history');
+        break;
+      case 'transfer':
+        navigate('/client/bank-transfer');
+        break;
+      case 'fund-buy':
+        navigate('/client/fund-purchase');
+        break;
+      case 'fund-sell':
+        navigate('/client/fund-redeem');
+        break;
+      case 'wealth':
+        navigate('/client/wealth-holdings');
+        break;
+      default:
+        console.log('Function:', id);
+    }
   };
 
-  // ===================== 通用计算 =====================
-  // 当前持仓
-  const currentHolding = useMemo(() => 
-    safeAccount.holdings.find(h => h.symbol === selectedStock.symbol),
-  [safeAccount.holdings, selectedStock.symbol]);
-
-  // 最大可交易数量
-  const maxTradeQty = useMemo(() => {
-    const p = parseFloat(price);
-    if (isNaN(p) || p <= 0) return 0;
-    // 卖出：取可用持仓
-    if (tradeSide === 'SELL') return currentHolding?.availableQuantity || 0;
-    // 买入：取可用资金可买数量
-    return Math.floor(safeAccount.balance / p);
-  }, [price, tradeSide, safeAccount.balance, currentHolding]);
-
-  // ===================== 预估成交金额 =====================
-  const estimatedAmount = useMemo(() => {
-    const qty = parseInt(quantity) || 0;
-    const p = parseFloat(price) || 0;
-    return (qty * p).toLocaleString();
-  }, [quantity, price]);
-
-  // ===================== 条件单列表 =====================
-  const activeConditionalOrders = useMemo(() => 
-    safeAccount.conditionalOrders.filter(o => o.status === 'ACTIVE' || o.status === 'RUNNING'),
-  [safeAccount.conditionalOrders]);
-
-  // ===================== 获取五档盘口数据 =====================
-  useEffect(() => {
-    const fetchOrderBook = async () => {
-      try {
-        const market = selectedStock.symbol.length === 5 ? 'HK' : 'CN';
-        const data = await marketApi.getOrderBook(selectedStock.symbol, market);
-        if (data) {
-          setOrderBookData(data);
-        }
-      } catch (error) {
-        console.warn('获取五档数据失败:', error);
-      }
-    };
-    
-    fetchOrderBook();
-    
-    // 每5秒刷新一次五档数据
-    const interval = setInterval(fetchOrderBook, 5000);
-    return () => clearInterval(interval);
-  }, [selectedStock.symbol]);
-
-  // 盘口数据（优先真实数据，无数据时使用模拟）
-  const orderBook = useMemo(() => {
-    if (orderBookData) {
-      return {
-        asks: orderBookData.asks.map((item, index) => ({
-          level: 5 - index,
-          price: item.price,
-          volume: item.volume,
-        })).slice(0, 5),
-        bids: orderBookData.bids.map((item, index) => ({
-          level: index + 1,
-          price: item.price,
-          volume: item.volume,
-        })).slice(0, 5),
-      };
-    }
-    
-    // 无真实数据时使用模拟数据
-    const basePrice = selectedStock.price;
-    return {
-      asks: Array.from({ length: 5 }, (_, i) => {
-        const level = 5 - i;
-        return { level, price: basePrice + level * 0.05, volume: Math.floor(Math.random() * 1000) + 100 };
-      }),
-      bids: Array.from({ length: 5 }, (_, i) => {
-        const level = i + 1;
-        return { level, price: basePrice - level * 0.05, volume: Math.floor(Math.random() * 1000) + 100 };
-      }),
-    };
-  }, [orderBookData, selectedStock.price]);
-
-  // 过滤股票列表
-  const filteredStockList = useMemo(() => {
-    if (!searchTerm) return stockList;
-    return stockList.filter(s => 
-      s.name.includes(searchTerm) || s.symbol.includes(searchTerm)
-    );
-  }, [searchTerm, stockList]);
-
-  // ===================== 接口方法（useCallback包裹，稳定无循环）=====================
-  // 加载市场股票列表
-  const loadMarketList = useCallback(async (market: 'CN' | 'HK') => {
+  // 搜索股票
+  const handleSearchStock = async () => {
+    if (!stockCode.trim()) return;
+    setSearching(true);
     try {
-      setLoading(true);
-      setErrorMsg(null);
-      const { getMarketList } = await import('../../services/marketService');
-      const data = await getMarketList(market);
-      // 处理返回结果（可能是数组或分页对象）
-      const stocks = Array.isArray(data) ? data : (data as any).stocks || [];
-      if (stocks && stocks.length > 0) {
-        setStockList(stocks);
-        // 仅无初始股票时设置默认值
-        if (!initialStock) {
-          setSelectedStock(stocks[0]);
-          setPrice(stocks[0].price.toString());
-        }
+      // 根据股票代码长度判断市场：6位为A股，5位为港股
+      const code = stockCode.toUpperCase();
+      const market = code.length === 5 ? 'HK' : 'CN';
+      const stock = await marketApi.getRealtimeStock(code, market);
+      if (stock) {
+        setStockInfo({
+          symbol: stock.symbol,
+          name: stock.name,
+          price: stock.price,
+          change: stock.change,
+          changePercent: stock.changePercent,
+          market: stock.market,
+          sparkline: stock.sparkline || []
+        });
+        setStockName(stock.name);
+        setStockPrice(stock.price);
+        setPrice(stock.price.toString());
       }
-    } catch (err) {
-      console.error(`加载${market}股票列表失败:`, err);
-      setErrorMsg(`加载${market}市场数据失败`);
+    } catch (error) {
+      console.error('搜索股票失败:', error);
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
-  }, [initialStock]);
-
-  // 加载新股列表
-  const loadIpoList = useCallback(async () => {
-    if (initRef.current.ipoLoaded) return;
-    try {
-      setIpoLoading(true);
-      // 使用 ipoService 从数据库获取数据
-      const { getIPOList } = await import('../../services/ipoService');
-      // 获取申购中和待申购的新股
-      const [ongoingData, upcomingData] = await Promise.all([
-        getIPOList('ONGOING'),
-        getIPOList('UPCOMING'),
-      ]);
-      const data = [...ongoingData, ...upcomingData];
-      // 转换为 TradePanel 期望的格式
-      const convertedData = convertIpoData(data);
-      setIpoList(convertedData);
-      if (convertedData.length > 0) setSelectedIpo(convertedData[0]);
-      initRef.current.ipoLoaded = true;
-    } catch (err) {
-      console.error('加载新股列表失败:', err);
-    } finally {
-      setIpoLoading(false);
-    }
-  }, []);
-
-  // 加载涨停个股列表
-  const loadLimitUpList = useCallback(async () => {
-    if (initRef.current.limitUpLoaded) return;
-    try {
-      setLimitUpLoading(true);
-      // 直接使用 limitUpService 获取涨停数据
-      const { getLimitUpList } = await import('../../services/limitUpService');
-      const limitUpData = await getLimitUpList();
-      
-      // 转换数据格式为 Stock 类型
-      const limitUpStocks = limitUpData.map((item: any) => ({
-        symbol: item.symbol,
-        name: item.name,
-        price: item.currentPrice || item.price,
-        change: item.change || 0,
-        changePercent: item.changePercent || item.change_percent || 0,
-        market: item.market === 'SH' ? 'CN' : item.market === 'SZ' ? 'CN' : item.market,
-        sparkline: []
-      })).filter((stock: any) => stock.changePercent >= 9.5); // 涨停股：涨幅>=9.5%（主板10%，创业板/科创板20%）
-      
-      setLimitUpList(limitUpStocks);
-      initRef.current.limitUpLoaded = true;
-    } catch (err) {
-      console.error('加载涨停个股失败:', err);
-    } finally {
-      setLimitUpLoading(false);
-    }
-  }, []);
-
-  // 交易输入验证
-  const validateTradeInput = (price: number, quantity: number, tradeType: TradeType, symbol?: string) => {
-    const errors: string[] = [];
-    
-    // 基础数值验证
-    if (price <= 0) {
-      errors.push('价格必须大于0');
-    }
-    
-    if (quantity <= 0) {
-      errors.push('数量必须大于0');
-    }
-    
-    // 数值范围验证
-    if (price > 999999) {
-      errors.push('价格超出合理范围（最大999999）');
-    }
-    
-    if (quantity > 1000000) {
-      errors.push('数量超出合理范围（最大1000000）');
-    }
-    
-    // 整数验证（股票数量）
-    if (quantity % 1 !== 0) {
-      errors.push('交易数量必须为整数');
-    }
-    
-    // 交易类型特定验证
-    if (tradeType === TradeType.IPO) {
-      // 新股申购验证 - 只检查最小申购单位，不需要整数倍
-      // 实际申购：中签即全仓配额，无需额外限制
-      const unit = symbol ? getIPOUnit(symbol) : 500; // 默认500股
-      const marketName = symbol?.startsWith('60') ? '沪市主板' : 
-                         symbol?.startsWith('688') ? '科创板' :
-                         symbol?.startsWith('00') ? '深市主板' :
-                         symbol?.startsWith('30') ? '创业板' : '市场';
-      
-      if (quantity < unit) {
-        errors.push(`${marketName}新股申购数量不得少于${unit}股`);
-      }
-      // 移除整数倍验证 - 新股申购按实际配额，无需整数倍限制
-    } else if (tradeType === TradeType.BLOCK) {
-      // 大宗交易验证
-      if (quantity < 100000) {
-        errors.push('大宗交易数量不得少于10万股');
-      }
-    } else if (tradeType === TradeType.LIMIT_UP) {
-      // 涨停打板验证
-      if (quantity < 100) {
-        errors.push('涨停打板数量不得少于100股');
-      }
-    }
-    
-    // 金额验证
-    const totalAmount = price * quantity;
-    if (totalAmount > 10000000) {
-      errors.push('交易金额超出单笔限制（最大1000万）');
-    }
-    
-    // 恶意输入检测
-    if (price.toString().includes('e') || quantity.toString().includes('e')) {
-      errors.push('检测到异常数值格式');
-    }
-    
-    return errors;
   };
 
-  // 通用交易执行
-  const handleTrade = useCallback(async (
-    tradeType: TradeType,
-    symbol: string,
-    name: string,
-    price: number,
-    quantity: number,
-    logoUrl?: string
-  ) => {
-    // 输入验证 - 传入 symbol 用于判断申购单位
-    const validationErrors = validateTradeInput(price, quantity, tradeType, symbol);
-    if (validationErrors.length > 0) {
-      alert(`输入验证失败: ${validationErrors.join(', ')}`);
-      return false;
-    }
+  // 计算最大可买
+  const maxQuantity = useMemo(() => {
+    if (!stockPrice || !availableFunds) return 0;
+    return Math.floor(availableFunds / stockPrice / 100) * 100;
+  }, [stockPrice, availableFunds]);
+
+  // 提交交易
+  const handleSubmit = async () => {
+    if (!stockInfo || !price || !quantity) return;
     
-    if (quantity <= 0 || price <= 0) {
-      alert('请输入有效的价格和数量');
-      return false;
-    }
+    setSubmitting(true);
+    setShowConfirm(false);
+    setTradeResult({ visible: true, status: 'pending' });
     
-    // 额外验证：检查交易金额是否超过账户余额
-    const totalAmount = price * quantity;
-    if (tradeType === TradeType.BUY && totalAmount > safeAccount.balance) {
-      alert('交易金额超出可用资金');
-      return false;
-    }
-    
-    // 根据当前模式确定市场类型
-    const marketType = currentMode === '港股' ? 'HK_SHARE' : 'A_SHARE';
-    
-    setIsSubmitting(true);
     try {
-      const { validateTradeRisk } = await import('../../services/marketService');
-      const riskValidation = await validateTradeRisk(name, totalAmount);
+      const success = await onExecute(
+        tradeType,
+        stockInfo.symbol,
+        stockInfo.name,
+        parseFloat(price),
+        parseInt(quantity),
+        undefined,
+        stockInfo.market
+      );
       
-      if (!riskValidation.isAppropriate) {
-        const confirm = window.confirm(`${riskValidation.riskWarning}\n\n是否继续交易？`);
-        if (!confirm) {
-          return false;
-        }
-      }
-      
-      const success = await onExecute(tradeType, symbol, name, price, quantity, logoUrl, marketType);
       if (success) {
+        // 生成模拟委托编号
+        const orderNo = `WT${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+        setTradeResult({
+          visible: true,
+          status: 'success',
+          orderNo,
+        });
+        // 刷新持仓数据
+        refreshPositions();
+        // 重置表单
         setQuantity('');
-        setBlockQuantity('');
-        alert('交易委托已提交，可在持仓中查看进度');
+      } else {
+        setTradeResult({
+          visible: true,
+          status: 'failed',
+          errorMessage: '委托提交失败，请稍后重试',
+        });
       }
-      return success;
-    } catch (err) {
-      console.error('交易执行失败:', err);
-      alert('交易执行失败，请重试');
-      return false;
+    } catch (error: any) {
+      console.error('交易失败:', error);
+      setTradeResult({
+        visible: true,
+        status: 'failed',
+        errorMessage: error?.message || '网络异常，请检查网络连接后重试',
+      });
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
-  }, [onExecute, safeAccount.balance, currentMode]);
+  };
 
-  // ===================== 生命周期控制（无循环）=====================
-  // 模式切换时加载对应数据
-  useEffect(() => {
-    // 重置状态
-    setErrorMsg(null);
-    setQuantity('');
-    setBlockQuantity('');
-
-    // 按模式加载数据
-    switch (currentMode) {
-      case 'A股':
-        loadMarketList('CN');
-        break;
-      case '港股':
-        loadMarketList('HK');
-        break;
-      case '新股申购':
-        loadIpoList();
-        break;
-      case '涨停打板':
-        loadLimitUpList();
-        break;
+  // 处理交易模式切换
+  const handleTradeModeChange = (mode: 'normal' | 'margin' | 'option') => {
+    if (mode === 'margin') {
+      // 切换到两融模式，跳转到融资融券页面
+      navigate('/client/margin');
+      return;
     }
-  }, [currentMode, loadMarketList, loadIpoList, loadLimitUpList]);
-
-  // 股票切换时同步价格（仅当没有URL价格参数时）
-  useEffect(() => {
-    // 如果URL中有价格参数，优先使用URL价格
-    if (!priceFromUrl) {
-      setPrice(selectedStock.price.toString());
+    if (mode === 'option') {
+      // 切换到期权模式，跳转到期权页面（如果存在）或显示提示
+      alert('期权交易功能即将上线，敬请期待！');
+      return;
     }
-  }, [selectedStock, priceFromUrl]);
+    setTradeMode(mode);
+  };
 
-  // 当股票列表加载完成后，根据URL参数选择股票（作为备选方案）
-  useEffect(() => {
-    if (symbolFromUrl && stockList.length > 0) {
-      const stockFromUrl = stockList.find(s => s.symbol === symbolFromUrl);
-      if (stockFromUrl) {
-        setSelectedStock(stockFromUrl);
-        // 如果URL中有价格，使用URL价格；否则使用股票当前价格
-        if (priceFromUrl) {
-          setPrice(priceFromUrl);
-        } else {
-          setPrice(stockFromUrl.price.toString());
-        }
-      }
-    }
-  }, [symbolFromUrl, stockList, priceFromUrl]);
-
-  // 【核心修复】URL参数中有股票代码时，直接获取该股票数据
-  useEffect(() => {
-    if (!symbolFromUrl) return;
-    
-    // 使用ref追踪是否已加载，避免重复加载和依赖警告
-    if (initRef.current.urlSymbolLoaded) return;
-    
-    const fetchStockFromUrl = async () => {
-      try {
-        setLoading(true);
-        const { getRealtimeStock } = await import('../../services/marketService');
-        // 根据股票代码判断市场：A股6位，港股5位
-        const market = symbolFromUrl.length === 5 ? 'HK' : 'CN';
-        const stock = await getRealtimeStock(symbolFromUrl, market);
-        
-        if (stock) {
-          setSelectedStock(stock);
-          // 如果URL中有价格，使用URL价格；否则使用股票当前价格
-          if (priceFromUrl) {
-            setPrice(priceFromUrl);
-          } else {
-            setPrice(stock.price.toString());
-          }
-          initRef.current.urlSymbolLoaded = true;
-        }
-      } catch (error) {
-        console.error('从URL参数加载股票失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchStockFromUrl();
-  }, [symbolFromUrl, priceFromUrl]); // 只依赖 symbolFromUrl 和 priceFromUrl
-
-  // 组件挂载仅执行一次初始化
-  useEffect(() => {
-    loadMarketList('CN');
-    return () => {
-      initRef.current = { normalLoaded: false, ipoLoaded: false, limitUpLoaded: false, urlSymbolLoaded: false };
-    };
-  }, [loadMarketList]);
-
-  // ===================== 分模式渲染 =====================
-  // 1. A股/港股普通交易渲染
-  const renderNormalTrade = () => (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1">
-      {/* 左侧交易区 */}
-      <div className="md:col-span-8 flex flex-col gap-6">
-        {/* 标的选择 */}
-        <div 
-          onClick={() => setShowStockSelector(true)}
-          className="galaxy-card p-6 flex items-center justify-between cursor-pointer hover:border-[var(--color-primary)] transition-all"
-        >
-          <div className="flex items-center gap-6">
-            <SafeStockIcon name={selectedStock.name} logoUrl={selectedStock.logoUrl} size="lg" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-xl font-bold text-[var(--color-text-primary)]">{selectedStock.name}</h4>
-                <SafeIcon.ArrowRight size={14} className="text-[var(--color-text-muted)]" />
-              </div>
-              <p className="text-xs text-[var(--color-text-muted)] font-mono font-medium">{selectedStock.symbol}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-widest mb-1">可用资金</p>
-            <p className="text-2xl font-bold font-mono text-[var(--color-primary)]">¥{safeAccount.balance.toLocaleString()}</p>
-          </div>
-        </div>
-
-        {/* 买卖方向切换 */}
-        <div className="flex gap-2 bg-[var(--color-bg)] p-1.5 rounded-xl border border-[var(--color-border)]">
-          <button 
-            onClick={() => setTradeSide('BUY')} 
-            className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${
-              tradeSide === 'BUY' ? 'bg-[var(--color-positive)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-            }`}
-          >
-            买入
-          </button>
-          <button 
-            onClick={() => setTradeSide('SELL')} 
-            className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${
-              tradeSide === 'SELL' ? 'bg-[var(--color-negative)] text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-            }`}
-          >
-            卖出
-          </button>
-        </div>
-
-        {/* 错误提示 */}
-        {errorMsg && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
-            <p className="text-sm text-red-500 font-black">{errorMsg}</p>
-          </div>
-        )}
-
-        {/* 价格/数量输入 */}
-        <div className="galaxy-card p-6 rounded-xl flex flex-col gap-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--color-text-muted)] px-2">
-                委托价格 (CNY)
-              </label>
-              <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4 focus-within:border-[var(--color-primary)] transition-all">
-                <input 
-                  type="number" 
-                  value={price} 
-                  onChange={(e) => setPrice(e.target.value)} 
-                  className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none" 
-                  step="0.01"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between px-2">
-                <label className="text-xs font-medium text-[var(--color-text-muted)]">委托数量 (股)</label>
-                <span className="text-xs font-medium text-[var(--color-primary)]">最大: {maxTradeQty.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4 focus-within:border-[var(--color-primary)] transition-all">
-                <input 
-                  type="number" 
-                  value={quantity} 
-                  onChange={(e) => setQuantity(e.target.value)} 
-                  className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none" 
-                  placeholder="0"
-                  min="100"
-                  step="100"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 快捷仓位按钮 */}
-          <div className="grid grid-cols-4 gap-2">
+  return (
+    <div className="min-h-screen bg-[#F5F5F5] pb-20">
+      {/* 顶部深蓝色导航栏 */}
+      <div className="bg-[#1a365d] px-4 py-3">
+        <div className="flex items-center justify-between">
+          {/* 模式切换 */}
+          <div className="flex items-center gap-4">
             {[
-              { label: '1/4', ratio: 0.25 },
-              { label: '半仓', ratio: 0.5 },
-              { label: '3/4', ratio: 0.75 },
-              { label: '全仓', ratio: 1 },
-            ].map((btn) => (
+              { key: 'normal', label: '普通' },
+              { key: 'margin', label: '两融' },
+              { key: 'option', label: '期权' },
+            ].map((mode) => (
               <button
-                key={btn.label}
-                onClick={() => setQuantity(Math.floor(maxTradeQty * btn.ratio).toString())}
-                className="py-2 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-xs font-medium hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
+                key={mode.key}
+                onClick={() => handleTradeModeChange(mode.key as any)}
+                className={`relative text-sm font-medium transition-colors ${
+                  tradeMode === mode.key ? 'text-white' : 'text-white/60'
+                }`}
               >
-                {btn.label}
+                {mode.label}
+                {tradeMode === mode.key && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white rounded-full" />
+                )}
               </button>
             ))}
           </div>
-
-          {/* 预估金额 */}
-          <div className="p-4 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)] flex justify-between items-center">
-            <div>
-              <p className="text-xs font-medium text-[var(--color-text-muted)]">预估成交金额</p>
-              <p className="text-2xl font-bold font-mono text-[var(--color-primary)] mt-1">¥{estimatedAmount}</p>
-            </div>
-          </div>
-
-          {/* 交易按钮 */}
-          <button 
-            onClick={() => {
-              const qty = parseInt(quantity) || 0;
-              const p = parseFloat(price) || 0;
-              
-              if (qty <= 0 || p <= 0) {
-                alert('请输入有效的价格和数量');
-                return;
-              }
-              
-              if (tradeSide === 'BUY') {
-                const totalAmount = p * qty;
-                if (totalAmount > safeAccount.balance) {
-                  alert('交易金额超出可用资金');
-                  return;
-                }
-              } else if (tradeSide === 'SELL') {
-                if (!currentHolding || qty > currentHolding.availableQuantity) {
-                  alert('卖出数量超出可用持仓');
-                  return;
-                }
-              }
-              
-              handleTrade(
-                tradeSide === 'BUY' ? TradeType.BUY : TradeType.SELL,
-                selectedStock.symbol,
-                selectedStock.name,
-                p,
-                qty
-              );
-            }}
-            disabled={isSubmitting || !quantity || parseInt(quantity) <= 0}
-            className={`w-full py-4 rounded-xl font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
-              tradeSide === 'BUY' 
-                ? 'bg-[var(--color-positive)] text-white hover:opacity-90' 
-                : 'bg-[var(--color-negative)] text-white hover:opacity-90'
-            }`}
-          >
-            {isSubmitting ? '提交中...' : `确认${tradeSide === 'BUY' ? '买入' : '卖出'}`}
-          </button>
-        </div>
-      </div>
-
-      {/* 右侧五档盘口 */}
-      <div className="md:col-span-4 flex flex-col">
-        <div className="galaxy-card p-6 rounded-xl flex-1 h-full">
-          <div className="flex flex-col h-full gap-4">
-            <div className="flex justify-between items-center text-xs font-medium text-[var(--color-text-muted)] border-b border-[var(--color-border)] pb-3">
-              <span>盘口五档</span>
-              <span>价格 / 量</span>
-            </div>
-            
-            {/* 卖盘 */}
-            <div className="space-y-1">
-              {orderBook.asks.map(ask => (
-                <div key={`ask-${ask.level}`} className="flex justify-between items-center py-1.5 px-3 rounded-lg hover:bg-[var(--color-negative)]/10 cursor-pointer" onClick={() => setPrice(ask.price.toFixed(2))}>
-                  <span className="text-xs font-medium text-[var(--color-negative)] opacity-70 w-8">卖{ask.level}</span>
-                  <span className="text-sm font-mono font-medium text-[var(--color-negative)] flex-1 text-center">{ask.price.toFixed(2)}</span>
-                  <span className="text-xs font-mono text-[var(--color-text-muted)] w-12 text-right">{ask.volume}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* 最新价 */}
-            <div className="py-4 px-3 flex flex-col items-center bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
-              <span className="text-xs font-medium text-[var(--color-text-muted)] mb-1">最新价</span>
-              <span className="text-xl font-bold font-mono text-[var(--color-text-primary)]">
-                {selectedStock.price.toFixed(2)}
+          
+          {/* 右侧功能 */}
+          <div className="flex items-center gap-3">
+            <button className="text-white/80 text-sm">定制</button>
+            <button className="relative">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#E63946] text-white text-[10px] rounded-full flex items-center justify-center">
+                33
               </span>
-              <span className={`text-xs font-medium mt-1 ${selectedStock.change >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>
-                {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change} ({selectedStock.changePercent}%)
-              </span>
-            </div>
-
-            {/* 买盘 */}
-            <div className="space-y-1">
-              {orderBook.bids.map(bid => (
-                <div key={`bid-${bid.level}`} className="flex justify-between items-center py-1.5 px-3 rounded-lg hover:bg-[var(--color-positive)]/10 cursor-pointer" onClick={() => setPrice(bid.price.toFixed(2))}>
-                  <span className="text-xs font-medium text-[var(--color-positive)] opacity-70 w-8">买{bid.level}</span>
-                  <span className="text-sm font-mono font-medium text-[var(--color-positive)] flex-1 text-center">{bid.price.toFixed(2)}</span>
-                  <span className="text-xs font-mono text-[var(--color-text-muted)] w-12 text-right">{bid.volume}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // 2. 新股申购渲染（严格匹配新浪数据）
-  const renderIpoTrade = () => (
-    <div className="flex flex-col h-full gap-6">
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">今日可申购新股</h3>
-        <span className="text-xs text-[var(--color-text-muted)] font-medium">
-          申购日期：{today} | T日申购 | T+1日配号 | T+2日中签
-        </span>
-      </div>
-
-      {ipoLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
-        </div>
-      ) : ipoList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-[var(--color-text-muted)]">
-          <SafeIcon.Calendar size={48} className="mb-4 opacity-30" />
-          <p className="text-lg font-medium">今日暂无可申购新股</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full min-w-[900px] border-collapse">
-            <thead>
-              <tr className="border-b border-[var(--color-border)]">
-                <th className="text-left py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">证券简称</th>
-                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">证券代码</th>
-                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">申购代码</th>
-                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">发行价格</th>
-                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">发行市盈率</th>
-                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">申购上限(万股)</th>
-                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">状态</th>
-                <th className="text-center py-4 px-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ipoList.map(ipo => {
-                // 判断是否可申购
-                const canApply = canSubscribe(ipo.状态);
-                // 获取申购单位
-                const unit = getIPOUnit(ipo.证券代码);
-                // 计算市场名称
-                const marketName = ipo.证券代码.startsWith('60') ? '沪市主板' : 
-                                   ipo.证券代码.startsWith('688') ? '科创板' :
-                                   ipo.证券代码.startsWith('00') ? '深市主板' :
-                                   ipo.证券代码.startsWith('30') ? '创业板' : ipo.市场;
-                
-                return (
-                <tr 
-                  key={ipo.证券代码} 
-                  className={`border-b border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-all ${
-                    selectedIpo?.证券代码 === ipo.证券代码 ? 'bg-[#00D4AA]/5' : ''
-                  }`}
-                >
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <SafeStockIcon name={ipo.证券简称} size="md" />
-                      <div>
-                        <p className="text-base font-medium text-[var(--color-text-primary)] truncate max-w-[120px]">{ipo.证券简称}</p>
-                        <p className="text-xs text-[var(--color-text-muted)]">{marketName}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-center font-mono text-sm">{ipo.证券代码}</td>
-                  <td className="py-4 px-4 text-center font-mono text-sm font-medium text-[var(--color-primary)]">{ipo.申购代码}</td>
-                  <td className="py-4 px-4 text-center font-mono text-sm font-medium">¥{ipo.发行价格?.toFixed(2) || '-'}</td>
-                  <td className="py-4 px-4 text-center font-mono text-sm">{ipo.市盈率?.toFixed(2) || '-'}</td>
-                  <td className="py-4 px-4 text-center font-mono text-sm">{ipo.个人申购上限 || '-'}</td>
-                  <td className="py-4 px-4 text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      ipo.状态 === 'ONGOING' ? 'bg-green-500/20 text-green-400' :
-                      ipo.状态 === 'UPCOMING' ? 'bg-yellow-500/20 text-yellow-400' :
-                      ipo.状态 === 'LISTED' ? 'bg-blue-500/20 text-blue-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {ipo.状态 === 'ONGOING' ? '申购中' :
-                       ipo.状态 === 'UPCOMING' ? '待申购' :
-                       ipo.状态 === 'LISTED' ? '已上市' : '已取消'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    <div className="w-32 mx-auto">
-                      <button 
-                        onClick={() => {
-                          // 检查状态
-                          if (!canSubscribe(ipo.状态)) {
-                            alert(`新股 ${ipo.证券简称} 当前状态不可申购（${ipo.状态 === 'UPCOMING' ? '待申购' : ipo.状态}）`);
-                            return;
-                          }
-                          
-                          // 计算实际申购数量，使用正确的申购单位
-                          const maxQtyByFund = Math.floor(safeAccount.balance / ipo.发行价格);
-                          // 向下取整到申购单位的整数倍
-                          const maxQtyByUnit = Math.floor(maxQtyByFund / unit) * unit;
-                          const actualQuantity = Math.min(ipo.个人申购上限 * 10000, maxQtyByUnit);
-                          
-                          if (actualQuantity < unit) {
-                            alert(`可用资金不足，${marketName}最低申购${unit}股`);
-                            return;
-                          }
-                          
-                          handleTrade(
-                            TradeType.IPO,
-                            ipo.证券代码,
-                            ipo.证券简称,
-                            ipo.发行价格,
-                            actualQuantity
-                          );
-                        }}
-                        disabled={isSubmitting || !canApply}
-                        className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          canApply 
-                            ? 'bg-[var(--color-primary)] text-white hover:opacity-90' 
-                            : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] cursor-not-allowed'
-                        } disabled:opacity-50`}
-                      >
-                        {isSubmitting && selectedIpo?.证券代码 === ipo.证券代码 ? '提交中' : 
-                         canApply ? '一键申购' : 
-                         ipo.状态 === 'UPCOMING' ? '待开放' : '不可申购'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )})}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-
-  // 3. 大宗交易渲染
-  const renderBlockTrade = () => {
-    const blockPrice = selectedStock.price * blockDiscount;
-    const minQuantity = 300000;
-    const maxQty = Math.floor(safeAccount.balance / blockPrice);
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1">
-        <div className="md:col-span-8 flex flex-col gap-6">
-          {/* 标的选择 */}
-          <div 
-            onClick={() => setShowStockSelector(true)}
-            className="galaxy-card p-6 flex items-center justify-between cursor-pointer hover:border-[var(--color-primary)] transition-all"
-          >
-            <div className="flex items-center gap-6">
-              <SafeStockIcon name={selectedStock.name} logoUrl={selectedStock.logoUrl} size="lg" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-xl font-bold text-[var(--color-text-primary)]">{selectedStock.name}</h4>
-                  <SafeIcon.ArrowRight size={14} className="text-[var(--color-text-muted)]" />
-                </div>
-                <p className="text-xs text-[var(--color-text-muted)] font-mono font-medium">{selectedStock.symbol}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-medium text-[var(--color-text-muted)] mb-1">二级市场现价</p>
-              <p className="text-xl font-bold font-mono text-[var(--color-text-primary)]">¥{selectedStock.price.toFixed(2)}</p>
-            </div>
-          </div>
-
-          <div className="galaxy-card p-6 rounded-xl flex flex-col gap-6">
-            {/* 折价率设置 */}
-            <div className="space-y-2">
-              <div className="flex justify-between px-2">
-                <label className="text-xs font-medium text-[var(--color-text-muted)]">折价率</label>
-                <span className="text-xs font-medium text-[var(--color-primary)]">{(blockDiscount * 100).toFixed(1)}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="0.7" 
-                max="0.99" 
-                step="0.01" 
-                value={blockDiscount} 
-                onChange={(e) => setBlockDiscount(parseFloat(e.target.value))} 
-                className="w-full h-2 bg-[var(--color-bg)] rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
-              />
-              <div className="flex justify-between text-xs text-[var(--color-text-muted)] font-medium px-2">
-                <span>7折</span>
-                <span>9折</span>
-                <span>平价</span>
-              </div>
-            </div>
-
-            {/* 价格/数量 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-[var(--color-text-muted)] px-2">
-                  大宗交易成交价
-                </label>
-                <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4">
-                  <input 
-                    type="number" 
-                    disabled 
-                    value={blockPrice.toFixed(2)} 
-                    className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none opacity-70" 
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between px-2">
-                  <label className="text-xs font-medium text-[var(--color-text-muted)]">申报数量 (股)</label>
-                  <span className="text-xs font-medium text-[var(--color-warning)]">最低: 30万股</span>
-                </div>
-                <div className="flex items-center bg-[var(--color-bg)] h-12 rounded-lg border border-[var(--color-border)] px-4 focus-within:border-[var(--color-primary)] transition-all">
-                  <input 
-                    type="number" 
-                    value={blockQuantity} 
-                    onChange={(e) => setBlockQuantity(e.target.value)} 
-                    className="flex-1 bg-transparent text-lg font-bold font-mono text-[var(--color-text-primary)] outline-none" 
-                    placeholder="≥300000"
-                    min={minQuantity}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 交易规则提示 */}
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs text-yellow-700 font-medium leading-relaxed">
-                ⚠️ 大宗交易规则：A股单笔申报数量不低于30万股，或交易金额不低于200万元人民币，申报时间为交易日9:30-15:30，收盘后统一撮合。
-              </p>
-            </div>
-
-            {/* 预估金额 */}
-            <div className="p-4 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)] flex justify-between items-center">
-              <div>
-                <p className="text-xs font-medium text-[var(--color-text-muted)]">预估交易总金额</p>
-                <p className="text-2xl font-bold font-mono text-[var(--color-primary)] mt-1">
-                  ¥{(blockPrice * (parseInt(blockQuantity) || 0)).toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            {/* 提交按钮 */}
-            <button 
-              onClick={() => {
-                const qty = parseInt(blockQuantity) || 0;
-                
-                if (qty < minQuantity) {
-                  alert(`大宗交易数量不得少于${minQuantity}股`);
-                  return;
-                }
-                
-                const totalAmount = blockPrice * qty;
-                if (totalAmount > safeAccount.balance) {
-                  alert('交易金额超出可用资金');
-                  return;
-                }
-                
-                handleTrade(
-                  TradeType.BLOCK,
-                  selectedStock.symbol,
-                  selectedStock.name,
-                  blockPrice,
-                  qty
-                );
-              }}
-              disabled={isSubmitting || (parseInt(blockQuantity) || 0) < minQuantity}
-              className="w-full py-4 rounded-xl font-bold text-sm transition-all active:scale-[0.98] bg-[var(--color-primary)] text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? '提交中...' : '确认大宗交易申报'}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* 右侧信息栏 */}
-        <div className="md:col-span-4 flex flex-col">
-          <div className="galaxy-card p-6 rounded-xl flex-1 h-full">
-            <h4 className="text-sm font-bold mb-4 text-center text-[var(--color-text-primary)]">大宗交易信息</h4>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-medium">标的证券</span>
-                <span className="text-sm font-medium text-[var(--color-text-primary)] truncate max-w-[150px]">{selectedStock.name}</span>
+      {/* 未登录状态 */}
+      {!isLoggedIn && (
+        <div className="bg-white px-4 py-5 border-b border-[#E5E5E5]">
+          <h2 className="text-lg font-semibold text-[#333333] mb-3">欢迎来到银河证券</h2>
+          <button 
+            onClick={() => navigate('/auth/login')}
+            className="w-full py-3 bg-[#3B82F6] text-white font-semibold rounded-xl hover:bg-[#2563EB] transition-colors"
+          >
+            登录/开户
+          </button>
+        </div>
+      )}
+
+      {/* 核心交易功能区 */}
+      <div className="bg-white px-4 py-4 mt-2">
+        <div className="grid grid-cols-4 gap-4">
+          {tradeFunctions.map((func) => (
+            <button
+              key={func.id}
+              onClick={() => handleFunctionClick(func.id)}
+              className="flex flex-col items-center gap-2"
+            >
+              <div className={`w-12 h-12 rounded-xl ${func.bg} flex items-center justify-center`}>
+                <span className={`text-lg font-bold ${func.color}`}>{func.icon}</span>
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-medium">证券代码</span>
-                <span className="text-sm font-mono font-medium text-[var(--color-text-primary)]">{selectedStock.symbol}</span>
+              <span className="text-sm text-[#333333]">{func.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 更多功能 */}
+      <div className="bg-white px-4 py-4 mt-2">
+        <div className="grid grid-cols-4 gap-4">
+          {moreFunctions.map((func) => (
+            <button
+              key={func.id}
+              onClick={() => handleFunctionClick(func.id)}
+              className="flex flex-col items-center gap-2"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#F5F5F5] flex items-center justify-center text-lg">
+                {func.icon}
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-medium">二级市场现价</span>
-                <span className="text-sm font-mono font-medium text-[var(--color-text-primary)]">¥{selectedStock.price.toFixed(2)}</span>
+              <span className="text-xs text-[#666666]">{func.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 营销资讯横幅 */}
+      <div className="mx-4 mt-3 bg-gradient-to-r from-[#1a365d] to-[#2d4a7c] rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <span className="inline-block bg-[#E63946] text-white text-[10px] px-1.5 py-0.5 rounded font-medium mb-1">HOT</span>
+          <p className="text-white text-sm font-medium">三驾马车齐头并进，港股配置价值显现！</p>
+        </div>
+        <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+
+      {/* 特色服务卡片 */}
+      <div className="px-4 mt-3 space-y-3">
+        {specialServices.map((service) => (
+          <div
+            key={service.id}
+            onClick={() => {
+              if (service.id === 'wealth-star') {
+                navigate('/client/education');
+              } else if (service.id === 'condition') {
+                navigate('/client/conditional-orders');
+              } else if (service.id === 'etf') {
+                navigate('/client/etf');
+              }
+            }}
+            className="bg-white rounded-xl p-4 flex items-center gap-4 shadow-sm cursor-pointer hover:bg-[#FAFAFA] transition-colors"
+          >
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center text-2xl`}>
+              {service.icon}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[#333333]">{service.title}</p>
+              <p className="text-xs text-[#999999] mt-0.5">{service.desc}</p>
+            </div>
+            <svg className="w-5 h-5 text-[#999999]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        ))}
+      </div>
+
+      {/* 股票交易区域（已登录状态显示） */}
+      {isLoggedIn && (
+        <div className="mx-4 mt-4 bg-white rounded-xl shadow-sm overflow-hidden">
+          {/* 买卖切换 */}
+          <div className="flex border-b border-[#E5E5E5]">
+            <button
+              onClick={() => setTradeType(BUY)}
+              className={`flex-1 py-3 text-center font-semibold transition-colors ${
+                tradeType === BUY 
+                  ? 'text-[#E63946] bg-[#FFE5E5]' 
+                  : 'text-[#666666]'
+              }`}
+            >
+              买入
+            </button>
+            <button
+              onClick={() => setTradeType(SELL)}
+              className={`flex-1 py-3 text-center font-semibold transition-colors ${
+                tradeType === SELL 
+                  ? 'text-[#3B82F6] bg-[#E5EDFF]' 
+                  : 'text-[#666666]'
+              }`}
+            >
+              卖出
+            </button>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* 股票代码输入 */}
+            <div>
+              <label className="text-xs text-[#999999] block mb-1.5">股票代码</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={stockCode}
+                  onChange={(e) => setStockCode(e.target.value.toUpperCase())}
+                  placeholder="输入股票代码"
+                  className="flex-1 h-11 px-4 border border-[#E5E5E5] rounded-lg text-[15px] text-[#333333]"
+                />
+                <button
+                  onClick={handleSearchStock}
+                  disabled={searching}
+                  className="px-4 bg-[#3B82F6] text-white rounded-lg text-sm font-medium"
+                >
+                  {searching ? '搜索中' : '查询'}
+                </button>
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-medium">折价率</span>
-                <span className="text-sm font-medium text-[var(--color-primary)]">{((1 - blockDiscount) * 100).toFixed(1)}%</span>
+            </div>
+
+            {/* 股票信息 */}
+            {stockInfo && (
+              <>
+                <div className="flex items-center justify-between py-2 px-3 bg-[#F5F5F5] rounded-lg">
+                  <div>
+                    <span className="text-sm font-semibold text-[#333333]">{stockName}</span>
+                    <span className="text-xs text-[#999999] ml-2">{stockCode}</span>
+                  </div>
+                  <span className={`text-lg font-bold ${stockInfo.change >= 0 ? 'text-[#E63946]' : 'text-[#22C55E]'}`}>
+                    {stockPrice.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* 价格类型 */}
+                <div>
+                  <label className="text-xs text-[#999999] block mb-1.5">价格类型</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPriceType('limit')}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+                        priceType === 'limit' 
+                          ? 'bg-[#3B82F6] text-white' 
+                          : 'bg-[#F5F5F5] text-[#666666]'
+                      }`}
+                    >
+                      限价
+                    </button>
+                    <button
+                      onClick={() => setPriceType('market')}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+                        priceType === 'market' 
+                          ? 'bg-[#3B82F6] text-white' 
+                          : 'bg-[#F5F5F5] text-[#666666]'
+                      }`}
+                    >
+                      市价
+                    </button>
+                  </div>
+                </div>
+
+                {/* 价格输入 */}
+                {priceType === 'limit' && (
+                  <div>
+                    <label className="text-xs text-[#999999] block mb-1.5">委托价格</label>
+                    <input
+                      type="number"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="输入价格"
+                      step="0.01"
+                      className="w-full h-11 px-4 border border-[#E5E5E5] rounded-lg text-[15px] text-[#333333]"
+                    />
+                  </div>
+                )}
+
+                {/* 数量输入 */}
+                <div>
+                  <label className="text-xs text-[#999999] block mb-1.5">委托数量（股）</label>
+                  <input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="输入数量"
+                    step="100"
+                    className="w-full h-11 px-4 border border-[#E5E5E5] rounded-lg text-[15px] text-[#333333]"
+                  />
+                  <p className="text-xs text-[#999999] mt-1">
+                    可用资金: ¥{availableFunds.toFixed(2)} | 最大可买: {maxQuantity}股
+                  </p>
+                </div>
+
+                {/* 提交按钮 */}
+                <button
+                  onClick={() => setShowConfirm(true)}
+                  disabled={!price || !quantity}
+                  className={`w-full py-3.5 rounded-xl font-semibold text-white transition-all ${
+                    tradeType === BUY
+                      ? 'bg-[#E63946] hover:bg-[#C62836]'
+                      : 'bg-[#3B82F6] hover:bg-[#2563EB]'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {tradeType === BUY ? '买入' : '卖出'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 夜市委托提示弹窗 */}
+      {showTip && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-[#333333]">夜市委托助手功能开启中</h3>
+                <button onClick={() => setShowTip(false)} className="text-[#999999]">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-                <span className="text-xs text-[var(--color-text-muted)] font-medium">大宗成交价</span>
-                <span className="text-sm font-mono font-medium text-[var(--color-primary)]">¥{blockPrice.toFixed(2)}</span>
+              <p className="text-sm text-[#666666] mb-4">
+                交易日16:00开启，非交易时间正常下单
+              </p>
+              <div className="flex items-center gap-2 mb-4">
+                <input type="checkbox" id="no-tip" className="w-4 h-4" />
+                <label htmlFor="no-tip" className="text-sm text-[#666666]">不再提示</label>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-[var(--color-text-muted)] font-medium">最大可买</span>
-                <span className="text-sm font-mono font-medium text-[var(--color-text-primary)]">{maxQty.toLocaleString()}股</span>
+              <div className="flex gap-3">
+                <button className="flex-1 py-2.5 border border-[#E5E5E5] rounded-lg text-sm text-[#666666]">
+                  了解更多
+                </button>
+                <button 
+                  onClick={() => setShowTip(false)}
+                  className="flex-1 py-2.5 bg-[#3B82F6] text-white rounded-lg text-sm font-medium"
+                >
+                  立即使用
+                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    );
-  };
+      )}
 
-  // 4. 涨停打板渲染
-  const renderLimitUpTrade = () => (
-    <div className="flex flex-col h-full gap-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">今日涨停个股</h3>
-        <span className="text-xs text-[var(--color-text-muted)] font-medium">按涨停价委托，进入排单队列</span>
-      </div>
-
-      {limitUpLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-positive)]"></div>
-        </div>
-      ) : limitUpList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-[var(--color-text-muted)]">
-          <SafeIcon.TrendingUp size={48} className="mb-4 opacity-30" />
-          <p className="text-lg font-medium">暂无涨停个股数据</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 overflow-y-auto no-scrollbar">
-          {limitUpList.map(stock => {
-            const limitUpPrice = stock.price;
-            const maxQty = Math.floor(safeAccount.balance / limitUpPrice);
-            return (
-              <div 
-                key={stock.symbol} 
-                className="galaxy-card p-5 rounded-xl border border-[var(--color-positive)]/30 hover:border-[var(--color-positive)] transition-all"
-              >
-                <div className="grid grid-cols-12 gap-4 items-center">
-                  {/* 个股信息 */}
-                  <div className="col-span-3 flex items-center gap-3">
-                    <SafeStockIcon name={stock.name} logoUrl={stock.logoUrl} size="md" />
-                    <div>
-                      <h4 className="text-base font-bold text-[var(--color-text-primary)] truncate">{stock.name}</h4>
-                      <p className="text-xs text-[var(--color-text-muted)] font-mono">{stock.symbol}</p>
-                    </div>
-                  </div>
-
-                  {/* 涨停信息 */}
-                  <div className="col-span-2 text-center">
-                    <p className="text-xs text-[var(--color-text-muted)] font-medium">涨停价</p>
-                    <p className="text-lg font-bold font-mono mt-1 text-[var(--color-positive)]">¥{limitUpPrice.toFixed(2)}</p>
-                  </div>
-                  <div className="col-span-2 text-center">
-                    <p className="text-xs text-[var(--color-text-muted)] font-medium">涨跌幅</p>
-                    <p className="text-lg font-bold font-mono mt-1 text-[var(--color-positive)]">+{stock.changePercent?.toFixed(2)}%</p>
-                  </div>
-                  <div className="col-span-2 text-center">
-                    <p className="text-xs text-[var(--color-text-muted)] font-medium">可买数量</p>
-                    <p className="text-lg font-bold font-mono mt-1 text-[var(--color-text-primary)]">{maxQty.toLocaleString()}</p>
-                  </div>
-
-                  {/* 操作按钮 */}
-                  <div className="col-span-3 text-right">
-                    <button 
-                      onClick={() => {
-                        if (maxQty <= 0) {
-                          alert('可用资金不足，无法买入');
-                          return;
-                        }
-                        
-                        handleTrade(
-                          TradeType.LIMIT_UP,
-                          stock.symbol,
-                          stock.name,
-                          limitUpPrice,
-                          maxQty
-                        );
-                      }}
-                      disabled={isSubmitting || maxQty <= 0}
-                      className="w-full py-2.5 rounded-lg bg-[var(--color-positive)] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50"
-                    >
-                      {isSubmitting ? '提交中...' : '一键打板'}
-                    </button>
-                    <p className="text-[10px] text-[var(--color-text-muted)] mt-1">全额委托，进入排单</p>
-                  </div>
+      {/* 交易确认弹窗 */}
+      {showConfirm && stockInfo && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-5">
+              <h3 className="text-base font-semibold text-[#333333] text-center mb-4">
+                确认{tradeType === BUY ? '买入' : '卖出'}
+              </h3>
+              <div className="space-y-3 py-3 border-y border-[#F0F0F0]">
+                <div className="flex justify-between">
+                  <span className="text-sm text-[#999999]">股票名称</span>
+                  <span className="text-sm text-[#333333]">{stockName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-[#999999]">股票代码</span>
+                  <span className="text-sm text-[#333333]">{stockCode}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-[#999999]">委托价格</span>
+                  <span className="text-sm text-[#333333]">¥{price}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-[#999999]">委托数量</span>
+                  <span className="text-sm text-[#333333]">{quantity}股</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-[#999999]">委托金额</span>
+                  <span className="text-sm font-semibold text-[#333333]">
+                    ¥{(parseFloat(price) * parseInt(quantity)).toFixed(2)}
+                  </span>
                 </div>
               </div>
-            );
-          })}
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  className="flex-1 py-3 border border-[#E5E5E5] rounded-xl text-sm text-[#666666]"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className={`flex-1 py-3 rounded-xl text-sm font-semibold text-white ${
+                    tradeType === BUY ? 'bg-[#E63946]' : 'bg-[#3B82F6]'
+                  }`}
+                >
+                  {submitting ? '提交中...' : '确认'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* 交易结果弹窗 */}
+      <TradeResultModal
+        visible={tradeResult.visible}
+        status={tradeResult.status}
+        tradeType={tradeType === BUY ? 'buy' : 'sell'}
+        stockName={stockName}
+        stockCode={stockCode.toUpperCase()}
+        price={parseFloat(price) || 0}
+        quantity={parseInt(quantity) || 0}
+        amount={(parseFloat(price) || 0) * (parseInt(quantity) || 0)}
+        errorMessage={tradeResult.errorMessage}
+        orderNo={tradeResult.orderNo}
+        onClose={() => setTradeResult({ visible: false, status: 'pending' })}
+        onContinue={() => {
+          setTradeResult({ visible: false, status: 'pending' });
+          setQuantity('');
+        }}
+        onViewOrder={() => {
+          setTradeResult({ visible: false, status: 'pending' });
+          navigate('/client/order-query');
+        }}
+      />
     </div>
   );
-
-  // 股票选择器弹窗
-  const renderStockSelector = () => (
-    <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="galaxy-card w-full max-w-2xl h-[85vh] flex flex-col overflow-hidden rounded-xl">
-        <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center shrink-0">
-          <h3 className="text-lg font-bold text-[var(--color-primary)]">选择标的</h3>
-          <button 
-            onClick={() => { setShowStockSelector(false); setSearchTerm(''); }} 
-            className="w-10 h-10 rounded-full bg-[var(--color-bg)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-all"
-          >
-            <SafeIcon.Plus className="rotate-45" size={20} />
-          </button>
-        </div>
-        <div className="p-4 border-b border-[var(--color-border)]">
-          <input 
-            type="text" 
-            placeholder="搜索代码或简称..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-12 bg-[var(--color-bg)] px-4 rounded-lg border border-[var(--color-border)] text-sm font-medium outline-none focus:border-[var(--color-primary)] transition-all"
-            autoFocus
-          />
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--color-primary)]"></div>
-            </div>
-          ) : (
-            filteredStockList.map(stock => (
-              <div 
-                key={stock.symbol} 
-                onClick={() => {
-                  setSelectedStock(stock);
-                  setPrice(stock.price.toString());
-                  setShowStockSelector(false);
-                  setSearchTerm('');
-                }} 
-                className="flex items-center gap-4 p-4 rounded-xl hover:bg-[var(--color-surface-hover)] cursor-pointer group border border-transparent hover:border-[var(--color-border)] transition-all"
-              >
-                <SafeStockIcon name={stock.name} logoUrl={stock.logoUrl} size="md" />
-                <div className="flex-1">
-                  <h4 className="text-base font-medium text-[var(--color-text-primary)]">{stock.name}</h4>
-                  <p className="text-xs text-[var(--color-text-muted)] font-mono">{stock.symbol}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-base font-mono font-medium text-[var(--color-text-primary)]">{stock.price.toFixed(2)}</p>
-                  <p className={`text-xs font-medium ${stock.change >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>
-                    {stock.changePercent}%
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  // ===================== 主渲染 =====================
-  return (
-    <div className="flex flex-col h-full bg-[var(--color-bg)] pb-4 pt-4 px-4 gap-6">
-      {/* 顶部交易模式切换 */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar">
-        {TRADE_MODES.map(mode => (
-          <button
-            key={mode.key}
-            onClick={() => setCurrentMode(mode.key)}
-            className={`whitespace-nowrap px-5 py-2 rounded-lg text-xs font-medium transition-all border ${
-              currentMode === mode.key 
-                ? 'bg-[var(--color-primary)] text-white border-transparent' 
-                : 'bg-[var(--color-surface)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-primary)]'
-            }`}
-          >
-            {mode.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 按模式渲染对应内容 */}
-      {currentMode === 'A股' || currentMode === '港股'
-        ? renderNormalTrade()
-        : currentMode === '新股申购'
-        ? renderIpoTrade()
-        : currentMode === '大宗交易'
-        ? renderBlockTrade()
-        : currentMode === '涨停打板'
-        ? renderLimitUpTrade()
-        : null
-      }
-
-      {/* 股票选择器弹窗 */}
-      {showStockSelector && renderStockSelector()}
-    </div>
-  );
-});
+};
 
 export default TradePanel;

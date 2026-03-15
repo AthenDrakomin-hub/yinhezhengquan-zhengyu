@@ -1,368 +1,379 @@
 "use strict";
 
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState } from 'react';
 import { 
-  Download, 
-  Clock, 
-  HelpCircle, 
-  ChevronDown, 
-  ChevronUp, 
-  MessageCircle,
   ArrowLeft,
-  History
+  Smartphone,
+  Monitor,
+  Apple,
+  ChevronRight,
+  Star,
+  Shield,
+  Zap,
+  Users,
+  CheckCircle,
+  Download,
+  QrCode
 } from 'lucide-react';
-
-interface DownloadPackage {
-  id: string;
-  platform: 'windows' | 'mac' | 'android' | 'ios';
-  name: string;
-  version: string;
-  size: string;
-  updateDate: string;
-  downloadUrl: string;
-  description: string;
-  features: string[];
-  requirements: string;
-  icon: React.ReactNode;
-}
 
 interface ServiceCenterViewProps {
   onBack?: () => void;
 }
 
-const downloadPackages: DownloadPackage[] = [
+// 产品数据
+const products = [
   {
-    id: 'windows',
-    platform: 'windows',
-    name: 'Windows 客户端',
-    version: 'v1.0.0',
-    size: '76.2 MB',
-    updateDate: '2025-03-09',
-    downloadUrl: 'https://github.com/AthenDrakomin-hub/yinhezhengquan-zhengyu/releases/download/%E9%93%B6%E6%B2%B3%E8%AF%81%E5%88%B8%C2%B7%E8%AF%81%E8%A3%95%E4%BA%A4%E6%98%93%E5%8D%95%E5%85%83_Setup_1.0.0.exe/_Setup_1.0.0.exe',
-    description: '适用于 Windows 10/11 操作系统，提供完整的交易功能和专业分析工具',
-    features: ['实时行情推送', '多窗口交易', '专业K线分析', '条件单管理', '资产分析报告'],
-    requirements: 'Windows 10 或更高版本，4GB RAM，500MB 可用空间',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-        <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />
-      </svg>
-    ),
+    id: 'app',
+    name: '中国银河证券',
+    subtitle: '官方APP',
+    description: '一站式财富管理平台，为您提供极速交易、实时行情、财富管理等全方位服务',
+    tags: ['智能交易', '实时行情', '财富管理', '新股申购'],
+    icon: <Smartphone className="w-10 h-10" />,
+    color: '#E30613',
+    downloads: '5000万+',
+    rating: '4.9',
+    platforms: [
+      { name: 'iOS', icon: <Apple className="w-5 h-5" />, url: 'https://apps.apple.com/cn/app/id420156359', label: 'App Store' },
+      { name: 'Android', icon: <Smartphone className="w-5 h-5" />, url: '/downloads/galaxy-android.apk', label: 'Android下载' }
+    ],
+    features: [
+      '极速交易，毫秒级响应',
+      'Level-2行情免费看',
+      '智能条件单自动盯盘',
+      '新股申购一键操作',
+      '资产分析全景视图'
+    ]
   },
   {
-    id: 'mac',
-    platform: 'mac',
-    name: 'macOS 客户端',
-    version: 'v2.5.1',
-    size: '156 MB',
-    updateDate: '2024-03-08',
-    downloadUrl: '/downloads/zhengyu-2.5.1.dmg',
-    description: '专为 macOS 设计，原生体验，支持 M1/M2 芯片',
-    features: ['原生 macOS 体验', 'Touch Bar 支持', '通知中心集成', '深色模式', '快捷键支持'],
-    requirements: 'macOS 11.0 或更高版本，4GB RAM，500MB 可用空间',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'android',
-    platform: 'android',
-    name: 'Android 客户端',
-    version: 'v2.5.0',
-    size: '45 MB',
-    updateDate: '2024-03-06',
-    downloadUrl: '/downloads/zhengyu-2.5.0.apk',
-    description: '支持 Android 8.0 及以上系统，随时随地掌控投资',
-    features: ['指纹/面容登录', '实时行情提醒', '快捷交易', '资产全景', '智能选股'],
-    requirements: 'Android 8.0 或更高版本，100MB 可用空间',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-        <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24c-1.4-.59-2.94-.92-4.47-.92s-3.07.33-4.47.92L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48C3.3 11.25 1.28 14.44 1 18h22c-.28-3.56-2.3-6.75-5.4-8.52zM7 15.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zm10 0c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'ios',
-    platform: 'ios',
-    name: 'iOS 客户端',
-    version: 'v2.5.0',
-    size: '52 MB',
-    updateDate: '2024-03-06',
-    downloadUrl: 'https://apps.apple.com/app/zhengyu',
-    description: '支持 iOS 13.0 及以上系统，App Store 下载',
-    features: ['Face ID / Touch ID', '小组件支持', 'Siri 快捷指令', '深色模式', 'iPad 适配'],
-    requirements: 'iOS 13.0 或更高版本，150MB 可用空间',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-      </svg>
-    ),
-  },
+    id: 'pc',
+    name: '日斗银河交易单元',
+    subtitle: 'PC交易终端',
+    description: '专业投资交易终端，支持多窗口布局、程序化交易、深度行情分析',
+    tags: ['专业分析', '多屏联动', '程序化交易', 'Level-2'],
+    icon: <Monitor className="w-10 h-10" />,
+    color: '#E30613',
+    downloads: '100万+',
+    rating: '4.9',
+    platforms: [
+      { name: 'Windows', icon: <Monitor className="w-5 h-5" />, url: 'https://www.chinastock.com.cn/newsite/download/text/GBK_Help/ZhuYeXiaZai.html', label: 'Windows版' },
+      { name: 'macOS', icon: <Apple className="w-5 h-5" />, url: 'https://www.chinastock.com.cn/newsite/download/text/GBK_Help/ZhuYeXiaZai.html', label: 'macOS版' }
+    ],
+    features: [
+      '专业K线分析工具',
+      '多窗口自由布局',
+      '程序化交易支持',
+      'Level-2深度行情',
+      '智能选股策略'
+    ]
+  }
 ];
 
-const platformColors: Record<string, { bg: string; text: string; border: string }> = {
-  windows: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
-  mac: { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30' },
-  android: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30' },
-  ios: { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30' },
-};
+// 特色服务
+const services = [
+  { icon: <Zap className="w-6 h-6" />, title: '极速交易', desc: '毫秒级委托下单', color: '#E30613' },
+  { icon: <Shield className="w-6 h-6" />, title: '安全可靠', desc: '多重加密防护', color: '#1E40AF' },
+  { icon: <Users className="w-6 h-6" />, title: '专属服务', desc: '7x24小时在线', color: '#059669' },
+  { icon: <Star className="w-6 h-6" />, title: '专业团队', desc: '投研实力雄厚', color: '#D97706' }
+];
+
+// 评价数据
+const reviews = [
+  { user: '投资达人', content: '界面简洁，交易速度快，用起来很顺手！', rating: 5, date: '3天前' },
+  { user: '股海老手', content: '行情数据准确，分析工具专业，推荐！', rating: 5, date: '1周前' },
+  { user: '新手小白', content: '开户方便，客服耐心指导，新手友好。', rating: 5, date: '2周前' }
+];
+
+// 更多产品
+const moreProducts = [
+  { name: '海王星', desc: '经典行情交易软件', platform: 'Windows', icon: '🌊' },
+  { name: '火星子', desc: '智能投资助手', platform: 'Windows/macOS', icon: '🔥' },
+  { name: '银河通达信', desc: '专业交易终端', platform: 'Windows', icon: '📊' }
+];
 
 const ServiceCenterView: React.FC<ServiceCenterViewProps> = ({ onBack }) => {
-  const [downloading, setDownloading] = useState<string | null>(null);
+  const [activeProduct, setActiveProduct] = useState(products[0]);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
 
-  const handleDownload = async (pkg: DownloadPackage) => {
-    setDownloading(pkg.id);
+  const handleDownload = (url: string, platformName: string) => {
+    setSelectedPlatform(platformName);
     
-    // iOS 跳转 App Store
-    if (pkg.platform === 'ios') {
-      window.open(pkg.downloadUrl, '_blank');
-      setDownloading(null);
+    // 外部链接直接打开
+    if (url.startsWith('http')) {
+      window.open(url, '_blank');
+      setTimeout(() => setSelectedPlatform(null), 1000);
       return;
     }
     
-    // Windows 客户端直接打开下载链接（GitHub Releases 需要 CORS 豁免）
-    if (pkg.platform === 'windows') {
-      // 直接打开新窗口下载，避免 CORS 问题
-      window.open(pkg.downloadUrl, '_blank');
-      setDownloading(null);
-      return;
-    }
-    
-    // 其他平台直接下载
+    // 本地文件下载
     const link = document.createElement('a');
-    link.href = pkg.downloadUrl;
-    link.download = pkg.downloadUrl.split('/').pop() || '';
+    link.href = url;
+    link.download = url.split('/').pop() || '';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    setDownloading(null);
+    setTimeout(() => setSelectedPlatform(null), 1000);
   };
 
   return (
-    <div className="min-h-full animate-slide-up">
-      {/* 头部 */}
-      <div className="galaxy-card m-4 mb-0 p-6 border-[var(--color-border)]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="min-h-full bg-slate-50">
+      {/* 顶部导航 */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             {onBack && (
               <button
                 onClick={onBack}
-                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[var(--color-text-secondary)] hover:bg-white/10 transition-colors"
+                className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition-colors"
               >
                 <ArrowLeft size={18} />
               </button>
             )}
-            <div>
-              <h1 className="text-xl font-black text-[var(--color-text-primary)]">服务中心</h1>
-              <p className="text-sm text-[var(--color-text-muted)] mt-1">下载银河证券日斗投资客户端</p>
-            </div>
+            <h1 className="text-lg font-bold text-slate-900">下载中心</h1>
           </div>
-          <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-            <Clock size={14} />
-            <span>更新时间：2024-03-08</span>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <Shield className="w-4 h-4 text-[#E30613]" />
+            <span>官方正版 · 安全认证</span>
           </div>
         </div>
       </div>
 
-      {/* 下载卡片列表 */}
-      <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {downloadPackages.map((pkg) => {
-          const colors = platformColors[pkg.platform];
-          const isDownloading = downloading === pkg.id;
-          
-          return (
-            <div
-              key={pkg.id}
-              className={`galaxy-card border-[var(--color-border)] overflow-hidden transition-all duration-300 hover:border-[var(--color-primary)]/30 ${
-                selectedPlatform === pkg.id ? 'ring-2 ring-[var(--color-primary)]/50' : ''
-              }`}
-            >
-              {/* 卡片头部 */}
-              <div className={`p-4 ${colors.bg} border-b border-[var(--color-border)]`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-14 h-14 rounded-2xl ${colors.bg} ${colors.text} flex items-center justify-center border ${colors.border}`}>
-                      {pkg.icon}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[var(--color-text-primary)]">{pkg.name}</h3>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className={`text-xs font-medium ${colors.text}`}>{pkg.version}</span>
-                        <span className="text-xs text-[var(--color-text-muted)]">{pkg.size}</span>
-                        <span className="text-xs text-[var(--color-text-muted)]">{pkg.updateDate}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDownload(pkg)}
-                    disabled={isDownloading}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${
-                      isDownloading
-                        ? 'bg-[var(--color-surface)] text-[var(--color-text-muted)] cursor-not-allowed'
-                        : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 hover:scale-105 active:scale-95'
-                    }`}
-                  >
-                    {isDownloading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        下载中...
-                      </>
-                    ) : (
-                      <>
-                        <Download size={16} />
-                        立即下载
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+      {/* Hero 区域 - 主推产品 */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-red-50/30 min-h-[600px]">
+        {/* 背景图片 */}
+        <div 
+          className="absolute right-0 top-0 w-1/2 h-full opacity-10"
+          style={{
+            backgroundImage: `url('https://kvlvbhzrrpspzaoiormt.supabase.co/storage/v1/object/public/xitongtu/screenshot-20260315-065802-removebg-preview.png')`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'right center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+        {/* 背景装饰 */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#E30613]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-100/50 rounded-full blur-3xl" />
 
-              {/* 卡片内容 */}
-              <div className="p-4 space-y-4">
-                {/* 描述 */}
-                <p className="text-sm text-[var(--color-text-secondary)]">{pkg.description}</p>
-
-                {/* 功能特点 */}
-                <div>
-                  <h4 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">主要功能</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {pkg.features.map((feature, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 text-xs font-medium bg-white/5 text-[var(--color-text-secondary)] rounded-lg border border-white/10"
-                      >
-                        {feature}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 系统要求 */}
-                <div>
-                  <h4 className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">系统要求</h4>
-                  <p className="text-xs text-[var(--color-text-muted)]">{pkg.requirements}</p>
-                </div>
-
-                {/* 展开/收起按钮 */}
-                <button
-                  onClick={() => setSelectedPlatform(selectedPlatform === pkg.id ? null : pkg.id)}
-                  className="w-full py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors flex items-center justify-center gap-1"
-                >
-                  {selectedPlatform === pkg.id ? (
-                    <>
-                      收起详情
-                      <ChevronUp size={14} />
-                    </>
-                  ) : (
-                    <>
-                      查看详情
-                      <ChevronDown size={14} />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 帮助说明 */}
-      <div className="p-4">
-        <div className="galaxy-card border-[var(--color-border)] p-6">
-          <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-            <HelpCircle size={20} className="text-[var(--color-primary)]" />
-            安装帮助
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-bold text-[var(--color-text-primary)] mb-2">Windows 安装步骤</h4>
-              <ol className="text-sm text-[var(--color-text-secondary)] space-y-1 list-decimal list-inside">
-                <li>点击"立即下载"按钮下载安装包</li>
-                <li>双击运行 zhengyu-setup.exe</li>
-                <li>按照安装向导完成安装</li>
-                <li>启动客户端并登录账户</li>
-              </ol>
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[var(--color-text-primary)] mb-2">Android 安装步骤</h4>
-              <ol className="text-sm text-[var(--color-text-secondary)] space-y-1 list-decimal list-inside">
-                <li>下载 APK 安装包</li>
-                <li>允许安装未知来源应用</li>
-                <li>点击安装包进行安装</li>
-                <li>打开应用并登录账户</li>
-              </ol>
-            </div>
-          </div>
-
-          {/* 联系支持 */}
-          <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-[var(--color-text-secondary)]">
-                如遇安装问题，请联系客服获取帮助
-              </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-[var(--color-text-secondary)] hover:bg-white/10 transition-colors">
-                <MessageCircle size={16} />
-                联系客服
+        <div className="relative max-w-6xl mx-auto px-4 py-8">
+          {/* 产品切换 Tabs */}
+          <div className="flex gap-3 mb-8">
+            {products.map((product) => (
+              <button
+                key={product.id}
+                onClick={() => setActiveProduct(product)}
+                className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+                  activeProduct.id === product.id
+                    ? 'bg-[#E30613] text-white shadow-lg shadow-red-500/20'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                {product.name}
               </button>
+            ))}
+          </div>
+
+          {/* 主产品展示 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* 左侧信息 */}
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg"
+                  style={{ background: `linear-gradient(135deg, ${activeProduct.color}, ${activeProduct.color}CC)` }}
+                >
+                  {activeProduct.icon}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-2xl font-black text-slate-900">{activeProduct.name}</h2>
+                    <span className="px-2 py-0.5 bg-[#E30613] text-white text-xs font-bold rounded">官方</span>
+                  </div>
+                  <p className="text-base text-slate-500 mt-1">{activeProduct.subtitle}</p>
+                </div>
+              </div>
+
+              <p className="text-slate-600 leading-relaxed">{activeProduct.description}</p>
+
+              {/* 标签 */}
+              <div className="flex flex-wrap gap-2">
+                {activeProduct.tags.map((tag, i) => (
+                  <span 
+                    key={i}
+                    className="px-3 py-1 bg-slate-100 text-slate-600 text-sm rounded-full border border-slate-200"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* 统计数据 */}
+              <div className="flex gap-8">
+                <div className="text-center">
+                  <div className="text-2xl font-black text-slate-900">{activeProduct.downloads}</div>
+                  <div className="text-xs text-slate-500">下载量</div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center gap-1 justify-center">
+                    <span className="text-2xl font-black text-[#E30613]">{activeProduct.rating}</span>
+                    <Star className="w-5 h-5 text-amber-400 fill-current" />
+                  </div>
+                  <div className="text-xs text-slate-500">用户评分</div>
+                </div>
+              </div>
+
+              {/* 下载按钮组 */}
+              <div className="flex flex-wrap gap-3">
+                {activeProduct.platforms.map((platform) => {
+                  const isDownloading = selectedPlatform === platform.name;
+                  return (
+                    <button
+                      key={platform.name}
+                      onClick={() => handleDownload(platform.url, platform.name)}
+                      disabled={isDownloading}
+                      className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+                        isDownloading
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          : 'bg-[#E30613] text-white hover:bg-[#C70510] active:scale-95 shadow-lg shadow-red-500/20'
+                      }`}
+                    >
+                      {isDownloading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          下载中...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          {platform.icon}
+                          <span>{platform.label}</span>
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 功能列表 */}
+              <div className="space-y-3 pt-4 border-t border-slate-200">
+                <h3 className="text-sm font-bold text-slate-700">核心功能</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {activeProduct.features.map((feature, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-slate-600">
+                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 右侧二维码 */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
+                <div className="w-48 h-48 bg-slate-50 rounded-2xl flex flex-col items-center justify-center border border-slate-200">
+                  {/* 模拟二维码 */}
+                  <QrCode className="w-24 h-24 text-slate-300" />
+                  <p className="text-xs text-slate-400 mt-2">扫码下载</p>
+                </div>
+                <p className="text-center text-slate-900 font-bold mt-4">扫码下载APP</p>
+                <p className="text-center text-slate-500 text-xs mt-1">支持 iOS / Android</p>
+              </div>
+              <p className="text-slate-400 text-xs mt-4 flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                扫描二维码，即刻下载官方APP
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 版本历史 */}
-      <div className="p-4 pt-0">
-        <div className="galaxy-card border-[var(--color-border)] p-6">
-          <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-            <History size={20} className="text-[var(--color-primary)]" />
-            更新日志
-          </h3>
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-[var(--color-primary)]" />
-                <div className="w-0.5 h-full bg-[var(--color-border)]" />
-              </div>
-              <div className="pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-[var(--color-text-primary)]">v2.5.1</span>
-                  <span className="text-xs text-[var(--color-text-muted)]">2024-03-08</span>
-                </div>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                  新增涨停打板功能，优化交易性能，修复已知问题
-                </p>
-              </div>
+      {/* 特色服务 */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {services.map((service, i) => (
+            <div 
+              key={i}
+              className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-lg hover:border-slate-300 transition-all group"
+            >
+              <div style={{ color: service.color }} className="mb-3">{service.icon}</div>
+              <h4 className="text-slate-900 font-bold text-sm">{service.title}</h4>
+              <p className="text-slate-500 text-xs mt-1">{service.desc}</p>
             </div>
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-border)]" />
-                <div className="w-0.5 h-full bg-[var(--color-border)]" />
-              </div>
-              <div className="pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-[var(--color-text-primary)]">v2.5.0</span>
-                  <span className="text-xs text-[var(--color-text-muted)]">2024-03-01</span>
+          ))}
+        </div>
+      </div>
+
+      {/* 用户评价 */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <h3 className="text-lg font-bold text-slate-900 mb-4">用户评价</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {reviews.map((review, i) => (
+            <div 
+              key={i}
+              className="bg-white rounded-2xl p-5 border border-slate-200"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: review.rating }).map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-amber-400 fill-current" />
+                  ))}
                 </div>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                  全新UI设计，新增条件单功能，支持多账户切换
-                </p>
+                <span className="text-xs text-slate-400">{review.date}</span>
               </div>
+              <p className="text-slate-600 text-sm mb-3">"{review.content}"</p>
+              <p className="text-slate-400 text-xs">—— {review.user}</p>
             </div>
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-border)]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-[var(--color-text-primary)]">v2.4.0</span>
-                  <span className="text-xs text-[var(--color-text-muted)]">2024-02-15</span>
+          ))}
+        </div>
+      </div>
+
+      {/* 其他下载 */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <h3 className="text-lg font-bold text-slate-900 mb-4">更多产品</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {moreProducts.map((item, i) => (
+            <button
+              key={i}
+              onClick={() => window.open('https://www.chinastock.com.cn/newsite/download/text/GBK_Help/ZhuYeXiaZai.html', '_blank')}
+              className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-lg hover:border-[#E30613]/30 transition-all group text-left"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{item.icon}</span>
+                  <div>
+                    <h4 className="text-slate-900 font-bold">{item.name}</h4>
+                    <p className="text-slate-500 text-xs mt-0.5">{item.desc}</p>
+                    <p className="text-slate-400 text-xs mt-1">{item.platform}</p>
+                  </div>
                 </div>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                  新增IPO申购功能，优化行情推送，提升稳定性
-                </p>
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#E30613] transition-colors" />
               </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 底部说明 */}
+      <div className="bg-white border-t border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="text-center md:text-left">
+              <p className="text-slate-500 text-sm">
+                ⚠️ 投资有风险，入市需谨慎
+              </p>
+              <p className="text-slate-400 text-xs mt-1">
+                中国银河证券股份有限公司 版权所有
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-slate-400">
+              <a href="https://www.chinastock.com.cn" target="_blank" rel="noopener noreferrer" className="hover:text-[#E30613] transition-colors">
+                官方网站
+              </a>
+              <span>·</span>
+              <a href="https://www.chinastock.com.cn/newsite/cgs.html" target="_blank" rel="noopener noreferrer" className="hover:text-[#E30613] transition-colors">
+                关于银河
+              </a>
+              <span>·</span>
+              <span className="text-slate-300">客服热线: 95551</span>
             </div>
           </div>
         </div>

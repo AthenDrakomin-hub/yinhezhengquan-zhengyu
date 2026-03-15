@@ -39,8 +39,8 @@ export async function authenticateUser(req: Request): Promise<AuthResult> {
     
     // 创建认证客户端
     const authClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_URL') ?? Deno.env.get('VITE_SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('VITE_SUPABASE_ANON_KEY') ?? '',
       { 
         global: { 
           headers: { Authorization: `Bearer ${token}` } 

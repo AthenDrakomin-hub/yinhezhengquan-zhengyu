@@ -194,6 +194,36 @@ const AdminUserManagement: React.FC = () => {
     }
   };
 
+  // 审核通过用户
+  const handleApproveUser = async (user: any) => {
+    if (!window.confirm(`确定要通过用户 "${user.username}" 的注册申请吗？\n\n通过后用户即可正常登录使用。`)) return;
+    
+    try {
+      await userService.updateUserStatus(user.id, 'ACTIVE');
+      alert(`用户 ${user.username} 已审核通过！`);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || '审核失败');
+    }
+  };
+
+  // 审核拒绝用户
+  const handleRejectUser = async (user: any) => {
+    const reason = window.prompt(`请输入拒绝原因（将发送给用户）：`);
+    if (!reason) return;
+    
+    if (!window.confirm(`确定要拒绝用户 "${user.username}" 的注册申请吗？`)) return;
+    
+    try {
+      await userService.updateUserStatus(user.id, 'REJECTED');
+      // 这里可以添加发送通知给用户的逻辑
+      alert(`用户 ${user.username} 的注册申请已被拒绝。`);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || '操作失败');
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* 头部 */}
@@ -299,9 +329,10 @@ const AdminUserManagement: React.FC = () => {
             }}
           >
             <option value="ALL">全部状态</option>
-            <option value="ACTIVE">已激活</option>
-            <option value="BANNED">已封禁</option>
             <option value="PENDING">待审核</option>
+            <option value="ACTIVE">已激活</option>
+            <option value="REJECTED">已拒绝</option>
+            <option value="BANNED">已封禁</option>
           </select>
           
           {/* 风险等级筛选 */}
@@ -441,19 +472,19 @@ const AdminUserManagement: React.FC = () => {
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <button 
-                      onClick={() => toggleUserStatus(user)}
+                      onClick={() => user.status !== 'PENDING' && toggleUserStatus(user)}
                       style={{
                         fontSize: '10px',
                         fontWeight: 'bold',
                         padding: '4px 10px',
                         borderRadius: '4px',
                         border: 'none',
-                        cursor: 'pointer',
-                        background: user.status === 'ACTIVE' ? '#22c55e20' : '#ef444420',
-                        color: user.status === 'ACTIVE' ? '#22c55e' : '#ef4444'
+                        cursor: user.status === 'PENDING' ? 'default' : 'pointer',
+                        background: user.status === 'ACTIVE' ? '#22c55e20' : user.status === 'PENDING' ? '#f9731620' : user.status === 'REJECTED' ? '#64748b20' : '#ef444420',
+                        color: user.status === 'ACTIVE' ? '#22c55e' : user.status === 'PENDING' ? '#f97316' : user.status === 'REJECTED' ? '#64748b' : '#ef4444'
                       }}
                     >
-                      {user.status === 'ACTIVE' ? '已激活' : '已封禁'}
+                      {user.status === 'ACTIVE' ? '已激活' : user.status === 'PENDING' ? '待审核' : user.status === 'REJECTED' ? '已拒绝' : '已封禁'}
                     </button>
                   </td>
                   <td style={{ padding: '14px 16px' }}>
@@ -479,6 +510,40 @@ const AdminUserManagement: React.FC = () => {
                   </td>
                   <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      {user.status === 'PENDING' && (
+                        <>
+                          <button 
+                            onClick={() => handleApproveUser(user)}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              color: '#22c55e',
+                              background: '#22c55e20',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✓ 通过
+                          </button>
+                          <button 
+                            onClick={() => handleRejectUser(user)}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              color: '#ef4444',
+                              background: '#ef444420',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✗ 拒绝
+                          </button>
+                        </>
+                      )}
                       <button 
                         onClick={() => {
                           setSelectedUser(user);

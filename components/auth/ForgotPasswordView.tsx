@@ -89,7 +89,7 @@ const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onBack, onCompl
                   <input
                     type="email"
                     placeholder="请输入注册邮箱"
-                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-xl border border-white/10 text-sm font-bold outline-none focus:border-[#00D4AA] transition-all text-white placeholder:text-slate-400"
+                    className="w-full h-14 bg-white/5 pl-12 pr-6 rounded-xl border border-white/10 text-sm font-bold outline-none focus:border-[#E63946] transition-all text-white placeholder:text-slate-400"
                     {...methods.register('email')}
                   />
                 </div>
@@ -101,7 +101,7 @@ const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onBack, onCompl
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-14 bg-[#00D4AA] text-[#0A1628] rounded-xl font-bold text-sm uppercase tracking-widest disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                className="w-full h-14 bg-[#E63946] text-[#1E1E1E] rounded-xl font-bold text-sm uppercase tracking-widest disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -121,7 +121,7 @@ const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onBack, onCompl
               <button 
                 type="button"
                 onClick={onBack}
-                className="text-sm text-slate-400 hover:text-[#00D4AA] transition-colors flex items-center gap-1 mx-auto"
+                className="text-sm text-slate-400 hover:text-[#E63946] transition-colors flex items-center gap-1 mx-auto"
               >
                 <ICONS.ArrowLeft size={14} />
                 返回登录
@@ -139,7 +139,7 @@ const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onBack, onCompl
               </div>
               <h3 className="text-lg font-bold text-white mb-2">邮件已发送</h3>
               <p className="text-sm text-slate-400">
-                重置链接已发送至 <span className="text-[#00D4AA] font-medium">{email}</span>
+                重置链接已发送至 <span className="text-[#E63946] font-medium">{email}</span>
               </p>
               <p className="text-xs text-slate-500 mt-2">请在24小时内点击邮件中的链接重置密码</p>
             </div>
@@ -166,7 +166,7 @@ const ForgotPasswordView: React.FC<ForgotPasswordViewProps> = ({ onBack, onCompl
               <button
                 type="button"
                 onClick={onComplete}
-                className="w-full h-12 bg-[#00D4AA] text-[#0A1628] rounded-xl font-bold text-sm uppercase tracking-widest"
+                className="w-full h-12 bg-[#E63946] text-[#1E1E1E] rounded-xl font-bold text-sm uppercase tracking-widest"
               >
                 返回登录页面
               </button>

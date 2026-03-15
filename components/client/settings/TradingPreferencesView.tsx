@@ -66,7 +66,7 @@ const TradingPreferencesView: React.FC = () => {
                 </div>
                 <div 
                   onClick={() => updateAndSaveSettings({ fastOrderMode: !settings.fastOrderMode })}
-                  className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.fastOrderMode ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
+                  className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.fastOrderMode ? 'bg-[#E63946]' : 'bg-[var(--color-text-muted)]/20'}`}
                 >
                   <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.fastOrderMode ? 'translate-x-5' : 'translate-x-0'}`} />
                 </div>
@@ -79,7 +79,7 @@ const TradingPreferencesView: React.FC = () => {
               </div>
               <div 
                 onClick={() => updateAndSaveSettings({ autoStopLoss: !settings.autoStopLoss })}
-                className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.autoStopLoss ? 'bg-[#00D4AA]' : 'bg-[var(--color-text-muted)]/20'}`}
+                className={`w-10 h-5 rounded-full p-1 transition-colors cursor-pointer ${settings.autoStopLoss ? 'bg-[#E63946]' : 'bg-[var(--color-text-muted)]/20'}`}
               >
                 <div className={`w-3 h-3 bg-white rounded-full transition-transform ${settings.autoStopLoss ? 'translate-x-5' : 'translate-x-0'}`} />
               </div>
@@ -96,7 +96,7 @@ const TradingPreferencesView: React.FC = () => {
                 key={strategy}
                 onClick={() => updateAndSaveSettings({ defaultStrategy: strategy })}
                 className={`galaxy-card p-4 flex items-center justify-between cursor-pointer border-2 transition-all ${
-                  settings.defaultStrategy === strategy ? 'border-[#00D4AA] bg-[#00D4AA]/5' : 'border-transparent hover:border-[var(--color-border)]'
+                  settings.defaultStrategy === strategy ? 'border-[#E63946] bg-[#E63946]/5' : 'border-transparent hover:border-[var(--color-border)]'
                 }`}
               >
                 <div className="space-y-1">
@@ -109,7 +109,7 @@ const TradingPreferencesView: React.FC = () => {
                   </p>
                 </div>
                 {settings.defaultStrategy === strategy && (
-                  <div className="w-5 h-5 rounded-full bg-[#00D4AA] flex items-center justify-center text-[#0A1628]">
+                  <div className="w-5 h-5 rounded-full bg-[#E63946] flex items-center justify-center text-[#1E1E1E]">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M20 6L9 17l-5-5"/></svg>
                   </div>
                 )}
@@ -122,7 +122,7 @@ const TradingPreferencesView: React.FC = () => {
         <section className="space-y-3">
           <div className="flex justify-between items-center px-2">
             <h3 className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em]">衍生品默认杠杆</h3>
-            <span className="text-xs font-black text-[#00D4AA] font-mono">{settings.defaultLeverage}x</span>
+            <span className="text-xs font-black text-[#E63946] font-mono">{settings.defaultLeverage}x</span>
           </div>
           <div className="galaxy-card p-6 space-y-6">
             <div className="flex justify-between gap-1">
@@ -132,7 +132,7 @@ const TradingPreferencesView: React.FC = () => {
                   onClick={() => updateAndSaveSettings({ defaultLeverage: lv })}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black font-mono transition-all border ${
                     settings.defaultLeverage === lv 
-                      ? 'bg-[#00D4AA] text-[#0A1628] border-transparent shadow-[0_0_15px_rgba(0,212,170,0.3)]' 
+                      ? 'bg-[#E63946] text-[#1E1E1E] border-transparent shadow-[0_0_15px_rgba(0,212,170,0.3)]' 
                       : 'bg-[var(--color-bg)] text-[var(--color-text-muted)] border-[var(--color-border)]'
                   }`}
                 >

@@ -51,7 +51,7 @@ const LimitUpMonitor: React.FC<Props> = ({
       setLoading(true);
       setError(null);
 
-      const data = await getLimitUpList(symbols);
+      const data = await getLimitUpList();
       setStocks(data);
       setLastRefresh(new Date());
     } catch (err) {
@@ -109,7 +109,7 @@ const LimitUpMonitor: React.FC<Props> = ({
       case 'ST':
         return 'text-red-600 bg-red-50';
       case 'GEM':
-        return 'text-blue-600 bg-blue-50';
+        return 'text-[var(--color-secondary)] bg-[var(--color-secondary-light)]';
       case 'STAR':
         return 'text-purple-600 bg-purple-50';
       default:
