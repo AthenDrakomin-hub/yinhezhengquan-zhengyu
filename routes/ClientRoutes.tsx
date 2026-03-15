@@ -722,7 +722,6 @@ const ConditionalOrderWrapper: React.FC = () => {
       if (symbolFromUrl) {
         // 从 URL 参数获取股票
         try {
-          const { marketApi } = await import('@/services/marketApi');
           const stock = await marketApi.getRealtimeStock(symbolFromUrl, 'CN');
           if (stock) {
             setSelectedStock({
@@ -752,7 +751,6 @@ const ConditionalOrderWrapper: React.FC = () => {
               .limit(1);
             
             if (positions && positions.length > 0) {
-              const { marketApi } = await import('@/services/marketApi');
               const stock = await marketApi.getRealtimeStock(positions[0].stock_code, 'CN');
               if (stock) {
                 setSelectedStock({
@@ -783,7 +781,6 @@ const ConditionalOrderWrapper: React.FC = () => {
     
     setSearching(true);
     try {
-      const { marketApi } = await import('@/services/marketApi');
       const code = searchCode.toUpperCase();
       const market = code.length === 5 ? 'HK' : 'CN';
       const stock = await marketApi.getRealtimeStock(code, market);

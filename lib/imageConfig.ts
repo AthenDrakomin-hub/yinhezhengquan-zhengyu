@@ -2,30 +2,33 @@
  * 图片资源配置文件
  * 集中管理所有图片 URL
  * 
- * 图片来源：Supabase Storage (xitongtu 存储桶)
+ * 图片来源：
+ * - Logo 等核心图片：本地文件 (public/logo.png)
+ * - 其他图片：Supabase Storage (xitongtu 存储桶)
  */
 
-// Supabase Storage 基础 URL
+// Supabase Storage 基础 URL（用于非核心图片）
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kvlvbhzrrpspzaoiormt.supabase.co';
 const STORAGE_BASE_URL = `${SUPABASE_URL}/storage/v1/object/public/xitongtu`;
 
 export const imageConfig = {
-  // ==================== Logo ====================
+  // ==================== Logo（使用本地文件，确保可靠性）====================
   logo: {
-    main: `${STORAGE_BASE_URL}/256.webp`,
-    // 客户端登录页 & 开户页 (256.webp)
-    fullUrl: `${STORAGE_BASE_URL}/256.webp`,
-    // 管理端登录页 (logo.png)
-    admin: `${STORAGE_BASE_URL}/logo.png`,
-    // 客户端首页顶部 & 公共页面首页 (logo.png)
-    clientHeader: `${STORAGE_BASE_URL}/logo.png`,
-    // 公共页面首页 (logo.png)
-    publicHome: `${STORAGE_BASE_URL}/logo.png`,
-    training: `${STORAGE_BASE_URL}/256.webp`,
+    // 主 Logo - 使用本地文件
+    main: '/logo.png',
+    // 客户端登录页 & 开户页
+    fullUrl: '/logo.png',
+    // 管理端登录页
+    admin: '/logo.png',
+    // 客户端首页顶部
+    clientHeader: '/logo.png',
+    // 公共页面首页
+    publicHome: '/logo.png',
+    training: '/logo.png',
   },
 
-  // ==================== 公章 ====================
-  seal: `${STORAGE_BASE_URL}/gongzhang.jpg`,
+  // ==================== 公章（使用本地文件）====================
+  seal: '/images/gongzhang.jpg',
   
   // ==================== 客服头像 ====================
   agentAvatar: '/logo.png',
@@ -49,25 +52,47 @@ export const imageConfig = {
     },
   ],
 
-  // ==================== 首页轮播图 ====================
+  // ==================== 首页轮播图（公共首页）====================
   carousel: [
     {
       id: 1,
-      img: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
+      img: '/images/carousel-1.jpg',
       title: '银河证券',
       subtitle: '专业投资服务',
     },
     {
       id: 2,
-      img: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
+      img: '/images/carousel-2.png',
       title: '日斗投资单元',
       subtitle: '智能交易平台',
     },
     {
       id: 3,
-      img: `${STORAGE_BASE_URL}/1773260182777-019cde8a-7e52-78e6-bbf3-19510e1feb9b.jpeg`,
+      img: '/images/carousel-3.png',
       title: '财富管理',
       subtitle: '稳健增值',
+    },
+  ],
+
+  // ==================== 客户端首页轮播图 ====================
+  clientBanners: [
+    {
+      id: 1,
+      img: '/images/client-banner-1.png',
+      title: '银河证券',
+      subtitle: '专业投资服务',
+    },
+    {
+      id: 2,
+      img: '/images/client-banner-2.png',
+      title: '财富管理',
+      subtitle: '稳健增值',
+    },
+    {
+      id: 3,
+      img: '/images/client-banner-3.jpg',
+      title: '日斗投资单元',
+      subtitle: '智能交易平台',
     },
   ],
 
@@ -85,9 +110,9 @@ export const imageConfig = {
     default: '/logo.png',
   },
 
-  // ==================== 公章和协议 ====================
+  // ==================== 公章和协议（使用本地文件）====================
   documents: {
-    seal: `${STORAGE_BASE_URL}/gongzhang.jpg`,
+    seal: '/images/gongzhang.jpg',
   },
 
   // ==================== 培训营背景 ====================
@@ -114,6 +139,10 @@ export const getBannerUrl = (index: number): string => {
 
 export const getCarouselUrl = (index: number): string => {
   return imageConfig.carousel[index - 1]?.img || imageConfig.carousel[0]?.img || '';
+};
+
+export const getClientBannerUrl = (index: number): string => {
+  return imageConfig.clientBanners[index - 1]?.img || imageConfig.clientBanners[0]?.img || '';
 };
 
 export const getServiceIconUrl = (key: keyof typeof imageConfig.serviceIcons): string => {

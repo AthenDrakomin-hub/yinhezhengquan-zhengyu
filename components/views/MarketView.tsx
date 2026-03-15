@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Stock } from '../../lib/types';
 import { getMarketList, getRealtimeStock } from '../../services/marketService';
+import { marketApi } from '@/services/marketApi';
 import { userService } from '../../services/userService';
 import { getTodayHotspot, TodayHotspotItem } from '../../services/hotspotService';
 import { getIndexQuotes, StockQuote } from '../../services/stockService';
@@ -57,8 +58,7 @@ const MarketView: React.FC<MarketViewProps> = ({ onSelectStock }) => {
   useEffect(() => {
     const loadNews = async () => {
       try {
-        // 尝试从 proxy-market 获取快讯数据
-        const { marketApi } = await import('@/services/marketApi');
+        // 使用静态导入的 marketApi
         const news = await marketApi.getNews(5);
         
         if (news && news.length > 0) {

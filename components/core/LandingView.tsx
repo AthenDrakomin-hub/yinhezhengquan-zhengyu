@@ -21,24 +21,24 @@ const LandingView: React.FC<LandingViewProps> = ({ onEnter, onQuickOpen }) => {
   const navigate = useNavigate(); // 添加导航钩子
 
   const LOGO_URL = imageConfig.logo.publicHome;
-  const CAROUSEL_IMAGE = imageConfig.carousel[0]?.img || '/images/carousel-1.jpg';
+  const CAROUSEL_IMAGES = imageConfig.carousel;
   const BACKGROUND_IMAGES = imageConfig.backgrounds;
   const SERVICE_ICONS = imageConfig.serviceIcons;
   const QR_PLACEHOLDER = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.zhengyutouzi.com/";
   
   const slides = [
     {
-      image: CAROUSEL_IMAGE,
+      image: CAROUSEL_IMAGES[0]?.img || '/images/carousel-1.jpg',
       title: "日斗投资单元 Nexus",
       subtitle: "极速、稳定、合规的数字化底座"
     },
     {
-      image: CAROUSEL_IMAGE,
+      image: CAROUSEL_IMAGES[1]?.img || '/images/carousel-2.png',
       title: "数字化资产管理",
       subtitle: "赋能机构与专业投资者"
     },
     {
-      image: CAROUSEL_IMAGE,
+      image: CAROUSEL_IMAGES[2]?.img || '/images/carousel-3.png',
       title: "全球市场直连",
       subtitle: "多维度的投资组合管理体验"
     }

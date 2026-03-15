@@ -15,11 +15,11 @@ interface CarouselSlide {
   link?: string;
 }
 
-// 默认轮播数据
+// 默认轮播数据 - 使用 imageConfig.clientBanners
 const defaultSlides: CarouselSlide[] = [
   {
     id: '1',
-    image: '/images/banner-1.jpg',
+    image: imageConfig.clientBanners[0]?.img || '/images/client-banner-1.png',
     title: '银河智投',
     subtitle: 'AI驱动的智能投资助手',
     tag: '新功能',
@@ -27,7 +27,7 @@ const defaultSlides: CarouselSlide[] = [
   },
   {
     id: '2',
-    image: '/images/banner-2.jpg',
+    image: imageConfig.clientBanners[1]?.img || '/images/client-banner-2.png',
     title: 'ETF专区',
     subtitle: '低成本配置全球资产',
     tag: '热门',
@@ -35,19 +35,11 @@ const defaultSlides: CarouselSlide[] = [
   },
   {
     id: '3',
-    image: '/images/banner-3.jpg',
+    image: imageConfig.clientBanners[2]?.img || '/images/client-banner-3.jpg',
     title: '新股申购',
     subtitle: '一键申购，轻松打新',
     tag: 'NEW',
     link: '/client/ipo'
-  },
-  {
-    id: '4',
-    image: '/images/banner-4.jpg',
-    title: '稳健理财',
-    subtitle: '专业理财，稳健收益',
-    tag: '精选',
-    link: '/client/wealth-finance'
   }
 ];
 

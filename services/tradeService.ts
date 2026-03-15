@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { TradeType } from '../lib/types';
 import { getRealtimeStock } from './marketService';
+import { marketApi } from './marketApi';
 import { logger } from '@/utils/logger';
 
 // 交易服务缓存
@@ -353,7 +354,6 @@ export const tradeService = {
    * 获取行情数据（前端直连东方财富 API）
    */
   async getMarketData(marketType: string, stockCodes: string[]) {
-    const { marketApi } = await import('./marketApi');
     return await marketApi.getBatchStocks(stockCodes, marketType === 'HK' ? 'HK' : 'CN');
   },
 

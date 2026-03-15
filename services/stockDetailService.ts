@@ -576,8 +576,7 @@ export async function getTradeTicks(symbol: string): Promise<TradeTick[]> {
   const market: 'CN' | 'HK' = symbol.length === 5 ? 'HK' : 'CN';
   
   try {
-    // 使用代理接口获取真实成交明细
-    const { marketApi } = await import('./marketApi');
+    // 使用静态导入的 marketApi 获取真实成交明细
     const ticksData = await marketApi.getTradeTicks(symbol, market);
     
     if (ticksData && ticksData.length > 0) {

@@ -38,7 +38,6 @@
     "eastmoney-data-sdk": "^1.0.5",
     "face-api.js": "^0.20.0",
     "framer-motion": "^12.34.3",
-    "iconv-lite": "^0.7.2",
     "lucide-react": "^0.575.0",
     "otpauth": "^9.5.0",
     "postgres": "^3.4.8",
